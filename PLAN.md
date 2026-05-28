@@ -227,3 +227,75 @@ Controller / Service / Repository / DTO / Entity / Config / Common 계층 구조
 ```
 
 개발 세션에서는 이 결정을 기준으로 실제 도메인/API 구현을 진행한다. 현재 세션에서는 기본 환경 구성과 프로젝트 방향 확정까지만 다룬다.
+
+## 13. 1차 민원 API 구현 상태
+
+2026-05-28 기준으로 권장 첫 구현 범위의 1차 백엔드 API를 구현했다.
+
+구현된 endpoint는 다음과 같다.
+
+```text
+POST /api/complaints
+GET /api/complaints
+GET /api/complaints/{id}
+GET /api/complaints/{id}/analysis
+GET /api/complaints/{id}/draft
+```
+
+구현 범위는 로컬 개발과 시연용 Mock 흐름에 맞춰 제한했다.
+
+- `Complaint` JPA Entity와 `ComplaintRepository`를 추가했다.
+- `ComplaintService`에서 민원 등록, 목록 조회, 상세 조회, Mock 분석, Mock 공문 초안 생성을 처리한다.
+- 실제 LLM, RAG, AWS 호출은 아직 연결하지 않았다.
+- `/analysis`는 민원 원문 키워드를 기반으로 의도, 긴급도, 감정 상태, 담당 부서, 위치 기반 GeoJSON 초안을 생성한다.
+- `/draft`는 Mock RAG 참조 문서와 담당자 검토용 공문 초안을 반환한다.
+- 개발 편의를 위해 `/api/**`, `/actuator/health`, `/actuator/info`는 인증 없이 접근 가능하도록 설정했다.
+- 테스트 프로필은 H2 메모리 DB를 사용하도록 분리했다.
+- 로컬 프로필은 PostgreSQL에 대해 `spring.jpa.hibernate.ddl-auto=update`를 사용해 개발용 테이블을 자동 생성한다.
+
+검증 결과:
+
+```text
+./gradlew.bat test 성공
+local 프로필 Spring Boot 실행 성공
+PostgreSQL 16.14 연결 성공
+POST /api/complaints 저장 성공
+GET /api/complaints/{id}/analysis 응답 성공
+GET /api/complaints/{id}/draft 응답 성공
+```
+
+다음 개발 단계는 API 응답 형식 정리, 도메인 필드 확장, 샘플 데이터 보강, 실제 파일 업로드/S3 연동 또는 Mock 파일 저장 계층 추가이다.
+# 2026-05-28 최종 백엔드 기준 변경
+
+전자정부프레임워크 사용이 필수 조건이므로, 최종 메인 백엔드는 기존 `backend`가 아니라 eGovFrame Initializr 5.0.5로 생성한 `egov-boot-web`으로 변경한다.
+
+## 최종 결정
+
+- `egov-boot-web`: eGovFrame 5.0 실행환경 기반 메인 백엔드
+- `backend`: 기존 Spring Initializr/Gradle 기반 백엔드. 참고용 또는 추후 정리 대상
+- 민원 API, 도메인, Repository, Service 코드는 `egov-boot-web/src/main/java/egovframework/example/complaint` 하위로 이식
+- 포트는 `8081`, DB는 로컬 PostgreSQL `complaintdb` 기준
+- 초기 AI/RAG는 비용 절감을 위해 Mock 구현 유지
+
+## 현재 적용한 핵심 세팅
+
+```text
+parent: org.egovframe.boot:egovframe-boot-starter-parent:5.0.0
+server.port=8081
+spring.datasource.url=jdbc:postgresql://localhost:5432/complaintdb
+spring.datasource.username=complaint_user
+spring.datasource.password=complaint_pass
+spring.jpa.hibernate.ddl-auto=update
+```
+
+## 다음 확인 작업
+
+```powershell
+cd C:\Users\user\Documents\GitHub\Unstructured\egov-boot-web
+mvn test
+mvn spring-boot:run
+```
+
+Maven이 PowerShell에서 인식되지 않으면 Maven 설치 경로의 `bin` 디렉터리를 Windows PATH에 추가하고 터미널을 다시 열어야 한다.
+
+현재 Maven 설치 경로는 `C:\maven\apache-maven-3.9.16`이며, 사용자 PATH에 `C:\maven\apache-maven-3.9.16\bin`을 추가했다.

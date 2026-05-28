@@ -1,0 +1,57 @@
+# Build outputs
+target/
+build/
+out/
+.gradle/
+
+# Maven / Gradle local files
+.mvn/wrapper/maven-wrapper.jar
+!.mvn/wrapper/maven-wrapper.properties
+gradle-app.setting
+
+# Logs
+*.log
+logs/
+
+# IDE / editor
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS metadata
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Runtime / temp files
+*.tmp
+*.temp
+*.pid
+*.seed
+*.stackdump
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+application-secret.properties
+application-private.properties
+application-*.local.properties
+
+# Java archives generated outside build folders
+*.class
+*.war
+*.ear
+
+# Node/frontend dependencies and build artifacts
+node_modules/
+dist/
+.next/
+.vite/
+coverage/
+
+# Generated document render artifacts
+rendered_*/
+*_render_copy.docx
