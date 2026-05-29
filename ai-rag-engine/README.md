@@ -4,7 +4,7 @@
 
 ## 포함 내용
 
-- `main.py`: Markdown 기반 RAG 문서를 읽고 OpenAI API로 민원 분석 및 공문 초안을 생성합니다.
+- `main.py`: DB 또는 Markdown 기반 RAG 문서를 읽고 OpenAI API로 민원 분석 및 공문 초안을 생성합니다.
 - `test_db_connection.py`: `.env`의 PostgreSQL 접속 정보로 DB 연결을 확인합니다.
 - `insert_knowledge_documents.py`: `data/knowledge` 하위 Markdown 문서를 Spring 백엔드의 `knowledge_documents` 테이블에 적재합니다.
 - `data/knowledge`: 법령, 조례, 매뉴얼 Markdown 문서입니다.
@@ -45,4 +45,4 @@ Spring 백엔드 실제 테이블인 `knowledge_documents`에 Markdown 문서들
 .venv\Scripts\python.exe main.py
 ```
 
-현재 `main.py`는 DB가 아니라 `data/knowledge`의 Markdown 파일을 직접 읽는 방식입니다.
+현재 `main.py`는 DB 연결이 가능하면 `knowledge_documents` 테이블을 먼저 읽고, DB 연결이 실패하면 `data/knowledge`의 Markdown 파일을 읽는 fallback 방식입니다.

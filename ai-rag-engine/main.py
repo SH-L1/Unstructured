@@ -6,6 +6,11 @@ from pathlib import Path
 from dotenv import load_dotenv
 from openai import OpenAI
 
+try:
+    import psycopg2
+except ImportError:
+    psycopg2 = None
+
 
 # =========================
 # 기본 설정
@@ -27,6 +32,8 @@ BASE_DIR = Path(__file__).resolve().parent
 KNOWLEDGE_DIR = BASE_DIR / "data" / "knowledge"
 SAMPLE_FILE = BASE_DIR / "data" / "samples" / "sample_complaints.json"
 
+DB_ENV_KEYS = ["DB_HOST", "DB_PORT", "DB_NAME", "DB_USER", "DB_PASSWORD"]
+
 
 # =========================
 # 파일 로드 함수
@@ -40,7 +47,21 @@ def load_sample_complaints():
         return json.load(f)
 
 
-def load_knowledge_documents():
+def get_db_config():
+    return {
+        "host": os.getenv("DB_HOST", "localhost"),
+        "port": os.getenv("DB_PORT", "5432"),
+        "dbname": os.getenv("DB_NAME", "complaintdb"),
+        "user": os.getenv("DB_USER", "complaint_user"),
+        "password": os.getenv("DB_PASSWORD", "complaint_pass"),
+    }
+
+
+def has_db_config():
+    return all(os.getenv(key) for key in DB_ENV_KEYS)
+
+
+def load_knowledge_documents_from_markdown():
     """
     data/knowledge 하위의 모든 .md 파일을 읽는다.
     manual, national_law, ordinance 같은 하위 폴더까지 모두 포함한다.
@@ -67,6 +88,86 @@ def load_knowledge_documents():
     if not docs:
         raise ValueError("data/knowledge 폴더 또는 하위 폴더에 내용이 있는 .md 문서가 없습니다.")
 
+    return docs
+
+
+def load_knowledge_documents_from_db():
+    """
+    Spring 백엔드가 사용하는 knowledge_documents 테이블에서 RAG 문서를 읽는다.
+    DB가 연결되는 팀원 환경에서는 이 함수의 결과를 우선 사용한다.
+    """
+    if psycopg2 is None:
+        raise RuntimeError("psycopg2가 설치되어 있지 않습니다.")
+
+    db_config = get_db_config()
+
+    with psycopg2.connect(**db_config) as conn:
+        with conn.cursor() as cur:
+            cur.execute(
+                """
+                SELECT
+                    id,
+                    document_type,
+                    title,
+                    source_name,
+                    content,
+                    keywords,
+                    legal_basis
+                FROM knowledge_documents
+                ORDER BY id;
+                """
+            )
+            rows = cur.fetchall()
+
+    docs = []
+
+    for row in rows:
+        doc_id, document_type, title, source_name, content, keywords, legal_basis = row
+        if not content:
+            continue
+
+        metadata = []
+        if source_name:
+            metadata.append(f"출처: {source_name}")
+        if keywords:
+            metadata.append(f"키워드: {keywords}")
+        if legal_basis:
+            metadata.append(f"근거: {legal_basis}")
+
+        metadata_text = "\n".join(metadata)
+        search_content = f"{metadata_text}\n\n{content}".strip()
+
+        docs.append({
+            "id": doc_id,
+            "title": title,
+            "source_type": document_type,
+            "source_name": source_name,
+            "content": search_content,
+        })
+
+    if not docs:
+        raise ValueError("knowledge_documents 테이블에 RAG 문서가 없습니다.")
+
+    return docs
+
+
+def load_knowledge_documents():
+    """
+    RAG 문서를 DB에서 먼저 읽고, 실패하면 기존 Markdown 문서로 fallback한다.
+    - 팀원 DB 환경: knowledge_documents 사용
+    - 개인 로컬 환경: data/knowledge Markdown 사용
+    """
+    if has_db_config():
+        try:
+            docs = load_knowledge_documents_from_db()
+            print("[RAG 문서 로드 방식] PostgreSQL knowledge_documents")
+            return docs
+        except Exception as exc:
+            print("[RAG 문서 로드 방식] PostgreSQL 연결 실패, Markdown 파일로 fallback")
+            print(f"- DB 로드 실패 사유: {exc}")
+
+    docs = load_knowledge_documents_from_markdown()
+    print("[RAG 문서 로드 방식] Markdown data/knowledge")
     return docs
 
 
@@ -329,8 +430,10 @@ def save_result_files(complaint, analysis, rag_results, draft):
         "analysis": analysis,
         "ragResults": [
             {
+                "document_id": item.get("id"),
                 "title": item["title"],
                 "source_type": item.get("source_type", ""),
+                "source_name": item.get("source_name", ""),
                 "content": item["content"],
                 "score": item["score"],
                 "matched_terms": item.get("matched_terms", [])
