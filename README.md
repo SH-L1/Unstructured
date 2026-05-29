@@ -19,6 +19,7 @@
 
 ```text
 egov-boot-web/   # 메인 백엔드: eGovFrame 5.0 기반 Maven 프로젝트
+ai-rag-engine/   # Python 로컬 AI/RAG 검증 엔진 및 지식문서 적재 스크립트
 backend/         # 이전 Spring Boot/Gradle 백엔드. 참고용 또는 추후 정리 대상
 docs/            # 산출물/문서 참고 영역
 ```
@@ -43,8 +44,12 @@ docs/            # 산출물/문서 참고 영역
 - Spring Security 기본 설정
 - Actuator health endpoint
 - Mock 기반 민원 분류/담당 부서 추론
+- Python 기반 로컬 AI/RAG 검증 스크립트
+- 지식문서 Markdown을 `knowledge_documents` 테이블에 적재하는 스크립트
 
 현재 개발 기본값에서는 실제 외부 AI/AWS 서비스를 호출하지 않습니다. AI 분석, RAG 검색, 공문 초안 생성은 로컬 Mock/PostgreSQL 기반으로 동작하며, S3, Bedrock, OpenSearch Serverless는 명시적으로 설정을 켰을 때만 연결됩니다.
+
+`ai-rag-engine`은 별도 Python 검증 도구입니다. OpenAI API를 직접 사용할 수 있으므로 `.env`에 API Key를 넣어야 하며, 기본 백엔드 실행에는 필요하지 않습니다.
 
 ## 주요 API
 
@@ -81,6 +86,19 @@ mvn spring-boot:run
 ```powershell
 Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
 ```
+
+Python AI/RAG 엔진을 별도로 확인할 때:
+
+```powershell
+cd C:\Users\user\Documents\GitHub\Unstructured\ai-rag-engine
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+Copy-Item .env.example .env
+.venv\Scripts\python.exe test_db_connection.py
+.venv\Scripts\python.exe insert_knowledge_documents.py
+```
+
+`main.py`는 OpenAI API를 호출하므로 비용이 발생할 수 있다.
 
 ## DB 기준
 

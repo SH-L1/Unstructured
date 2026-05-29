@@ -2,6 +2,52 @@
 
 이 문서는 현재 저장소의 최종 개발 기준과 실행 세팅을 빠르게 확인하기 위한 요약이다.
 
+## 2026-05-29 현재 핵심 변경 요약
+
+팀원 변경 이후 현재 프로젝트는 `egov-boot-web` 중심으로 정리되어 있다.
+
+```text
+egov-boot-web:
+메인 백엔드. eGovFrame Boot Web 5.0 기반 Maven 프로젝트.
+
+ai-rag-engine:
+Python 로컬 AI/RAG 검증 엔진. OpenAI API 실험과 Markdown 지식문서 DB 적재 담당.
+
+backend:
+초기 Spring Boot/Gradle 백엔드. 현재는 참고용 또는 삭제 검토 대상.
+```
+
+최근 팀원 수정으로 추가/확장된 내용:
+
+- eGovFrame 5.0 기반 `egov-boot-web` 메인 서버
+- Flyway V1~V3 마이그레이션 기반 DB 스키마
+- 정규화된 민원 DB 모델과 Repository 계층
+- 민원 등록/조회/필터링/상태 변경 API
+- 민원 분석/GeoJSON/RAG 근거/공문 초안 생성 및 수정 API
+- 첨부파일 업로드/목록/다운로드/삭제 API
+- 부서 조회 API
+- API Key 인증 옵션, API 사용자 모델, 감사 로그
+- local/S3 파일 저장소 선택 구조
+- Mock/Bedrock AI 분석 및 초안 생성 선택 구조
+- PostgreSQL/OpenSearch RAG 검색 선택 구조
+- Dockerfile, 운영 프로파일, 비AWS 기본 설정
+- Python `ai-rag-engine`과 샘플 지식문서/민원 데이터
+
+이번 확인에서 검증한 내용:
+
+```text
+egov-boot-web: mvn -q test 통과
+backend: .\gradlew.bat test 통과
+ai-rag-engine: python -m py_compile main.py insert_knowledge_documents.py test_db_connection.py 통과
+```
+
+주의:
+
+- 최종 산출물과 발표 기준 서버는 `egov-boot-web`이다.
+- `ai-rag-engine/main.py`는 OpenAI API를 호출하므로 실행 시 비용이 발생할 수 있다.
+- 기본 개발 설정은 AWS S3, Bedrock, OpenSearch Serverless를 호출하지 않는다.
+- API Key, DB 비밀번호, AWS/OpenAI Key는 코드와 Git에 직접 저장하지 않는다.
+
 ## 최종 기준
 
 전자정부프레임워크 사용이 필수이므로 메인 백엔드는 `egov-boot-web`이다.
@@ -18,6 +64,7 @@ C:\Users\user\Documents\GitHub\Unstructured\egov-boot-web
 
 ```text
 egov-boot-web/   # 메인 백엔드: eGovFrame 5.0 기반 Maven 프로젝트
+ai-rag-engine/   # Python AI/RAG 검증 엔진 및 지식문서 적재 스크립트
 backend/         # 이전 Spring Boot/Gradle 백엔드. 참고용 또는 추후 정리 대상
 ```
 

@@ -205,3 +205,58 @@ Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
 - `PLAN.md`: 개발 방향, 요구사항, 구현 계획
 
 문서에서 백엔드 기준을 설명할 때는 항상 `egov-boot-web`을 기준으로 작성한다.
+
+## 11. 2026-05-29 팀원 수정사항 파악 결과
+
+팀원 변경 이후 프로젝트 구조와 진행상황을 재확인했다. 현재 기준 메인 서버는 `egov-boot-web`이며, 기존 `backend`는 참고용/정리 대상이다.
+
+새로 확인된 주요 변경사항:
+
+- `egov-boot-web`에 eGovFrame Boot Web 5.0 기반 Maven 백엔드가 추가되었다.
+- 민원 도메인/API가 `egovframework.example.complaint` 패키지로 이식 및 확장되었다.
+- DB 스키마가 Flyway 마이그레이션으로 전환되었다.
+- `complaints`, `complaint_attachments`, `complaint_analysis`, `departments`, `knowledge_documents`, `official_drafts`, `draft_revisions`, `rag_contexts`, `audit_logs`, `api_users` 중심의 정규화 모델이 추가되었다.
+- API 응답은 `ApiResponse`, 오류 응답은 `ApiError` 기반으로 정리되었다.
+- 민원 목록 필터링/페이지네이션, 상태 변경, 분석 조회, GeoJSON 조회, RAG 근거 조회, 초안 생성/수정, 첨부파일 업로드/다운로드/삭제, 부서 조회 API가 구현되었다.
+- 파일 저장소는 local 기본값과 S3 선택 구현으로 분리되었다.
+- AI 분석/초안 생성은 Mock 기본값과 Bedrock 선택 구현으로 분리되었다.
+- RAG 검색은 PostgreSQL 기반 기본 구현과 OpenSearch Serverless 선택 구현으로 분리되었다.
+- API Key 인증 옵션, API 사용자 모델, 감사 로그 필터가 추가되었다.
+- Dockerfile, `.dockerignore`, 운영 프로파일 `application-prod.properties`가 추가되었다.
+- `ai-rag-engine` Python 모듈이 추가되어 Markdown 지식문서 기반 OpenAI RAG 실험과 `knowledge_documents` 테이블 적재를 지원한다.
+
+현재 검증 결과:
+
+```text
+egov-boot-web: mvn -q test 통과
+backend: .\gradlew.bat test 통과
+ai-rag-engine: python -m py_compile main.py insert_knowledge_documents.py test_db_connection.py 통과
+```
+
+검증 시 확인된 런타임 특징:
+
+- `egov-boot-web` 테스트는 Spring Boot 3.5.6, Spring 6.2.11, Java 17로 실행된다.
+- H2 테스트 DB에 Flyway V1~V3 마이그레이션이 적용되고 API smoke test가 통과한다.
+- 테스트는 민원 등록, 분석, 초안 생성/수정, RAG 조회, 부서 조회, 첨부파일 업로드/조회/다운로드/삭제 흐름을 검증한다.
+- 개발 기본 설정은 S3, Bedrock, OpenSearch Serverless를 호출하지 않는다.
+
+역할 정리:
+
+```text
+egov-boot-web:
+최종 메인 백엔드. 발표/산출물/실행 설명 기준.
+
+ai-rag-engine:
+Python 기반 AI/RAG 실험 및 지식문서 적재 도구. OpenAI API 사용 시 비용 발생 가능.
+
+backend:
+초기 Spring Boot/Gradle 백엔드. 현재는 참고용 또는 삭제 검토 대상.
+```
+
+다음 우선순위:
+
+1. `backend`를 유지할지 삭제할지 팀 기준으로 결정한다.
+2. 프론트엔드/대시보드를 `egov-boot-web` API에 연결한다.
+3. API 문서, DBeaver 확인 쿼리, 데모 시나리오를 정리한다.
+4. `ai-rag-engine`에서 적재한 지식문서를 `egov-boot-web`의 PostgreSQL RAG 검색과 연결해 데모 데이터를 보강한다.
+5. AWS 실연동은 비용 검토 후 S3, Bedrock, OpenSearch 순서로 별도 활성화한다.
