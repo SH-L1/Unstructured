@@ -1,0 +1,32 @@
+[
+  {
+    "id": "CPL-001",
+    "text": "아산시 배방읍 길가에 쓰레기가 버려져 있어서 냄새가 너무 심합니다. 빨리 치워주세요.",
+    "expected_category": "불법 투기",
+    "expected_department": "자원순환과"
+  },
+  {
+    "id": "CPL-002",
+    "text": "탕정면 도로에 큰 구멍이 생겨서 차량이 지나갈 때 너무 위험합니다.",
+    "expected_category": "도로 파손",
+    "expected_department": "도로관리과"
+  },
+  {
+    "id": "CPL-003",
+    "text": "온양온천역 근처 인도 보도블록이 깨져 있어서 어르신들이 걸어가다가 넘어질 것 같습니다. 확인 부탁드립니다.",
+    "expected_category": "도로 파손",
+    "expected_department": "도로관리과"
+  },
+  {
+    "id": "CPL-004",
+    "text": "아파트 앞 공터에 누가 폐가구를 버리고 갔습니다. 며칠째 방치되어 있어서 보기에도 안 좋고 악취가 납니다.",
+    "expected_category": "불법 투기",
+    "expected_department": "자원순환과"
+  },
+  {
+    "id": "CPL-005",
+    "text": "학교 앞 횡단보도 근처 도로가 갈라져 있어 학생들이 등하교할 때 위험해 보입니다.",
+    "expected_category": "도로 파손",
+    "expected_department": "도로관리과"
+  }
+]

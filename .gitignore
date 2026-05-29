@@ -31,6 +31,10 @@ desktop.ini
 *.pid
 *.seed
 *.stackdump
+__pycache__/
+.venv/
+output_*.json
+output_*_report.md
 
 # Local environment and secrets
 .env
