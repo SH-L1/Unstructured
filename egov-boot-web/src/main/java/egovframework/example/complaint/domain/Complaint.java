@@ -27,12 +27,30 @@ public class Complaint {
 	@Column(length = 500)
 	private String locationText;
 
+	@Column(length = 100)
+	private String intent;
+
+	@Column(length = 30)
+	private String urgency;
+
+	@Column(length = 30)
+	private String sentiment;
+
+	@Column(length = 100)
+	private String department;
+
+	@Column(columnDefinition = "text")
+	private String draftText;
+
 	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 30)
 	private ComplaintStatus status;
 
 	@Column(nullable = false, updatable = false)
 	private LocalDateTime createdAt;
+
+	@Column
+	private LocalDateTime updatedAt;
 
 	protected Complaint() {
 	}
@@ -52,9 +70,17 @@ public class Complaint {
 		if (createdAt == null) {
 			createdAt = LocalDateTime.now();
 		}
+		if (updatedAt == null) {
+			updatedAt = createdAt;
+		}
 		if (status == null) {
 			status = ComplaintStatus.RECEIVED;
 		}
+	}
+
+	@jakarta.persistence.PreUpdate
+	void preUpdate() {
+		updatedAt = LocalDateTime.now();
 	}
 
 	public UUID getId() {
@@ -77,7 +103,52 @@ public class Complaint {
 		return status;
 	}
 
+	public String getIntent() {
+		return intent;
+	}
+
+	public String getUrgency() {
+		return urgency;
+	}
+
+	public String getSentiment() {
+		return sentiment;
+	}
+
+	public String getDepartment() {
+		return department;
+	}
+
+	public String getDraftText() {
+		return draftText;
+	}
+
 	public LocalDateTime getCreatedAt() {
 		return createdAt;
+	}
+
+	public LocalDateTime getUpdatedAt() {
+		return updatedAt;
+	}
+
+	public void applyAnalysis(String intent, String urgency, String sentiment, String department) {
+		this.intent = intent;
+		this.urgency = urgency;
+		this.sentiment = sentiment;
+		this.department = department;
+		if (status == ComplaintStatus.RECEIVED) {
+			this.status = ComplaintStatus.ANALYZED;
+		}
+	}
+
+	public void updateDraft(String draftText) {
+		this.draftText = draftText;
+		if (status == ComplaintStatus.RECEIVED || status == ComplaintStatus.ANALYZED) {
+			this.status = ComplaintStatus.DRAFTED;
+		}
+	}
+
+	public void changeStatus(ComplaintStatus status) {
+		this.status = status;
 	}
 }

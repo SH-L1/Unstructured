@@ -1,26 +1,55 @@
 package egovframework.example.complaint.service;
 
+import egovframework.example.complaint.api.dto.AttachmentResponse;
 import egovframework.example.complaint.api.dto.ComplaintAnalysisResponse;
 import egovframework.example.complaint.api.dto.ComplaintResponse;
 import egovframework.example.complaint.api.dto.CreateComplaintRequest;
 import egovframework.example.complaint.api.dto.DraftResponse;
 import egovframework.example.complaint.api.dto.RagContextResponse;
 import egovframework.example.complaint.domain.Complaint;
+import egovframework.example.complaint.domain.ComplaintAttachment;
+import egovframework.example.complaint.domain.ComplaintStatus;
+import egovframework.example.complaint.repository.ComplaintAttachmentRepository;
 import egovframework.example.complaint.repository.ComplaintRepository;
 import jakarta.persistence.EntityNotFoundException;
+import jakarta.persistence.criteria.Predicate;
+import java.io.IOException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 @Service
 public class ComplaintService {
 
 	private final ComplaintRepository complaintRepository;
+	private final ComplaintAttachmentRepository complaintAttachmentRepository;
+	private final ComplaintAnalysisService complaintAnalysisService;
+	private final DraftService draftService;
+	private final RagSearchService ragSearchService;
+	private final FileStorageService fileStorageService;
 
-	public ComplaintService(ComplaintRepository complaintRepository) {
+	public ComplaintService(
+			ComplaintRepository complaintRepository,
+			ComplaintAttachmentRepository complaintAttachmentRepository,
+			ComplaintAnalysisService complaintAnalysisService,
+			DraftService draftService,
+			RagSearchService ragSearchService,
+			FileStorageService fileStorageService
+	) {
 		this.complaintRepository = complaintRepository;
+		this.complaintAttachmentRepository = complaintAttachmentRepository;
+		this.complaintAnalysisService = complaintAnalysisService;
+		this.draftService = draftService;
+		this.ragSearchService = ragSearchService;
+		this.fileStorageService = fileStorageService;
 	}
 
 	@Transactional
@@ -31,10 +60,14 @@ public class ComplaintService {
 	}
 
 	@Transactional(readOnly = true)
-	public List<ComplaintResponse> findAll() {
-		return complaintRepository.findAll().stream()
-				.map(ComplaintResponse::from)
-				.toList();
+	public Page<ComplaintResponse> findAll(
+			ComplaintStatus status,
+			String department,
+			String urgency,
+			Pageable pageable
+	) {
+		return complaintRepository.findAll(filterBy(status, department, urgency), pageable)
+				.map(ComplaintResponse::from);
 	}
 
 	@Transactional(readOnly = true)
@@ -42,61 +75,100 @@ public class ComplaintService {
 		return ComplaintResponse.from(getComplaint(id));
 	}
 
-	@Transactional(readOnly = true)
+	@Transactional
+	public ComplaintResponse updateStatus(UUID id, ComplaintStatus status) {
+		Complaint complaint = getComplaint(id);
+		complaint.changeStatus(status);
+		return ComplaintResponse.from(complaint);
+	}
+
+	@Transactional
 	public ComplaintAnalysisResponse analyze(UUID id) {
 		Complaint complaint = getComplaint(id);
-		String text = complaint.getRawText().toLowerCase(Locale.ROOT);
-		String intent = containsAny(text, "쓰레기", "폐기물", "무단투기", "불법 투기", "trash", "waste", "dumping")
-				? "불법 투기 신고"
-				: "일반 생활 민원";
-		String urgency = containsAny(text, "위험", "파손", "긴급", "악취", "danger", "broken", "urgent")
-				? "HIGH"
-				: "NORMAL";
-		String sentiment = containsAny(text, "불편", "화남", "짜증", "민원", "complaint", "uncomfortable")
-				? "NEGATIVE"
-				: "NEUTRAL";
-		String department = "불법 투기 신고".equals(intent) ? "자원순환과" : "민원처리과";
-		String locationText = complaint.getLocationText();
-		String geoJson = locationText == null || locationText.isBlank() ? null : """
-				{"type":"Feature","properties":{"locationText":"%s"},"geometry":null}
-				""".formatted(escapeJson(locationText)).trim();
+		ComplaintAnalysisResponse analysis = complaintAnalysisService.analyze(complaint);
+		complaint.applyAnalysis(analysis.intent(), analysis.urgency(), analysis.sentiment(), analysis.department());
+		return analysis;
+	}
 
-		return new ComplaintAnalysisResponse(
-				complaint.getId(),
-				intent,
-				urgency,
-				sentiment,
-				department,
-				locationText,
-				geoJson
-		);
+	@Transactional
+	public DraftResponse generateDraft(UUID id) {
+		Complaint complaint = getComplaint(id);
+		ComplaintAnalysisResponse analysis = ensureAnalysis(complaint);
+		DraftResponse draft = draftService.generateDraft(complaint, analysis);
+		complaint.updateDraft(draft.draftText());
+		return draft;
+	}
+
+	@Transactional
+	public DraftResponse updateDraft(UUID id, String draftText) {
+		Complaint complaint = getComplaint(id);
+		complaint.updateDraft(draftText);
+		return draftService.updateDraft(complaint, draftText);
 	}
 
 	@Transactional(readOnly = true)
-	public DraftResponse generateDraft(UUID id) {
-		Complaint complaint = getComplaint(id);
-		ComplaintAnalysisResponse analysis = analyze(id);
-		List<RagContextResponse> references = List.of(
-				new RagContextResponse(
-						"mock-waste-ordinance-001",
-						"폐기물관리법 및 지자체 폐기물 관리 조례",
-						"생활폐기물 무단투기 신고 접수 시 현장 확인, 수거 조치, 위반 행위 확인 절차를 진행한다.",
-						0.92
-				),
-				new RagContextResponse(
-						"mock-civil-manual-001",
-						"민원 응대 매뉴얼",
-						"민원 답변은 접수 사실, 처리 예정 절차, 담당 부서, 추가 확인 사항을 포함하여 작성한다.",
-						0.87
-				)
-		);
-		String draftText = """
-				안녕하십니까. 접수하신 민원은 %s 건으로 확인했습니다.
-				제출하신 내용은 해당 부서인 %s에서 검토할 예정이며, 현장 확인이 필요한 경우 관련 절차에 따라 조치하겠습니다.
-				검토 과정에서 추가 확인이 필요한 사항이 있을 경우 별도로 안내드리겠습니다.
-				""".formatted(analysis.intent(), analysis.department()).trim();
+	public List<RagContextResponse> findRagContexts(UUID id) {
+		return ragSearchService.searchContexts(getComplaint(id));
+	}
 
-		return new DraftResponse(complaint.getId(), draftText, references);
+	@Transactional(readOnly = true)
+	public String findGeoJson(UUID id) {
+		Complaint complaint = getComplaint(id);
+		return complaintAnalysisService.analyze(complaint).geoJson();
+	}
+
+	@Transactional
+	public AttachmentResponse addAttachment(UUID id, MultipartFile file) {
+		if (file == null || file.isEmpty()) {
+			throw new IllegalArgumentException("Attachment file is required");
+		}
+		Complaint complaint = getComplaint(id);
+		try {
+			StoredFile storedFile = fileStorageService.store(
+					file.getOriginalFilename(),
+					file.getContentType(),
+					file.getSize(),
+					file.getInputStream()
+			);
+			ComplaintAttachment attachment = new ComplaintAttachment(
+					complaint,
+					storedFile.originalFilename(),
+					storedFile.contentType(),
+					storedFile.size(),
+					storedFile.storageKey()
+			);
+			return AttachmentResponse.from(complaintAttachmentRepository.save(attachment));
+		}
+		catch (IOException exception) {
+			throw new IllegalStateException("Failed to read attachment file", exception);
+		}
+	}
+
+	@Transactional(readOnly = true)
+	public List<AttachmentResponse> findAttachments(UUID id) {
+		getComplaint(id);
+		return complaintAttachmentRepository.findByComplaintIdOrderByCreatedAtDesc(id).stream()
+				.map(AttachmentResponse::from)
+				.toList();
+	}
+
+	private ComplaintAnalysisResponse ensureAnalysis(Complaint complaint) {
+		if (StringUtils.hasText(complaint.getIntent())
+				&& StringUtils.hasText(complaint.getUrgency())
+				&& StringUtils.hasText(complaint.getDepartment())) {
+			return new ComplaintAnalysisResponse(
+					complaint.getId(),
+					complaint.getIntent(),
+					complaint.getUrgency(),
+					complaint.getSentiment(),
+					complaint.getDepartment(),
+					complaint.getLocationText(),
+					complaintAnalysisService.analyze(complaint).geoJson()
+			);
+		}
+		ComplaintAnalysisResponse analysis = complaintAnalysisService.analyze(complaint);
+		complaint.applyAnalysis(analysis.intent(), analysis.urgency(), analysis.sentiment(), analysis.department());
+		return analysis;
 	}
 
 	private Complaint getComplaint(UUID id) {
@@ -104,23 +176,26 @@ public class ComplaintService {
 				.orElseThrow(() -> new EntityNotFoundException("Complaint not found: " + id));
 	}
 
+	private Specification<Complaint> filterBy(ComplaintStatus status, String department, String urgency) {
+		return (root, query, criteriaBuilder) -> {
+			List<Predicate> predicates = new ArrayList<>();
+			if (status != null) {
+				predicates.add(criteriaBuilder.equal(root.get("status"), status));
+			}
+			if (StringUtils.hasText(department)) {
+				predicates.add(criteriaBuilder.equal(criteriaBuilder.lower(root.get("department")), department.toLowerCase(Locale.ROOT)));
+			}
+			if (StringUtils.hasText(urgency)) {
+				predicates.add(criteriaBuilder.equal(criteriaBuilder.lower(root.get("urgency")), urgency.toLowerCase(Locale.ROOT)));
+			}
+			return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
+		};
+	}
+
 	private String normalizeSourceChannel(String sourceChannel) {
 		if (sourceChannel == null || sourceChannel.isBlank()) {
 			return "WEB";
 		}
 		return sourceChannel.trim().toUpperCase(Locale.ROOT);
-	}
-
-	private boolean containsAny(String text, String... keywords) {
-		for (String keyword : keywords) {
-			if (text.contains(keyword)) {
-				return true;
-			}
-		}
-		return false;
-	}
-
-	private String escapeJson(String value) {
-		return value.replace("\\", "\\\\").replace("\"", "\\\"");
 	}
 }

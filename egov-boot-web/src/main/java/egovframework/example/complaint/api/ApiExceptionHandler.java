@@ -1,33 +1,44 @@
 package egovframework.example.complaint.api;
 
+import egovframework.example.complaint.api.dto.ApiError;
+import egovframework.example.complaint.api.dto.ApiResponse;
 import jakarta.persistence.EntityNotFoundException;
-import java.time.LocalDateTime;
+import java.util.List;
 import org.springframework.http.HttpStatus;
-import org.springframework.http.ProblemDetail;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 @RestControllerAdvice
 public class ApiExceptionHandler {
 
 	@ExceptionHandler(EntityNotFoundException.class)
-	public ProblemDetail handleNotFound(EntityNotFoundException exception) {
-		ProblemDetail problem = ProblemDetail.forStatusAndDetail(HttpStatus.NOT_FOUND, exception.getMessage());
-		problem.setTitle("Resource not found");
-		problem.setProperty("timestamp", LocalDateTime.now());
-		return problem;
+	public ResponseEntity<ApiResponse<Void>> handleNotFound(EntityNotFoundException exception) {
+		return ResponseEntity.status(HttpStatus.NOT_FOUND)
+				.body(ApiResponse.error("NOT_FOUND", exception.getMessage()));
 	}
 
 	@ExceptionHandler(MethodArgumentNotValidException.class)
-	public ProblemDetail handleValidation(MethodArgumentNotValidException exception) {
-		ProblemDetail problem = ProblemDetail.forStatus(HttpStatus.BAD_REQUEST);
-		problem.setTitle("Validation failed");
-		problem.setDetail(exception.getBindingResult().getFieldErrors().stream()
-				.findFirst()
+	public ResponseEntity<ApiResponse<Void>> handleValidation(MethodArgumentNotValidException exception) {
+		List<String> details = exception.getBindingResult().getFieldErrors().stream()
 				.map(error -> error.getField() + " " + error.getDefaultMessage())
-				.orElse("Invalid request"));
-		problem.setProperty("timestamp", LocalDateTime.now());
-		return problem;
+				.toList();
+		ApiError error = new ApiError("VALIDATION_FAILED", "Request validation failed", details);
+		return ResponseEntity.badRequest()
+				.body(new ApiResponse<>(false, null, error.message(), error));
+	}
+
+	@ExceptionHandler({
+			MethodArgumentTypeMismatchException.class,
+			MissingServletRequestParameterException.class,
+			IllegalArgumentException.class,
+			IllegalStateException.class
+	})
+	public ResponseEntity<ApiResponse<Void>> handleBadRequest(Exception exception) {
+		return ResponseEntity.badRequest()
+				.body(ApiResponse.error("BAD_REQUEST", exception.getMessage()));
 	}
 }

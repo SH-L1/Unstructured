@@ -10,8 +10,11 @@ public record ComplaintResponse(
 		String sourceChannel,
 		String rawText,
 		String locationText,
+		String urgency,
+		String department,
 		ComplaintStatus status,
-		LocalDateTime createdAt
+		LocalDateTime createdAt,
+		LocalDateTime updatedAt
 ) {
 	public static ComplaintResponse from(Complaint complaint) {
 		return new ComplaintResponse(
@@ -19,8 +22,11 @@ public record ComplaintResponse(
 				complaint.getSourceChannel(),
 				complaint.getRawText(),
 				complaint.getLocationText(),
+				complaint.getUrgency(),
+				complaint.getDepartment(),
 				complaint.getStatus(),
-				complaint.getCreatedAt()
+				complaint.getCreatedAt(),
+				complaint.getUpdatedAt()
 		);
 	}
 }
