@@ -1,25 +1,32 @@
 package com.school.complaint.domain;
 
+import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
-import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.UUID;
 
 @Entity
 @Table(name = "complaints")
-public class Complaint {
+public class Complaint extends BaseTimeEntity {
 
 	@Id
 	@Column(nullable = false, updatable = false)
 	private UUID id;
 
-	@Column(nullable = false, length = 50)
-	private String sourceChannel;
+	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 30)
+	private SourceChannel sourceChannel;
+
+	@Column(nullable = false, length = 200)
+	private String title;
 
 	@Column(nullable = false, columnDefinition = "text")
 	private String rawText;
@@ -31,14 +38,15 @@ public class Complaint {
 	@Column(nullable = false, length = 30)
 	private ComplaintStatus status;
 
-	@Column(nullable = false, updatable = false)
-	private LocalDateTime createdAt;
+	@OneToMany(mappedBy = "complaint", cascade = CascadeType.ALL, orphanRemoval = true)
+	private List<ComplaintAttachment> attachments = new ArrayList<>();
 
 	protected Complaint() {
 	}
 
-	public Complaint(String sourceChannel, String rawText, String locationText) {
+	public Complaint(SourceChannel sourceChannel, String title, String rawText, String locationText) {
 		this.sourceChannel = sourceChannel;
+		this.title = title;
 		this.rawText = rawText;
 		this.locationText = locationText;
 		this.status = ComplaintStatus.RECEIVED;
@@ -49,20 +57,29 @@ public class Complaint {
 		if (id == null) {
 			id = UUID.randomUUID();
 		}
-		if (createdAt == null) {
-			createdAt = LocalDateTime.now();
-		}
 		if (status == null) {
 			status = ComplaintStatus.RECEIVED;
 		}
+	}
+
+	public void markAnalyzed() {
+		status = ComplaintStatus.ANALYZED;
+	}
+
+	public void markDraftGenerated() {
+		status = ComplaintStatus.DRAFT_GENERATED;
 	}
 
 	public UUID getId() {
 		return id;
 	}
 
-	public String getSourceChannel() {
+	public SourceChannel getSourceChannel() {
 		return sourceChannel;
+	}
+
+	public String getTitle() {
+		return title;
 	}
 
 	public String getRawText() {
@@ -77,7 +94,7 @@ public class Complaint {
 		return status;
 	}
 
-	public LocalDateTime getCreatedAt() {
-		return createdAt;
+	public List<ComplaintAttachment> getAttachments() {
+		return attachments;
 	}
 }

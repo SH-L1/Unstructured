@@ -5,4 +5,8 @@ import java.io.InputStream;
 public interface FileStorageService {
 
 	StoredFile store(String originalFilename, String contentType, long size, InputStream inputStream);
+
+	StoredFileContent load(String storageKey);
+
+	void delete(String storageKey);
 }

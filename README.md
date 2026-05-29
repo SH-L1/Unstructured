@@ -37,11 +37,14 @@ docs/            # 산출물/문서 참고 영역
 - GeoJSON 조회 API
 - JPA 기반 민원 저장
 - PostgreSQL 연동
+- Flyway 기반 DB 마이그레이션
+- API Key 인증 옵션
+- API 감사 로그 저장
 - Spring Security 기본 설정
 - Actuator health endpoint
 - Mock 기반 민원 분류/담당 부서 추론
 
-현재 AI/RAG 부분은 실제 외부 AI 서비스가 아니라 로컬 Mock 로직입니다. 이후 단계에서 Amazon Bedrock, 벡터 검색, 문서 저장소를 연결하는 방향으로 확장합니다.
+현재 개발 기본값에서는 실제 외부 AI/AWS 서비스를 호출하지 않습니다. AI 분석, RAG 검색, 공문 초안 생성은 로컬 Mock/PostgreSQL 기반으로 동작하며, S3, Bedrock, OpenSearch Serverless는 명시적으로 설정을 켰을 때만 연결됩니다.
 
 ## 주요 API
 
@@ -51,6 +54,8 @@ GET  /api/complaints?status=&department=&urgency=&page=&size=
 GET  /api/complaints/{id}
 POST /api/complaints/{id}/attachments
 GET  /api/complaints/{id}/attachments
+GET  /api/complaints/{id}/attachments/{attachmentId}
+DELETE /api/complaints/{id}/attachments/{attachmentId}
 PATCH /api/complaints/{id}/status
 GET  /api/complaints/{id}/analysis
 GET  /api/complaints/{id}/draft
@@ -97,7 +102,7 @@ egov-boot-web/src/main/resources/application.properties
 
 1. eGovFrame 기반 백엔드 구조를 기준으로 유지합니다.
 2. 민원 접수, 분석, 담당 부서 분류, 답변 초안 생성/수정 흐름을 API 단위로 안정화합니다.
-3. Mock 분석/RAG/초안 서비스를 실제 AI/RAG 연동으로 교체합니다.
-4. 첨부파일 저장소 인터페이스를 실제 저장소 구현으로 연결합니다.
+3. 개발 중에는 Mock 분석/RAG/초안 서비스와 로컬 파일 저장소를 기본값으로 유지합니다.
+4. AWS 실연동은 비용 검토 후 별도 단계에서 필요한 기능만 명시적으로 켭니다.
 5. PostgreSQL 업무 데이터와 문서/벡터 저장소를 분리해 확장합니다.
 6. 운영 단계에서는 보안, 로깅, 예외 처리, 감사 추적, 배포 자동화를 강화합니다.

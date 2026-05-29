@@ -13,12 +13,16 @@ public class MockRagSearchService implements RagSearchService {
 		return List.of(
 				new RagContextResponse(
 						"mock-waste-ordinance-001",
+						"Waste Management Act handling basis",
+						"LAW",
 						"Waste Management Act and local waste handling ordinance",
 						"After receiving a waste dumping complaint, the department checks the site, removes waste and reviews whether enforcement action is needed.",
 						0.92
 				),
 				new RagContextResponse(
 						"mock-civil-manual-001",
+						"Civil complaint response manual",
+						"MANUAL",
 						"Civil complaint response manual",
 						"A response should include the received facts, expected processing steps, responsible department and any additional confirmation required.",
 						0.87

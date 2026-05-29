@@ -12,14 +12,18 @@ import egovframework.example.complaint.api.dto.UpdateComplaintStatusRequest;
 import egovframework.example.complaint.api.dto.UpdateDraftRequest;
 import egovframework.example.complaint.domain.ComplaintStatus;
 import egovframework.example.complaint.service.ComplaintService;
+import egovframework.example.complaint.service.ComplaintService.DownloadedAttachment;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -113,5 +117,27 @@ public class ComplaintController {
 	@GetMapping("/{id}/attachments")
 	public ApiResponse<List<AttachmentResponse>> attachments(@PathVariable UUID id) {
 		return ApiResponse.ok(complaintService.findAttachments(id));
+	}
+
+	@GetMapping("/{id}/attachments/{attachmentId}")
+	public ResponseEntity<byte[]> downloadAttachment(
+			@PathVariable UUID id,
+			@PathVariable UUID attachmentId
+	) {
+		DownloadedAttachment attachment = complaintService.downloadAttachment(id, attachmentId);
+		String contentType = attachment.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : attachment.contentType();
+		return ResponseEntity.ok()
+				.header(HttpHeaders.CONTENT_DISPOSITION, complaintService.attachmentDisposition(attachment.originalFilename()))
+				.contentType(MediaType.parseMediaType(contentType))
+				.body(attachment.bytes());
+	}
+
+	@DeleteMapping("/{id}/attachments/{attachmentId}")
+	public ResponseEntity<Void> deleteAttachment(
+			@PathVariable UUID id,
+			@PathVariable UUID attachmentId
+	) {
+		complaintService.deleteAttachment(id, attachmentId);
+		return ResponseEntity.noContent().build();
 	}
 }

@@ -1,0 +1,8 @@
+package egovframework.example.complaint.domain;
+
+public enum DraftStatus {
+	DRAFT,
+	REVISED,
+	APPROVED,
+	REJECTED
+}

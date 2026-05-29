@@ -40,8 +40,10 @@ public class MockComplaintAnalysisService implements ComplaintAnalysisService {
 				urgency,
 				sentiment,
 				department,
+				department,
 				locationText,
-				geoJson
+				geoJson,
+				"{}"
 		);
 	}
 

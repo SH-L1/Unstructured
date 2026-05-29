@@ -22,8 +22,22 @@ public record ComplaintResponse(
 				complaint.getSourceChannel(),
 				complaint.getRawText(),
 				complaint.getLocationText(),
-				complaint.getUrgency(),
-				complaint.getDepartment(),
+				null,
+				null,
+				complaint.getStatus(),
+				complaint.getCreatedAt(),
+				complaint.getUpdatedAt()
+		);
+	}
+
+	public static ComplaintResponse from(Complaint complaint, ComplaintAnalysisResponse analysis) {
+		return new ComplaintResponse(
+				complaint.getId(),
+				complaint.getSourceChannel(),
+				complaint.getRawText(),
+				complaint.getLocationText(),
+				analysis == null ? null : analysis.urgency(),
+				analysis == null ? null : analysis.department(),
 				complaint.getStatus(),
 				complaint.getCreatedAt(),
 				complaint.getUpdatedAt()

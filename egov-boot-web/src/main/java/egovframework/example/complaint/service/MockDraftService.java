@@ -24,11 +24,11 @@ public class MockDraftService implements DraftService {
 				The responsible department is expected to be %s. The department will review the submitted details and take follow-up action according to the relevant procedure.
 				If additional confirmation is needed during the review, we will contact you separately.
 				""".formatted(analysis.intent(), analysis.department()).trim();
-		return new DraftResponse(complaint.getId(), draftText, references);
+		return new DraftResponse(null, complaint.getId(), draftText, "mock-bedrock-illegal-dumping-v1", "DRAFT", references);
 	}
 
 	@Override
 	public DraftResponse updateDraft(Complaint complaint, String draftText) {
-		return new DraftResponse(complaint.getId(), draftText, ragSearchService.searchContexts(complaint));
+		return new DraftResponse(null, complaint.getId(), draftText, "mock-bedrock-illegal-dumping-v1", "REVISED", ragSearchService.searchContexts(complaint));
 	}
 }

@@ -3,7 +3,7 @@ package egovframework.example.complaint.domain;
 public enum ComplaintStatus {
 	RECEIVED,
 	ANALYZED,
-	DRAFTED,
+	DRAFT_GENERATED,
 	IN_PROGRESS,
 	COMPLETED,
 	REJECTED

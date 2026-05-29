@@ -7,8 +7,10 @@ public record ComplaintAnalysisResponse(
 		String intent,
 		String urgency,
 		String sentiment,
+		String departmentCode,
 		String department,
 		String locationText,
-		String geoJson
+		String geoJson,
+		String analysisJson
 ) {
 }

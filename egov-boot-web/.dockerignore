@@ -1,0 +1,7 @@
+target/*
+!target/egovframe-project-1.0.0.jar
+.mvn
+*.log
+src
+pom.xml
+README*

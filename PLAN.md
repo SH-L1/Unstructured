@@ -4,7 +4,7 @@
 
 본 프로젝트는 전자정부 표준프레임워크(eGovFrame) 5.0 기반 백엔드를 사용해 비정형 민원을 접수, 분석, 분류하고 담당자가 활용할 수 있는 공문 답변 초안을 생성하는 시스템을 목표로 한다.
 
-현재 단계에서는 민원 접수와 분석 결과 조회가 가능한 eGovFrame 기반 백엔드 골격을 먼저 확립한다. AI/RAG 기능은 Mock 로직으로 시작하고, 이후 실제 AI 서비스와 벡터 검색 구조로 확장한다.
+현재 개발 기준에서는 민원 접수와 분석 결과 조회가 가능한 eGovFrame 기반 백엔드 골격을 확립하고, AI/RAG 기능은 비용이 발생하지 않는 Mock/PostgreSQL 로직으로 운영한다. AWS 실연동은 비용 검토 후 별도 단계에서 명시적으로 켠다.
 
 ## 2. 최종 개발 기준
 
@@ -24,8 +24,9 @@
 flowchart LR
     Citizen["민원 제출자"] --> API["eGovFrame Boot Web API"]
     API --> DB["PostgreSQL complaintdb"]
-    API --> Analyzer["민원 분석/분류 서비스"]
-    Analyzer --> Draft["답변 초안 생성 서비스"]
+    API --> Analyzer["Mock 민원 분석/분류 서비스"]
+    Analyzer --> Rag["PostgreSQL 기반 RAG 문서 검색"]
+    Rag --> Draft["Mock 답변 초안 생성 서비스"]
     Draft --> API
     API --> Staff["담당자/관리자"]
 ```
@@ -42,6 +43,7 @@ flowchart LR
 - Spring Data JPA
 - Spring Security
 - Spring Actuator
+- Flyway
 - PostgreSQL JDBC Driver
 - Maven
 
@@ -81,6 +83,10 @@ egov-boot-web/src/main/java/egovframework/example/complaint
 - Mock 기반 민원 유형/담당 부서 분류
 - 공통 API 응답 및 공통 예외 응답
 - 분석, 초안, RAG, 부서 라우팅 서비스 분리
+- Flyway 기반 DB 마이그레이션
+- API Key 인증 옵션
+- API 감사 로그 저장
+- 선택형 S3/Bedrock/OpenSearch 구현 경계 추가
 
 주요 API:
 
@@ -90,6 +96,8 @@ GET  /api/complaints?status=&department=&urgency=&page=&size=
 GET  /api/complaints/{id}
 POST /api/complaints/{id}/attachments
 GET  /api/complaints/{id}/attachments
+GET  /api/complaints/{id}/attachments/{attachmentId}
+DELETE /api/complaints/{id}/attachments/{attachmentId}
 PATCH /api/complaints/{id}/status
 GET  /api/complaints/{id}/analysis
 GET  /api/complaints/{id}/draft
@@ -119,8 +127,16 @@ server.port=8081
 spring.datasource.url=jdbc:postgresql://localhost:5432/complaintdb
 spring.datasource.username=complaint_user
 spring.datasource.password=complaint_pass
-spring.jpa.hibernate.ddl-auto=update
+spring.jpa.hibernate.ddl-auto=validate
+spring.flyway.enabled=true
+spring.flyway.baseline-on-migrate=true
 management.endpoints.web.exposure.include=health,info
+app.ai.provider=mock-bedrock
+app.aws.s3.enabled=false
+app.aws.bedrock.enabled=false
+app.rag.provider=postgres-mock
+app.rag.opensearch.enabled=false
+app.file-storage.provider=local
 ```
 
 실행:
@@ -145,7 +161,8 @@ Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
 - 시스템은 등록된 민원을 DB에 저장해야 한다.
 - 시스템은 민원 내용을 기반으로 민원 유형과 담당 부서를 추론해야 한다.
 - 담당자는 민원 상세와 분석 결과를 조회할 수 있어야 한다.
-- 향후 시스템은 관련 문서 검색 결과를 바탕으로 답변 초안을 생성해야 한다.
+- 시스템은 관련 문서 검색 결과를 바탕으로 답변 초안을 생성해야 한다.
+- 개발 기본값에서는 외부 AWS 서비스를 직접 호출하지 않아야 한다.
 
 비기능 요구사항:
 
@@ -159,10 +176,10 @@ Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
 
 1. 민원 API 통합 테스트를 보강한다.
 2. 첨부파일 다운로드/삭제 API를 추가한다.
-3. 로컬 파일 저장소를 S3 등 운영 저장소 구현으로 교체한다.
-4. RAG용 문서 저장소와 벡터 검색 구조를 설계한다.
-5. Mock 분석/RAG/초안 서비스를 실제 AI 연동 구현으로 교체한다.
-6. 관리자/담당자 화면 또는 별도 프론트엔드 대시보드를 연결한다.
+3. 로컬 Mock 기준 통합 시나리오와 데모 데이터를 보강한다.
+4. RAG용 문서 저장소와 벡터 검색 구조를 정리한다.
+5. 관리자/담당자 화면 또는 별도 프론트엔드 대시보드를 연결한다.
+6. AWS 실연동은 비용 검토 후 필요한 기능만 명시적으로 켠다.
 7. 인증/인가 정책을 실제 사용자 역할 기준으로 구체화한다.
 8. 배포 환경 기준으로 프로파일, 로그, 보안 설정을 분리한다.
 
@@ -177,6 +194,7 @@ Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
 - `POST /api/complaints` 민원 등록 확인
 - `GET /api/complaints/{id}/analysis` 분석 결과 조회 확인
 - `mvn test` 기준 컴파일 성공 확인
+- 현재 개발 기본값에서 S3, Bedrock, OpenSearch Serverless를 호출하지 않도록 설정 확인
 
 ## 10. 문서화 기준
 

@@ -4,15 +4,19 @@ import com.school.complaint.api.dto.ComplaintAnalysisResponse;
 import com.school.complaint.api.dto.ComplaintResponse;
 import com.school.complaint.api.dto.CreateComplaintRequest;
 import com.school.complaint.api.dto.DraftResponse;
+import com.school.complaint.api.dto.RagContextResponse;
+import com.school.complaint.api.dto.UpdateDraftRequest;
 import com.school.complaint.service.ComplaintService;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -53,5 +57,24 @@ public class ComplaintController {
 	@GetMapping("/{id}/draft")
 	public DraftResponse draft(@PathVariable UUID id) {
 		return complaintService.generateDraft(id);
+	}
+
+	@PutMapping("/{id}/draft")
+	public DraftResponse reviseDraft(@PathVariable UUID id, @Valid @RequestBody UpdateDraftRequest request) {
+		return complaintService.reviseDraft(id, request);
+	}
+
+	@GetMapping("/{id}/rag-contexts")
+	public List<RagContextResponse> ragContexts(@PathVariable UUID id) {
+		return complaintService.findRagContexts(id);
+	}
+
+	@GetMapping(value = "/{id}/geojson", produces = MediaType.APPLICATION_JSON_VALUE)
+	public ResponseEntity<String> geoJson(@PathVariable UUID id) {
+		String geoJson = complaintService.findGeoJson(id);
+		if (geoJson == null || geoJson.isBlank()) {
+			return ResponseEntity.noContent().build();
+		}
+		return ResponseEntity.ok(geoJson);
 	}
 }

@@ -6,11 +6,13 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.UUID;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 @Service
+@ConditionalOnProperty(name = "app.file-storage.provider", havingValue = "local", matchIfMissing = true)
 public class LocalFileStorageService implements FileStorageService {
 
 	private final Path storageRoot;
@@ -35,5 +37,35 @@ public class LocalFileStorageService implements FileStorageService {
 		catch (IOException exception) {
 			throw new IllegalStateException("Failed to store attachment", exception);
 		}
+	}
+
+	@Override
+	public StoredFileContent load(String storageKey) {
+		Path target = resolveStorageKey(storageKey);
+		try {
+			return new StoredFileContent(Files.readAllBytes(target));
+		}
+		catch (IOException exception) {
+			throw new IllegalStateException("Failed to load attachment", exception);
+		}
+	}
+
+	@Override
+	public void delete(String storageKey) {
+		Path target = resolveStorageKey(storageKey);
+		try {
+			Files.deleteIfExists(target);
+		}
+		catch (IOException exception) {
+			throw new IllegalStateException("Failed to delete attachment", exception);
+		}
+	}
+
+	private Path resolveStorageKey(String storageKey) {
+		Path target = storageRoot.resolve(storageKey).normalize();
+		if (!target.startsWith(storageRoot)) {
+			throw new IllegalArgumentException("Invalid attachment storage key");
+		}
+		return target;
 	}
 }

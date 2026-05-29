@@ -1,7 +1,9 @@
 package com.school.complaint.api.dto;
 
 public record RagContextResponse(
-		String documentId,
+		Long documentId,
+		String title,
+		String documentType,
 		String legalBasis,
 		String contentSnippet,
 		double score
