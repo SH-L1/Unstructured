@@ -29,6 +29,10 @@ public class ComplaintAnalysis extends BaseTimeEntity {
 	private String intent;
 
 	@Enumerated(EnumType.STRING)
+	@Column(nullable = false, length = 50)
+	private ComplaintType complaintType;
+
+	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 30)
 	private Urgency urgency;
 
@@ -52,10 +56,11 @@ public class ComplaintAnalysis extends BaseTimeEntity {
 	protected ComplaintAnalysis() {
 	}
 
-	public ComplaintAnalysis(Complaint complaint, String intent, Urgency urgency, Sentiment sentiment,
+	public ComplaintAnalysis(Complaint complaint, String intent, ComplaintType complaintType, Urgency urgency, Sentiment sentiment,
 			Department department, String locationText, String geoJson, String analysisJson) {
 		this.complaint = complaint;
 		this.intent = intent;
+		this.complaintType = complaintType;
 		this.urgency = urgency;
 		this.sentiment = sentiment;
 		this.department = department;
@@ -70,6 +75,10 @@ public class ComplaintAnalysis extends BaseTimeEntity {
 
 	public String getIntent() {
 		return intent;
+	}
+
+	public ComplaintType getComplaintType() {
+		return complaintType;
 	}
 
 	public Urgency getUrgency() {

@@ -7,6 +7,8 @@ import java.util.UUID;
 
 public record ComplaintResponse(
 		UUID id,
+		String receiptNumber,
+		String title,
 		String sourceChannel,
 		String rawText,
 		String locationText,
@@ -19,7 +21,9 @@ public record ComplaintResponse(
 	public static ComplaintResponse from(Complaint complaint) {
 		return new ComplaintResponse(
 				complaint.getId(),
-				complaint.getSourceChannel(),
+				complaint.getReceiptNumber(),
+				complaint.getTitle(),
+				complaint.getSourceChannel().name(),
 				complaint.getRawText(),
 				complaint.getLocationText(),
 				null,
@@ -33,7 +37,9 @@ public record ComplaintResponse(
 	public static ComplaintResponse from(Complaint complaint, ComplaintAnalysisResponse analysis) {
 		return new ComplaintResponse(
 				complaint.getId(),
-				complaint.getSourceChannel(),
+				complaint.getReceiptNumber(),
+				complaint.getTitle(),
+				complaint.getSourceChannel().name(),
 				complaint.getRawText(),
 				complaint.getLocationText(),
 				analysis == null ? null : analysis.urgency(),

@@ -10,12 +10,14 @@ import egovframework.example.complaint.domain.Complaint;
 import egovframework.example.complaint.domain.ComplaintAnalysis;
 import egovframework.example.complaint.domain.ComplaintAttachment;
 import egovframework.example.complaint.domain.ComplaintStatus;
+import egovframework.example.complaint.domain.ComplaintType;
 import egovframework.example.complaint.domain.Department;
 import egovframework.example.complaint.domain.DraftRevision;
 import egovframework.example.complaint.domain.KnowledgeDocument;
 import egovframework.example.complaint.domain.OfficialDraft;
 import egovframework.example.complaint.domain.RagContext;
 import egovframework.example.complaint.domain.Sentiment;
+import egovframework.example.complaint.domain.SourceChannel;
 import egovframework.example.complaint.domain.Urgency;
 import egovframework.example.complaint.repository.ComplaintAnalysisRepository;
 import egovframework.example.complaint.repository.ComplaintAttachmentRepository;
@@ -88,7 +90,7 @@ public class ComplaintService {
 
 	@Transactional
 	public ComplaintResponse create(CreateComplaintRequest request) {
-		String sourceChannel = normalizeSourceChannel(request.sourceChannel());
+		SourceChannel sourceChannel = normalizeSourceChannel(request.sourceChannel());
 		Complaint complaint = new Complaint(sourceChannel, request.rawText(), request.locationText());
 		return ComplaintResponse.from(complaintRepository.save(complaint));
 	}
@@ -266,7 +268,17 @@ public class ComplaintService {
 		String text = complaint.getRawText().toLowerCase(Locale.ROOT);
 		boolean waste = containsAny(text, "trash", "waste", "dumping", "garbage", "recycle");
 		boolean road = containsAny(text, "road", "street", "pothole", "broken");
-		String intent = waste ? "Waste dumping report" : road ? "Road facility complaint" : "General civil complaint";
+		boolean trafficSign = containsAny(text, "traffic sign", "no parking sign", "sign");
+		ComplaintType complaintType = waste ? ComplaintType.ILLEGAL_DUMPING
+				: road ? ComplaintType.ROAD_DAMAGE
+				: trafficSign ? ComplaintType.TRAFFIC_SIGN
+				: ComplaintType.GENERAL;
+		String intent = switch (complaintType) {
+			case ILLEGAL_DUMPING -> "Waste dumping report";
+			case ROAD_DAMAGE -> "Road facility complaint";
+			case TRAFFIC_SIGN -> "Traffic sign complaint";
+			default -> "General civil complaint";
+		};
 		Urgency urgency = containsAny(text, "danger", "broken", "urgent", "accident", "risk", "insects", "smell")
 				? Urgency.HIGH : Urgency.NORMAL;
 		Sentiment sentiment = containsAny(text, "complaint", "uncomfortable", "angry", "damage", "unsafe", "smell")
@@ -282,6 +294,7 @@ public class ComplaintService {
 		ComplaintAnalysis analysis = complaintAnalysisRepository.save(new ComplaintAnalysis(
 				complaint,
 				intent,
+				complaintType,
 				urgency,
 				sentiment,
 				department,
@@ -299,6 +312,7 @@ public class ComplaintService {
 		ComplaintAnalysis analysis = complaintAnalysisRepository.save(new ComplaintAnalysis(
 				complaint,
 				result.intent(),
+				inferComplaintType(result.intent()),
 				Urgency.valueOf(result.urgency().trim().toUpperCase(Locale.ROOT)),
 				Sentiment.valueOf(result.sentiment().trim().toUpperCase(Locale.ROOT)),
 				department,
@@ -338,6 +352,7 @@ public class ComplaintService {
 		return new ComplaintAnalysisResponse(
 				analysis.getComplaint().getId(),
 				analysis.getIntent(),
+				analysis.getComplaintType().name(),
 				analysis.getUrgency().name(),
 				analysis.getSentiment().name(),
 				analysis.getDepartment().getCode(),
@@ -375,11 +390,17 @@ public class ComplaintService {
 		};
 	}
 
-	private String normalizeSourceChannel(String sourceChannel) {
+	private SourceChannel normalizeSourceChannel(String sourceChannel) {
 		if (sourceChannel == null || sourceChannel.isBlank()) {
-			return "WEB";
+			return SourceChannel.WEB;
 		}
-		return sourceChannel.trim().toUpperCase(Locale.ROOT);
+		String normalized = sourceChannel.trim().toUpperCase(Locale.ROOT).replace("-", "_");
+		try {
+			return SourceChannel.valueOf(normalized);
+		}
+		catch (IllegalArgumentException exception) {
+			return SourceChannel.WEB;
+		}
 	}
 
 	private boolean containsAny(String text, String... keywords) {
@@ -403,6 +424,32 @@ public class ComplaintService {
 			case CASE -> 0.84;
 			default -> 0.80;
 		};
+	}
+
+	private ComplaintType inferComplaintType(String intent) {
+		if (intent == null) {
+			return ComplaintType.GENERAL;
+		}
+		String text = intent.toLowerCase(Locale.ROOT);
+		if (containsAny(text, "dumping", "waste", "garbage", "trash")) {
+			return ComplaintType.ILLEGAL_DUMPING;
+		}
+		if (containsAny(text, "road", "pothole", "sidewalk")) {
+			return ComplaintType.ROAD_DAMAGE;
+		}
+		if (containsAny(text, "parking")) {
+			return ComplaintType.ILLEGAL_PARKING;
+		}
+		if (containsAny(text, "traffic sign", "sign")) {
+			return ComplaintType.TRAFFIC_SIGN;
+		}
+		if (containsAny(text, "noise")) {
+			return ComplaintType.NOISE;
+		}
+		if (containsAny(text, "environment", "pollution")) {
+			return ComplaintType.ENVIRONMENT;
+		}
+		return ComplaintType.GENERAL;
 	}
 
 	private String escapeJson(String value) {

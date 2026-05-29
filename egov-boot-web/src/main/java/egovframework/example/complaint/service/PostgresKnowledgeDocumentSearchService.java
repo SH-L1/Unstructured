@@ -2,6 +2,8 @@ package egovframework.example.complaint.service;
 
 import egovframework.example.complaint.domain.ComplaintAnalysis;
 import egovframework.example.complaint.domain.KnowledgeDocument;
+import egovframework.example.complaint.domain.KnowledgeDocumentChunk;
+import egovframework.example.complaint.repository.KnowledgeDocumentChunkRepository;
 import egovframework.example.complaint.repository.KnowledgeDocumentRepository;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -15,17 +17,25 @@ import org.springframework.stereotype.Service;
 public class PostgresKnowledgeDocumentSearchService implements KnowledgeDocumentSearchService {
 
 	private final KnowledgeDocumentRepository knowledgeDocumentRepository;
+	private final KnowledgeDocumentChunkRepository knowledgeDocumentChunkRepository;
 
-	public PostgresKnowledgeDocumentSearchService(KnowledgeDocumentRepository knowledgeDocumentRepository) {
+	public PostgresKnowledgeDocumentSearchService(KnowledgeDocumentRepository knowledgeDocumentRepository,
+			KnowledgeDocumentChunkRepository knowledgeDocumentChunkRepository) {
 		this.knowledgeDocumentRepository = knowledgeDocumentRepository;
+		this.knowledgeDocumentChunkRepository = knowledgeDocumentChunkRepository;
 	}
 
 	@Override
 	public List<KnowledgeDocument> search(ComplaintAnalysis analysis) {
 		Map<Long, KnowledgeDocument> documents = new LinkedHashMap<>();
 		for (String keyword : List.of("waste", "dumping", analysis.getIntent())) {
-			knowledgeDocumentRepository.searchByKeyword(keyword)
+			knowledgeDocumentChunkRepository.searchByKeyword(keyword).stream()
+					.map(KnowledgeDocumentChunk::getKnowledgeDocument)
 					.forEach(document -> documents.put(document.getId(), document));
+			if (documents.isEmpty()) {
+				knowledgeDocumentRepository.searchByKeyword(keyword)
+						.forEach(document -> documents.put(document.getId(), document));
+			}
 		}
 		if (documents.isEmpty()) {
 			return knowledgeDocumentRepository.findAll().stream()

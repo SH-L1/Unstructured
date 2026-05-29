@@ -39,6 +39,7 @@ docs/            # 산출물/문서 참고 영역
 - JPA 기반 민원 저장
 - PostgreSQL 연동
 - Flyway 기반 DB 마이그레이션
+- RAG 문서 청크 테이블
 - API Key 인증 옵션
 - API 감사 로그 저장
 - Spring Security 기본 설정

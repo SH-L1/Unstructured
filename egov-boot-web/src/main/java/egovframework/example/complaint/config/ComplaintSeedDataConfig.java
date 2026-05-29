@@ -4,9 +4,11 @@ import egovframework.example.complaint.api.dto.ComplaintResponse;
 import egovframework.example.complaint.api.dto.CreateComplaintRequest;
 import egovframework.example.complaint.domain.Department;
 import egovframework.example.complaint.domain.DocumentType;
+import egovframework.example.complaint.domain.KnowledgeDocumentChunk;
 import egovframework.example.complaint.domain.KnowledgeDocument;
 import egovframework.example.complaint.repository.ComplaintRepository;
 import egovframework.example.complaint.repository.DepartmentRepository;
+import egovframework.example.complaint.repository.KnowledgeDocumentChunkRepository;
 import egovframework.example.complaint.repository.KnowledgeDocumentRepository;
 import egovframework.example.complaint.service.ComplaintService;
 import org.springframework.beans.factory.annotation.Value;
@@ -36,10 +38,13 @@ public class ComplaintSeedDataConfig {
 
 		private final DepartmentRepository departmentRepository;
 		private final KnowledgeDocumentRepository knowledgeDocumentRepository;
+		private final KnowledgeDocumentChunkRepository knowledgeDocumentChunkRepository;
 
-		SeedDataService(DepartmentRepository departmentRepository, KnowledgeDocumentRepository knowledgeDocumentRepository) {
+		SeedDataService(DepartmentRepository departmentRepository, KnowledgeDocumentRepository knowledgeDocumentRepository,
+				KnowledgeDocumentChunkRepository knowledgeDocumentChunkRepository) {
 			this.departmentRepository = departmentRepository;
 			this.knowledgeDocumentRepository = knowledgeDocumentRepository;
+			this.knowledgeDocumentChunkRepository = knowledgeDocumentChunkRepository;
 		}
 
 		@Transactional
@@ -49,7 +54,7 @@ public class ComplaintSeedDataConfig {
 			saveDepartment("TRAFFIC", "Traffic Administration Division", "Traffic facilities and illegal parking complaints");
 			saveDepartment("CIVIL_AFFAIRS", "Civil Affairs Division", "General civil complaint routing");
 
-			saveKnowledgeDocument(new KnowledgeDocument(
+			KnowledgeDocument wasteLaw = saveKnowledgeDocument(new KnowledgeDocument(
 					DocumentType.LAW,
 					"Waste Management Act handling basis",
 					"National Law Information Center",
@@ -58,7 +63,7 @@ public class ComplaintSeedDataConfig {
 					"waste,dumping,illegal dumping,garbage,household waste",
 					"Waste Management Act"
 			));
-			saveKnowledgeDocument(new KnowledgeDocument(
+			KnowledgeDocument wasteOrdinance = saveKnowledgeDocument(new KnowledgeDocument(
 					DocumentType.ORDINANCE,
 					"Local waste handling ordinance sample",
 					"Local Ordinance Information System",
@@ -67,7 +72,7 @@ public class ComplaintSeedDataConfig {
 					"waste,dumping,old furniture,recycling,local ordinance",
 					"Local waste management ordinance"
 			));
-			saveKnowledgeDocument(new KnowledgeDocument(
+			KnowledgeDocument responseManual = saveKnowledgeDocument(new KnowledgeDocument(
 					DocumentType.MANUAL,
 					"Illegal dumping civil complaint response manual",
 					"Civil complaint manual",
@@ -76,6 +81,9 @@ public class ComplaintSeedDataConfig {
 					"civil complaint,response manual,site inspection,waste removal",
 					"Civil complaint response manual"
 			));
+			saveKnowledgeChunk(wasteLaw, 0, wasteLaw.getContent(), wasteLaw.getKeywords(), wasteLaw.getLegalBasis());
+			saveKnowledgeChunk(wasteOrdinance, 0, wasteOrdinance.getContent(), wasteOrdinance.getKeywords(), wasteOrdinance.getLegalBasis());
+			saveKnowledgeChunk(responseManual, 0, responseManual.getContent(), responseManual.getKeywords(), responseManual.getLegalBasis());
 		}
 
 		private void saveDepartment(String code, String name, String description) {
@@ -84,9 +92,15 @@ public class ComplaintSeedDataConfig {
 			}
 		}
 
-		private void saveKnowledgeDocument(KnowledgeDocument document) {
-			if (!knowledgeDocumentRepository.existsByTitle(document.getTitle())) {
-				knowledgeDocumentRepository.save(document);
+		private KnowledgeDocument saveKnowledgeDocument(KnowledgeDocument document) {
+			return knowledgeDocumentRepository.findByTitle(document.getTitle())
+					.orElseGet(() -> knowledgeDocumentRepository.save(document));
+		}
+
+		private void saveKnowledgeChunk(KnowledgeDocument document, int chunkIndex, String content, String keywords,
+				String legalBasis) {
+			if (!knowledgeDocumentChunkRepository.existsByKnowledgeDocumentIdAndChunkIndex(document.getId(), chunkIndex)) {
+				knowledgeDocumentChunkRepository.save(new KnowledgeDocumentChunk(document, chunkIndex, content, keywords, legalBasis));
 			}
 		}
 	}

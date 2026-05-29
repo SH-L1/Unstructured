@@ -84,6 +84,7 @@ egov-boot-web/src/main/java/egovframework/example/complaint
 - 공통 API 응답 및 공통 예외 응답
 - 분석, 초안, RAG, 부서 라우팅 서비스 분리
 - Flyway 기반 DB 마이그레이션
+- RAG 문서 청크 테이블
 - API Key 인증 옵션
 - API 감사 로그 저장
 - 선택형 S3/Bedrock/OpenSearch 구현 경계 추가

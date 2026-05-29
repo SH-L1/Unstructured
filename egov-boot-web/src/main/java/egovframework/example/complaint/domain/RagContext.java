@@ -30,6 +30,10 @@ public class RagContext extends BaseTimeEntity {
 	@JoinColumn(name = "knowledge_document_id", nullable = false)
 	private KnowledgeDocument knowledgeDocument;
 
+	@ManyToOne(fetch = FetchType.LAZY)
+	@JoinColumn(name = "knowledge_document_chunk_id")
+	private KnowledgeDocumentChunk knowledgeDocumentChunk;
+
 	@Column(length = 500)
 	private String legalBasis;
 
@@ -44,9 +48,15 @@ public class RagContext extends BaseTimeEntity {
 
 	public RagContext(Complaint complaint, OfficialDraft officialDraft, KnowledgeDocument knowledgeDocument,
 			String legalBasis, String contentSnippet, double score) {
+		this(complaint, officialDraft, knowledgeDocument, null, legalBasis, contentSnippet, score);
+	}
+
+	public RagContext(Complaint complaint, OfficialDraft officialDraft, KnowledgeDocument knowledgeDocument,
+			KnowledgeDocumentChunk knowledgeDocumentChunk, String legalBasis, String contentSnippet, double score) {
 		this.complaint = complaint;
 		this.officialDraft = officialDraft;
 		this.knowledgeDocument = knowledgeDocument;
+		this.knowledgeDocumentChunk = knowledgeDocumentChunk;
 		this.legalBasis = legalBasis;
 		this.contentSnippet = contentSnippet;
 		this.score = score;
@@ -54,6 +64,10 @@ public class RagContext extends BaseTimeEntity {
 
 	public KnowledgeDocument getKnowledgeDocument() {
 		return knowledgeDocument;
+	}
+
+	public KnowledgeDocumentChunk getKnowledgeDocumentChunk() {
+		return knowledgeDocumentChunk;
 	}
 
 	public String getLegalBasis() {

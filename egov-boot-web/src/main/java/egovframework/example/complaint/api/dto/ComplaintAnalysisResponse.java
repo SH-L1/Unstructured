@@ -5,6 +5,7 @@ import java.util.UUID;
 public record ComplaintAnalysisResponse(
 		UUID complaintId,
 		String intent,
+		String complaintType,
 		String urgency,
 		String sentiment,
 		String departmentCode,

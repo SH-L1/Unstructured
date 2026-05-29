@@ -281,9 +281,12 @@ draft_revisions
 departments
 knowledge_documents
 rag_contexts
+knowledge_document_chunks
 ```
 
 `departments`와 `knowledge_documents`는 서버 시작 시 seed 데이터가 들어간다. Mock 분석은 `complaint_analysis`에 저장되고, Mock RAG 결과는 `knowledge_documents` 검색 후 `rag_contexts`에 저장된다. 공문 초안은 `official_drafts`에 저장되며, 담당자 수정 내용은 `draft_revisions`에 저장된다.
+
+V4 마이그레이션부터 `complaints`에는 `receipt_number`, `title`을 추가했고, `complaint_analysis`에는 `complaint_type`을 추가했다. RAG 문서는 원본 문서 단위인 `knowledge_documents`와 검색 단위인 `knowledge_document_chunks`로 분리한다.
 
 개발 편의를 위해 `app.seed.demo-enabled=true`일 때 데모 민원 3건을 자동 등록하고, Mock 분석과 Mock 공문 초안 생성까지 수행한다. 테스트와 운영 프로파일에서는 기본값을 `false`로 두어 원하지 않는 데모 데이터가 들어가지 않도록 한다.
 
@@ -421,6 +424,9 @@ Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
 - 데모 민원 seed 옵션을 추가했다. 로컬 개발 기본값에서는 데모 민원 3건을 자동 생성하되, 테스트/운영 기본값에서는 비활성화한다.
 - `mvn test`와 `mvn -DskipTests package` 통과를 확인했다.
 - 패키징된 JAR가 로컬 PostgreSQL에 연결되고 8081 포트로 정상 기동하는 것을 확인했다. 확인 후 테스트용 Java 프로세스는 종료했다.
+- Flyway V4 마이그레이션을 추가했다. 민원 접수번호/제목, 분석 민원 유형, `knowledge_document_chunks`, `rag_contexts.knowledge_document_chunk_id`를 포함한다.
+- 로컬 PostgreSQL에서 V4 적용 후 현재 schema version 4와 Hibernate validate 정상 기동을 확인했다.
+- DB 점검용 문서와 쿼리를 `docs/db-schema-review.md`, `docs/db-check-queries.sql`에 추가했다.
 
 ## 다음 개발 순서
 

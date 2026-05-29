@@ -37,6 +37,7 @@ public class MockComplaintAnalysisService implements ComplaintAnalysisService {
 		return new ComplaintAnalysisResponse(
 				complaint.getId(),
 				intent,
+				intent.contains("Waste") ? "ILLEGAL_DUMPING" : intent.contains("Road") ? "ROAD_DAMAGE" : "GENERAL",
 				urgency,
 				sentiment,
 				department,

@@ -4,8 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import egovframework.example.EgovBootApplication;
+import egovframework.example.complaint.repository.KnowledgeDocumentChunkRepository;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -29,13 +31,19 @@ class ComplaintApiSmokeTest {
 
 	private final TestRestTemplate restTemplate = new TestRestTemplate();
 
+	@Autowired
+	private KnowledgeDocumentChunkRepository knowledgeDocumentChunkRepository;
+
 	@Test
 	void complaintPipelineStoresAnalysisDraftRagAndAttachment() {
 		JsonNode created = postComplaint();
 		String complaintId = created.path("data").path("id").asText();
+		assertThat(created.path("data").path("receiptNumber").asText()).startsWith("CIV-");
+		assertThat(created.path("data").path("title").asText()).contains("Illegal dumping");
 
 		JsonNode analysis = get("/api/complaints/" + complaintId + "/analysis");
 		assertThat(analysis.path("success").asBoolean()).isTrue();
+		assertThat(analysis.path("data").path("complaintType").asText()).isEqualTo("ILLEGAL_DUMPING");
 		assertThat(analysis.path("data").path("departmentCode").asText()).isEqualTo("RESOURCE_RECYCLING");
 		assertThat(analysis.path("data").path("geoJson").asText()).contains("Seoul Jung-gu alley");
 
@@ -53,6 +61,7 @@ class ComplaintApiSmokeTest {
 
 		JsonNode departments = get("/api/departments");
 		assertThat(departments.path("data").size()).isEqualTo(4);
+		assertThat(knowledgeDocumentChunkRepository.count()).isGreaterThanOrEqualTo(3);
 
 		JsonNode attachment = uploadAttachment(complaintId);
 		assertThat(attachment.path("success").asBoolean()).isTrue();

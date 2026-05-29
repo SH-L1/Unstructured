@@ -7,6 +7,9 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.Locale;
 import java.util.UUID;
 
 @Entity
@@ -17,8 +20,15 @@ public class Complaint extends BaseTimeEntity {
 	@Column(nullable = false, updatable = false)
 	private UUID id;
 
+	@Column(nullable = false, length = 60, unique = true)
+	private String receiptNumber;
+
+	@Column(length = 200)
+	private String title;
+
+	@Enumerated(EnumType.STRING)
 	@Column(nullable = false, length = 50)
-	private String sourceChannel;
+	private SourceChannel sourceChannel;
 
 	@Column(nullable = false, columnDefinition = "text")
 	private String rawText;
@@ -33,11 +43,12 @@ public class Complaint extends BaseTimeEntity {
 	protected Complaint() {
 	}
 
-	public Complaint(String sourceChannel, String rawText, String locationText) {
+	public Complaint(SourceChannel sourceChannel, String rawText, String locationText) {
 		this.sourceChannel = sourceChannel;
 		this.rawText = rawText;
 		this.locationText = locationText;
 		this.status = ComplaintStatus.RECEIVED;
+		this.title = buildTitle(rawText);
 	}
 
 	@PrePersist
@@ -48,13 +59,25 @@ public class Complaint extends BaseTimeEntity {
 		if (status == null) {
 			status = ComplaintStatus.RECEIVED;
 		}
+		if (receiptNumber == null) {
+			String date = LocalDate.now().format(DateTimeFormatter.BASIC_ISO_DATE);
+			receiptNumber = "CIV-" + date + "-" + id.toString().substring(0, 8).toUpperCase(Locale.ROOT);
+		}
 	}
 
 	public UUID getId() {
 		return id;
 	}
 
-	public String getSourceChannel() {
+	public String getReceiptNumber() {
+		return receiptNumber;
+	}
+
+	public String getTitle() {
+		return title;
+	}
+
+	public SourceChannel getSourceChannel() {
 		return sourceChannel;
 	}
 
@@ -84,5 +107,13 @@ public class Complaint extends BaseTimeEntity {
 
 	public void changeStatus(ComplaintStatus status) {
 		this.status = status;
+	}
+
+	private String buildTitle(String rawText) {
+		if (rawText == null || rawText.isBlank()) {
+			return null;
+		}
+		String normalized = rawText.replaceAll("\\s+", " ").trim();
+		return normalized.length() <= 80 ? normalized : normalized.substring(0, 80);
 	}
 }
