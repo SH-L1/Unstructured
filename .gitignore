@@ -33,8 +33,11 @@ desktop.ini
 *.stackdump
 __pycache__/
 .venv/
+.cache/
 output_*.json
 output_*_report.md
+output_*_official_review.md
+ai-rag-engine/data/department_history/*.xlsx
 
 # Local environment and secrets
 .env

@@ -7,8 +7,38 @@
 - `main.py`: DB 또는 Markdown 기반 RAG 문서를 읽고 OpenAI API로 민원 분석 및 공문 초안을 생성합니다.
 - `test_db_connection.py`: `.env`의 PostgreSQL 접속 정보로 DB 연결을 확인합니다.
 - `insert_knowledge_documents.py`: `data/knowledge` 하위 Markdown 문서를 Spring 백엔드의 `knowledge_documents` 테이블에 적재합니다.
+- `law_api_client.py`: 법제처 국가법령정보 공동활용 Open API로 국가법령/자치법규를 검색합니다.
+- `department_router.py`: 과거 전자민원 처리부 엑셀을 기반으로 유사 민원과 담당 부서를 추천합니다.
 - `data/knowledge`: 법령, 조례, 매뉴얼 Markdown 문서입니다.
 - `data/samples`: 샘플 민원 JSON입니다.
+
+샘플 민원은 본문만 입력하면 됩니다. `id`, `category`, `department`는 직접 적지 않아도 되며, `main.py`가 민원 ID를 자동 생성하고 OpenAI API로 분석 결과를 생성합니다.
+
+```json
+[
+  {
+    "text": "학교 앞 횡단보도 근처 도로가 갈라져 있어 학생들이 등하교할 때 위험해 보입니다."
+  }
+]
+```
+
+첨부 이미지가 있는 민원은 `image_path` 또는 `image_paths`를 함께 넣을 수 있습니다. 경로는 `ai-rag-engine` 폴더 기준 상대 경로나 절대 경로를 사용할 수 있습니다.
+
+```json
+[
+  {
+    "text": "학교 앞 도로가 파손되어 위험합니다.",
+    "image_path": "data/samples/images/road_damage_001.jpg"
+  },
+  {
+    "text": "공터에 폐가구와 쓰레기가 방치되어 있습니다.",
+    "image_paths": [
+      "data/samples/images/waste_001.jpg",
+      "data/samples/images/waste_002.jpg"
+    ]
+  }
+]
+```
 
 ## 실행 준비
 
@@ -39,6 +69,27 @@ Spring 백엔드 실제 테이블인 `knowledge_documents`에 Markdown 문서들
 
 같은 제목의 문서가 이미 있으면 새로 중복 삽입하지 않고 기존 데이터를 업데이트합니다.
 
+## 법제처 Open API 검색 테스트
+
+`.env`에 `LAW_API_OC` 값을 설정한 뒤 실행합니다.
+
+```powershell
+.venv\Scripts\python.exe law_api_client.py 도로법
+.venv\Scripts\python.exe law_api_client.py 폐기물관리법
+```
+
+이 파일은 국가법령과 자치법규 검색 결과를 `main.py`의 RAG 결과와 합치기 쉬운 형태로 반환하는 `search_law_documents()` 함수도 제공합니다.
+
+## 과거 민원 기반 부서 추천 테스트
+
+```powershell
+.venv\Scripts\python.exe department_router.py "탕정역 앞 불법주차 때문에 우회전이 어렵습니다."
+```
+
+전자민원 처리부 엑셀 파일은 기본적으로 `data/department_history/complaint_department_history.xlsx`를 사용합니다. 다른 파일을 쓰려면 `.env`의 `DEPARTMENT_HISTORY_XLSX` 값을 변경합니다.
+
+과거 민원 이력 엑셀은 실제 민원 정보가 포함될 수 있으므로 Git에 올리지 않습니다. 각자 로컬 환경에서만 `data/department_history/complaint_department_history.xlsx` 경로에 파일을 배치해서 사용합니다.
+
 ## 로컬 AI/RAG 실행
 
 ```powershell
@@ -46,3 +97,5 @@ Spring 백엔드 실제 테이블인 `knowledge_documents`에 Markdown 문서들
 ```
 
 현재 `main.py`는 DB 연결이 가능하면 `knowledge_documents` 테이블을 먼저 읽고, DB 연결이 실패하면 `data/knowledge`의 Markdown 파일을 읽는 fallback 방식입니다.
+
+또한 `.env`에 `LAW_API_OC`가 설정되어 있으면 민원 분석 결과를 바탕으로 법제처 Open API를 호출해 국가법령/자치법규 검색 결과를 RAG 근거에 함께 포함합니다. 법제처 API 호출이 실패해도 기존 DB/Markdown RAG 흐름은 계속 진행됩니다.
