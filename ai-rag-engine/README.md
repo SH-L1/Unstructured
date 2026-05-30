@@ -4,9 +4,9 @@
 
 ## 포함 내용
 
-- `main.py`: DB 또는 Markdown 기반 RAG 문서를 읽고 OpenAI API로 민원 분석 및 공문 초안을 생성합니다.
+- `main.py`: `data/knowledge` Markdown 문서를 PostgreSQL에 자동 동기화한 뒤 DB 기반 RAG 문서를 읽고 OpenAI API로 민원 분석 및 공문 초안을 생성합니다.
 - `test_db_connection.py`: `.env`의 PostgreSQL 접속 정보로 DB 연결을 확인합니다.
-- `insert_knowledge_documents.py`: `data/knowledge` 하위 Markdown 문서를 Spring 백엔드의 `knowledge_documents` 테이블에 적재합니다.
+- `insert_knowledge_documents.py`: `data/knowledge` 하위 Markdown 문서를 Spring 백엔드의 `knowledge_documents`, `knowledge_document_chunks` 테이블에 적재합니다.
 - `law_api_client.py`: 법제처 국가법령정보 공동활용 Open API로 국가법령/자치법규를 검색합니다.
 - `department_router.py`: 과거 전자민원 처리부 엑셀을 기반으로 유사 민원과 담당 부서를 추천합니다.
 - `data/knowledge`: 법령, 조례, 매뉴얼 Markdown 문서입니다.
@@ -61,13 +61,20 @@ DB가 실행 중인 팀원 PC에서 실행합니다.
 
 ## RAG 문서 DB 적재
 
-Spring 백엔드 실제 테이블인 `knowledge_documents`에 Markdown 문서들을 저장합니다.
+Spring 백엔드 실제 테이블인 `knowledge_documents`, `knowledge_document_chunks`에 Markdown 문서들을 저장합니다. `main.py` 일반 실행 시에도 이 동기화가 먼저 수행됩니다.
 
 ```powershell
 .venv\Scripts\python.exe insert_knowledge_documents.py
+.venv\Scripts\python.exe main.py --ingest-only
 ```
 
 같은 제목의 문서가 이미 있으면 새로 중복 삽입하지 않고 기존 데이터를 업데이트합니다.
+
+DB에 적재된 문서가 RAG 검색에 반영되는지만 확인하려면 LLM 호출 없이 다음 명령을 실행합니다.
+
+```powershell
+.venv\Scripts\python.exe main.py --verify-rag-only
+```
 
 ## 법제처 Open API 검색 테스트
 
@@ -96,6 +103,6 @@ Spring 백엔드 실제 테이블인 `knowledge_documents`에 Markdown 문서들
 .venv\Scripts\python.exe main.py
 ```
 
-현재 `main.py`는 DB 연결이 가능하면 `knowledge_documents` 테이블을 먼저 읽고, DB 연결이 실패하면 `data/knowledge`의 Markdown 파일을 읽는 fallback 방식입니다.
+현재 `main.py`는 DB 연결이 가능하면 `data/knowledge` Markdown 파일을 먼저 DB에 동기화하고, `knowledge_documents` 테이블을 읽습니다. DB 연결이 실패하면 `data/knowledge`의 Markdown 파일을 읽는 fallback 방식입니다.
 
 또한 `.env`에 `LAW_API_OC`가 설정되어 있으면 민원 분석 결과를 바탕으로 법제처 Open API를 호출해 국가법령/자치법규 검색 결과를 RAG 근거에 함께 포함합니다. 법제처 API 호출이 실패해도 기존 DB/Markdown RAG 흐름은 계속 진행됩니다.

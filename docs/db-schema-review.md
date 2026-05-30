@@ -49,3 +49,21 @@ mvn test
 ## DBeaver Check
 
 Use `docs/db-check-queries.sql` to inspect the current data shape, seed data, RAG chunks, generated drafts, audit logs and Flyway history.
+
+## Knowledge Loading
+
+For local development, use automatic file-based loading instead of manual SQL inserts. The source of truth is:
+
+```text
+C:\Users\user\Documents\GitHub\Unstructured\ai-rag-engine\data\knowledge
+```
+
+Run either command:
+
+```powershell
+cd C:\Users\user\Documents\GitHub\Unstructured\ai-rag-engine
+C:\Users\user\miniconda3\python.exe main.py --ingest-only
+C:\Users\user\miniconda3\python.exe main.py --verify-rag-only
+```
+
+The loader upserts Markdown files into `knowledge_documents` and their searchable chunks into `knowledge_document_chunks`.
