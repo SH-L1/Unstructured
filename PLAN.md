@@ -80,6 +80,7 @@ egov-boot-web/src/main/java/egovframework/example/complaint
 - eGovFrame 샘플 HSQLDB 설정 제거 및 PostgreSQL 기준 전환
 - Spring Security 기본 허용 설정
 - Actuator health endpoint
+- OpenAPI/Swagger UI 문서
 - Mock 기반 민원 유형/담당 부서 분류
 - 공통 API 응답 및 공통 예외 응답
 - 분석, 초안, RAG, 부서 라우팅 서비스 분리
@@ -107,6 +108,8 @@ GET  /api/complaints/{id}/rag-contexts
 GET  /api/complaints/{id}/geojson
 GET  /api/departments
 GET  /actuator/health
+GET  /v3/api-docs
+GET  /swagger-ui/index.html
 ```
 
 ## 6. 로컬 실행 기준
@@ -195,6 +198,8 @@ Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
 - `POST /api/complaints` 민원 등록 확인
 - `GET /api/complaints/{id}/analysis` 분석 결과 조회 확인
 - `mvn test` 기준 컴파일 성공 확인
+- `GET /v3/api-docs` OpenAPI 문서 응답 확인
+- `GET /swagger-ui/index.html` Swagger UI 200 응답 확인
 - 현재 개발 기본값에서 S3, Bedrock, OpenSearch Serverless를 호출하지 않도록 설정 확인
 
 ## 10. 문서화 기준

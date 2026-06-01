@@ -44,6 +44,7 @@ docs/            # 산출물/문서 참고 영역
 - API 감사 로그 저장
 - Spring Security 기본 설정
 - Actuator health endpoint
+- OpenAPI/Swagger UI 문서
 - Mock 기반 민원 분류/담당 부서 추론
 - Python 기반 로컬 AI/RAG 검증 스크립트
 - 지식문서 Markdown을 `knowledge_documents` 테이블에 적재하는 스크립트
@@ -70,6 +71,8 @@ GET  /api/complaints/{id}/rag-contexts
 GET  /api/complaints/{id}/geojson
 GET  /api/departments
 GET  /actuator/health
+GET  /v3/api-docs
+GET  /swagger-ui/index.html
 ```
 
 ## 로컬 실행
