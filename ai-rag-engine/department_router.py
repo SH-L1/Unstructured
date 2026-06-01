@@ -11,6 +11,7 @@ from dotenv import load_dotenv
 
 
 BASE_DIR = Path(__file__).resolve().parent
+DEFAULT_HISTORY_DIR = BASE_DIR / "data" / "department_history"
 DEFAULT_HISTORY_FILE = BASE_DIR / "data" / "department_history" / "complaint_department_history.xlsx"
 
 NS = {
@@ -45,10 +46,21 @@ SYNONYM_TERMS = {
     "쓰레기": ["폐기물", "생활폐기물", "환경", "청소"],
     "폐기물": ["쓰레기", "생활폐기물", "환경", "청소"],
     "악취": ["냄새", "환경", "위생"],
-    "소음": ["환경", "생활소음", "공사"],
+    "소음": ["환경", "생활소음", "확성기", "마이크", "데시벨"],
+    "마이크": ["소음", "확성기", "데시벨", "생활소음"],
+    "데시벨": ["소음", "확성기", "생활소음"],
+    "선거": ["선거운동", "유세", "확성기", "소음"],
 }
 
 FALLBACK_DEPARTMENTS = [
+    {
+        "terms": ["선거", "선거운동", "유세", "확성기"],
+        "department": "선거관리위원회 또는 환경보전과 확인 필요",
+    },
+    {
+        "terms": ["소음", "마이크", "데시벨", "생활소음", "잠을 못"],
+        "department": "환경보전과",
+    },
     {
         "terms": ["불법주차", "불법주정차", "주차", "주정차", "견인"],
         "department": "교통행정과",
@@ -75,6 +87,32 @@ def get_history_file() -> Path:
         return path
 
     return DEFAULT_HISTORY_FILE
+
+
+def get_history_files() -> List[Path]:
+    load_dotenv()
+    configured = os.getenv("DEPARTMENT_HISTORY_XLSX", "").strip()
+    history_files = list(DEFAULT_HISTORY_DIR.glob("*.xlsx"))
+
+    if configured:
+        path = Path(configured)
+        if not path.is_absolute():
+            path = BASE_DIR / path
+        if path.is_dir():
+            history_files.extend(path.glob("*.xlsx"))
+        else:
+            history_files.append(path)
+
+    unique_files = []
+    seen = set()
+    for history_file in history_files:
+        resolved = history_file.resolve()
+        if resolved in seen:
+            continue
+        seen.add(resolved)
+        unique_files.append(history_file)
+
+    return sorted(unique_files)
 
 
 def column_number(cell_ref: str) -> int:
@@ -164,9 +202,7 @@ def workbook_sheet_paths(zip_file: ZipFile) -> Dict[str, str]:
     return sheet_paths
 
 
-def load_department_history(path: Path = None) -> List[Dict[str, str]]:
-    path = path or get_history_file()
-
+def load_department_history_file(path: Path) -> List[Dict[str, str]]:
     if not path.exists():
         raise FileNotFoundError(f"민원-부서 이력 엑셀 파일이 없습니다: {path}")
 
@@ -202,6 +238,7 @@ def load_department_history(path: Path = None) -> List[Dict[str, str]]:
                     continue
 
                 records.append({
+                    "source_file": path.name,
                     "year_sheet": sheet_name,
                     "title": title,
                     "summary": summary,
@@ -210,6 +247,21 @@ def load_department_history(path: Path = None) -> List[Dict[str, str]]:
                     "status": row_data.get("처리상태", "").strip(),
                     "search_text": f"{title} {summary} {row_data.get('민원발생지역', '')}".strip(),
                 })
+
+    return records
+
+
+def load_department_history(path: Path = None) -> List[Dict[str, str]]:
+    if path:
+        return load_department_history_file(path)
+
+    history_files = get_history_files()
+    if not history_files:
+        raise FileNotFoundError(f"민원-부서 이력 엑셀 파일이 없습니다: {DEFAULT_HISTORY_DIR}")
+
+    records = []
+    for history_file in history_files:
+        records.extend(load_department_history_file(history_file))
 
     return records
 
@@ -280,14 +332,16 @@ def recommend_department(complaint_text: str, top_k: int = 5) -> Dict[str, objec
         department_counter[match["department"]] += match["score"]
 
     recommended_department = ""
-    if department_counter:
+    best_score = top_matches[0]["score"] if top_matches else 0
+    if department_counter and best_score >= 3:
         recommended_department = department_counter.most_common(1)[0][0]
     else:
         recommended_department = fallback_department(complaint_text)
 
     return {
         "recommended_department": recommended_department,
-        "recommendation_source": "history" if department_counter else "keyword_fallback" if recommended_department else "",
+        "recommendation_source": "history" if department_counter and best_score >= 3 else "keyword_fallback" if recommended_department else "",
+        "best_match_score": best_score,
         "query_tokens": query_tokens,
         "top_matches": [
             {

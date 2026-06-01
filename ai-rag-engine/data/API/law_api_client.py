@@ -15,7 +15,9 @@ LAW_API_BASE_URL = "http://www.law.go.kr/DRF/lawSearch.do"
 LAW_SERVICE_BASE_URL = "http://www.law.go.kr/DRF/lawService.do"
 LAW_SITE_BASE_URL = "https://www.law.go.kr"
 DEFAULT_MUNICIPALITY = "아산시"
-BASE_DIR = Path(__file__).resolve().parent
+API_DIR = Path(__file__).resolve().parent
+BASE_DIR = API_DIR.parents[1]
+ENV_PATH = BASE_DIR / ".env"
 CACHE_DIR = BASE_DIR / ".cache"
 LAW_DETAIL_CACHE_FILE = CACHE_DIR / "law_api_details.json"
 DETAIL_MAX_CHARS = 2500
@@ -70,7 +72,7 @@ QUERY_PROFILES = [
 
 
 def get_law_api_key() -> str:
-    load_dotenv()
+    load_dotenv(ENV_PATH)
     api_key = os.getenv("LAW_API_OC", "").strip()
 
     if not api_key:
