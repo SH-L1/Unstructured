@@ -1,12 +1,18 @@
 import os
 import base64
+import argparse
 import json
 import mimetypes
 import re
 from pathlib import Path
 
 from dotenv import load_dotenv
-from openai import OpenAI
+try:
+    from openai import OpenAI
+except ImportError:
+    class OpenAI:
+        def __init__(self, *args, **kwargs):
+            pass
 
 try:
     import psycopg2
@@ -15,6 +21,12 @@ except ImportError:
 
 try:
     from data.API.law_api_client import search_law_documents
+    from insert_knowledge_documents import sync_knowledge_documents
+except ImportError:
+    sync_knowledge_documents = None
+
+try:
+    from law_api_client import search_law_documents
 except ImportError:
     search_law_documents = None
 
@@ -42,6 +54,8 @@ load_dotenv()
 
 OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 MODEL_NAME = os.getenv("OPENAI_MODEL", "gpt-4o-mini")
+if not OPENAI_API_KEY:
+    OPENAI_API_KEY = "__MISSING_OPENAI_API_KEY__"
 
 if not OPENAI_API_KEY:
     raise ValueError(
@@ -238,6 +252,8 @@ def load_knowledge_documents():
     """
     if has_db_config():
         try:
+            if sync_knowledge_documents is not None:
+                sync_knowledge_documents(verbose=True)
             docs = load_knowledge_documents_from_db()
             print("[RAG 문서 로드 방식] PostgreSQL knowledge_documents")
             return docs
@@ -274,6 +290,10 @@ def call_llm(prompt):
     """
     OpenAI Responses API 호출
     """
+    if OPENAI_API_KEY == "__MISSING_OPENAI_API_KEY__":
+        raise ValueError("OPENAI_API_KEY is missing. Set it in .env or run main.py --ingest-only.")
+    if not hasattr(client, "responses"):
+        raise RuntimeError("openai package is not installed. Install requirements.txt or run main.py --ingest-only.")
     response = client.responses.create(
         model=MODEL_NAME,
         input=prompt
@@ -1198,7 +1218,46 @@ def run_one_complaint(complaint):
     )
 
 
+def parse_args():
+    parser = argparse.ArgumentParser(description="Run local AI/RAG complaint pipeline.")
+    parser.add_argument(
+        "--ingest-only",
+        action="store_true",
+        help="Sync data/knowledge Markdown files into PostgreSQL and exit without LLM calls.",
+    )
+    parser.add_argument(
+        "--verify-rag-only",
+        action="store_true",
+        help="Sync knowledge files, load RAG documents from DB, run keyword RAG check and exit without LLM calls.",
+    )
+    return parser.parse_args()
+
+
 if __name__ == "__main__":
+    args = parse_args()
+    if args.ingest_only:
+        if sync_knowledge_documents is None:
+            raise RuntimeError("insert_knowledge_documents.py could not be imported.")
+        sync_knowledge_documents(verbose=True)
+        raise SystemExit(0)
+    if args.verify_rag_only:
+        docs = load_knowledge_documents()
+        analysis = {
+            "category": "불법 투기",
+            "summary": "생활폐기물 무단 배출 신고",
+            "urgency": "Medium",
+            "department": "자원순환과",
+            "location_text": "아산시 탕정면",
+            "keywords": ["불법 투기", "생활폐기물", "폐기물", "무단 배출"],
+        }
+        results = simple_rag_search(analysis, docs, top_k=5, debug=True)
+        print(f"[verify rag] loaded_docs={len(docs)}, matched_docs={len(results)}")
+        if not results:
+            raise RuntimeError("RAG verification failed: no DB-backed knowledge documents matched.")
+        for item in results:
+            print(f"- matched: {item['title']} / score={item['score']}")
+        raise SystemExit(0)
+
     complaints = load_sample_complaints()
 
     for complaint in complaints:

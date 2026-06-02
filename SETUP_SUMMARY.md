@@ -249,6 +249,8 @@ GET  /api/complaints/{id}/rag-contexts
 GET  /api/complaints/{id}/geojson
 GET  /api/departments
 GET  /actuator/health
+GET  /v3/api-docs
+GET  /swagger-ui/index.html
 ```
 
 비용 방지를 위해 기본 설정에서는 Mock 분석/RAG/초안 로직을 사용한다. 첨부파일 저장소와 Bedrock 초안 생성은 설정으로 local/mock과 AWS 구현을 전환할 수 있다.
@@ -443,3 +445,11 @@ Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
 - `backend`는 eGovFrame 실행환경을 포함하지 않으므로 메인 백엔드로 설명하면 안 된다.
 - API Key, DB 비밀번호, AWS Access Key 등은 코드와 Git에 직접 저장하지 않는다.
 - 실제 LLM/Vector DB 호출은 비용이 발생하므로 개발 초반에는 Mock 구현을 유지한다.
+
+## 2026-06-01 최종 런타임 검증
+
+- `springdoc-openapi-starter-webmvc-ui` 2.8.17을 추가했다.
+- `/v3/api-docs`에서 OpenAPI title `Civil Complaint API`와 path 10개를 확인했다.
+- `/swagger-ui/index.html`이 HTTP 200으로 응답하는 것을 확인했다.
+- PostgreSQL `complaintdb` 기준으로 `health=UP`을 확인했다.
+- 민원 등록, 분석, 초안 생성, 초안 수정, 상태 변경, 필터링, 부서 조회, RAG context 조회, GeoJSON 조회, 첨부파일 업로드/다운로드/삭제까지 실제 HTTP 호출로 검증했다.
