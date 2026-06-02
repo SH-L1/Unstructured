@@ -17,16 +17,20 @@ public class MockComplaintAnalysisService implements ComplaintAnalysisService {
 	@Override
 	public ComplaintAnalysisResponse analyze(Complaint complaint) {
 		String text = complaint.getRawText().toLowerCase(Locale.ROOT);
-		String intent = containsAny(text, "trash", "waste", "dumping", "garbage", "recycle")
-				? "Waste dumping report"
-				: containsAny(text, "road", "street", "pothole", "broken")
-						? "Road facility complaint"
-						: "General civil complaint";
-		String urgency = containsAny(text, "danger", "broken", "urgent", "accident", "risk")
+		String intent = containsAny(text, "trash", "waste", "dumping", "garbage", "recycle", "쓰레기", "폐기물", "무단투기", "불법투기", "폐가구")
+				? "무단투기 및 생활폐기물 신고"
+				: containsAny(text, "road", "street", "pothole", "broken", "도로", "포트홀", "파손", "보도")
+						? "도로시설물 파손 신고"
+						: containsAny(text, "parking", "불법주차", "불법주정차", "주정차", "주차")
+								? "불법주정차 신고"
+								: containsAny(text, "traffic sign", "sign", "교통표지", "표지판", "신호")
+										? "교통시설물 정비 요청"
+										: "일반 민원";
+		String urgency = containsAny(text, "danger", "broken", "urgent", "accident", "risk", "위험", "긴급", "사고", "파손")
 				? "HIGH"
 				: "NORMAL";
-		String sentiment = containsAny(text, "complaint", "uncomfortable", "angry", "damage", "unsafe")
-				? "NEGATIVE"
+		String sentiment = containsAny(text, "complaint", "uncomfortable", "angry", "damage", "unsafe", "불편", "불만", "위험", "피해")
+				? "DISCOMFORT"
 				: "NEUTRAL";
 		String department = departmentRoutingService.route(intent);
 		String locationText = complaint.getLocationText();
@@ -37,7 +41,11 @@ public class MockComplaintAnalysisService implements ComplaintAnalysisService {
 		return new ComplaintAnalysisResponse(
 				complaint.getId(),
 				intent,
-				intent.contains("Waste") ? "ILLEGAL_DUMPING" : intent.contains("Road") ? "ROAD_DAMAGE" : "GENERAL",
+				intent.contains("무단투기") ? "ILLEGAL_DUMPING"
+						: intent.contains("도로") ? "ROAD_DAMAGE"
+						: intent.contains("주정차") ? "ILLEGAL_PARKING"
+						: intent.contains("교통") ? "TRAFFIC_SIGN"
+						: "GENERAL",
 				urgency,
 				sentiment,
 				department,

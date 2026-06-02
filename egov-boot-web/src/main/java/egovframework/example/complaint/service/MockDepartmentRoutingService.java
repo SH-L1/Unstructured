@@ -37,11 +37,17 @@ public class MockDepartmentRoutingService implements DepartmentRoutingService {
 			return "CIVIL_AFFAIRS";
 		}
 		String normalized = intent.toLowerCase();
-		if (normalized.contains("waste") || normalized.contains("dumping")) {
+		if (normalized.contains("waste") || normalized.contains("dumping") || normalized.contains("폐기물")
+				|| normalized.contains("무단투기") || normalized.contains("쓰레기")) {
 			return "RESOURCE_RECYCLING";
 		}
-		if (normalized.contains("road") || normalized.contains("street")) {
+		if (normalized.contains("road") || normalized.contains("street") || normalized.contains("도로")
+				|| normalized.contains("포트홀") || normalized.contains("파손")) {
 			return "ROAD";
+		}
+		if (normalized.contains("parking") || normalized.contains("traffic") || normalized.contains("주차")
+				|| normalized.contains("주정차") || normalized.contains("교통") || normalized.contains("표지판")) {
+			return "TRAFFIC";
 		}
 		return "CIVIL_AFFAIRS";
 	}

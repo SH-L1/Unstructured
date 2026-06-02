@@ -7,5 +7,6 @@ public enum ComplaintType {
 	TRAFFIC_SIGN,
 	NOISE,
 	ENVIRONMENT,
+	HAZARDOUS_MATERIAL,
 	GENERAL
 }

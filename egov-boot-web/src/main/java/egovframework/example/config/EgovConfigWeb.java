@@ -106,7 +106,7 @@ public class EgovConfigWeb implements WebMvcConfigurer, ApplicationContextAware 
 	}
 
 	@Override
-	public void configureHandlerExceptionResolvers(List<HandlerExceptionResolver> resolvers) {
+	public void extendHandlerExceptionResolvers(List<HandlerExceptionResolver> resolvers) {
 		Properties prop = new Properties();
 		prop.setProperty("org.springframework.dao.DataAccessException", "sample/egovSampleError");
 		prop.setProperty("org.springframework.transaction.TransactionException", "sample/egovSampleError");

@@ -45,11 +45,12 @@ docs/            # 산출물/문서 참고 영역
 - Spring Security 기본 설정
 - Actuator health endpoint
 - OpenAPI/Swagger UI 문서
-- Mock 기반 민원 분류/담당 부서 추론
+- OpenAI LLM 기반 민원 분류/담당 부서 추론
 - Python 기반 로컬 AI/RAG 검증 스크립트
 - 지식문서 Markdown을 `knowledge_documents` 테이블에 적재하는 스크립트
 
-현재 개발 기본값에서는 실제 외부 AI/AWS 서비스를 호출하지 않습니다. AI 분석, RAG 검색, 공문 초안 생성은 로컬 Mock/PostgreSQL 기반으로 동작하며, S3, Bedrock, OpenSearch Serverless는 명시적으로 설정을 켰을 때만 연결됩니다.
+현재 개발 기본값은 OpenAI LLM 분석/초안 생성과 PostgreSQL RAG 검색입니다. `OPENAI_API_KEY`가 설정되어 있어야 분석과 초안 생성 API가 정상 동작합니다. S3, Bedrock, OpenSearch Serverless는 명시적으로 설정을 켰을 때만 연결됩니다.
+기본 모델은 OpenAI Responses API에서 사용할 수 있는 `gpt-4o-mini`이며, 필요하면 `OPENAI_MODEL` 환경 변수로 바꿀 수 있습니다.
 
 `ai-rag-engine`은 별도 Python 검증 도구입니다. OpenAI API를 직접 사용할 수 있으므로 `.env`에 API Key를 넣어야 하며, 기본 백엔드 실행에는 필요하지 않습니다.
 
@@ -124,7 +125,7 @@ egov-boot-web/src/main/resources/application.properties
 
 1. eGovFrame 기반 백엔드 구조를 기준으로 유지합니다.
 2. 민원 접수, 분석, 담당 부서 분류, 답변 초안 생성/수정 흐름을 API 단위로 안정화합니다.
-3. 개발 중에는 Mock 분석/RAG/초안 서비스와 로컬 파일 저장소를 기본값으로 유지합니다.
+3. 개발 중에도 OpenAI LLM 분석/초안 생성과 PostgreSQL RAG 검색을 기본값으로 유지합니다.
 4. AWS 실연동은 비용 검토 후 별도 단계에서 필요한 기능만 명시적으로 켭니다.
 5. PostgreSQL 업무 데이터와 문서/벡터 저장소를 분리해 확장합니다.
 6. 운영 단계에서는 보안, 로깅, 예외 처리, 감사 추적, 배포 자동화를 강화합니다.

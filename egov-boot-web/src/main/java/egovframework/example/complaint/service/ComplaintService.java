@@ -36,6 +36,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
@@ -48,7 +49,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class ComplaintService {
 
-	private static final String MOCK_MODEL_NAME = "mock-bedrock-illegal-dumping-v1";
+	private static final String MOCK_MODEL_NAME = "mock-korean-civil-complaint-v1";
 
 	private final ComplaintRepository complaintRepository;
 	private final ComplaintAttachmentRepository complaintAttachmentRepository;
@@ -61,6 +62,8 @@ public class ComplaintService {
 	private final KnowledgeDocumentSearchService knowledgeDocumentSearchService;
 	private final ObjectProvider<ComplaintAnalysisClient> complaintAnalysisClientProvider;
 	private final ObjectProvider<DraftGenerationClient> draftGenerationClientProvider;
+	private final String aiProvider;
+	private final String openAiModel;
 
 	public ComplaintService(
 			ComplaintRepository complaintRepository,
@@ -73,7 +76,9 @@ public class ComplaintService {
 			FileStorageService fileStorageService,
 			KnowledgeDocumentSearchService knowledgeDocumentSearchService,
 			ObjectProvider<ComplaintAnalysisClient> complaintAnalysisClientProvider,
-			ObjectProvider<DraftGenerationClient> draftGenerationClientProvider
+			ObjectProvider<DraftGenerationClient> draftGenerationClientProvider,
+			@Value("${app.ai.provider:mock-bedrock}") String aiProvider,
+			@Value("${app.openai.model:gpt-4o-mini}") String openAiModel
 	) {
 		this.complaintRepository = complaintRepository;
 		this.complaintAttachmentRepository = complaintAttachmentRepository;
@@ -86,22 +91,22 @@ public class ComplaintService {
 		this.knowledgeDocumentSearchService = knowledgeDocumentSearchService;
 		this.complaintAnalysisClientProvider = complaintAnalysisClientProvider;
 		this.draftGenerationClientProvider = draftGenerationClientProvider;
+		this.aiProvider = aiProvider;
+		this.openAiModel = openAiModel;
 	}
 
 	@Transactional
 	public ComplaintResponse create(CreateComplaintRequest request) {
-		SourceChannel sourceChannel = normalizeSourceChannel(request.sourceChannel());
-		Complaint complaint = new Complaint(sourceChannel, request.rawText(), request.locationText());
+		Complaint complaint = new Complaint(
+				normalizeSourceChannel(request.sourceChannel()),
+				request.rawText(),
+				request.locationText()
+		);
 		return ComplaintResponse.from(complaintRepository.save(complaint));
 	}
 
 	@Transactional(readOnly = true)
-	public Page<ComplaintResponse> findAll(
-			ComplaintStatus status,
-			String department,
-			String urgency,
-			Pageable pageable
-	) {
+	public Page<ComplaintResponse> findAll(ComplaintStatus status, String department, String urgency, Pageable pageable) {
 		Page<Complaint> complaints = complaintRepository.findAll(filterByStatus(status), pageable);
 		List<ComplaintResponse> responses = complaints.getContent().stream()
 				.map(complaint -> ComplaintResponse.from(
@@ -136,7 +141,7 @@ public class ComplaintService {
 	public ComplaintAnalysisResponse analyze(UUID id) {
 		return complaintAnalysisRepository.findByComplaintId(id)
 				.map(this::toAnalysisResponse)
-				.orElseGet(() -> toAnalysisResponse(createMockAnalysis(getComplaint(id))));
+				.orElseGet(() -> toAnalysisResponse(createAnalysis(getComplaint(id))));
 	}
 
 	@Transactional
@@ -149,12 +154,13 @@ public class ComplaintService {
 		}
 
 		ComplaintAnalysis analysis = complaintAnalysisRepository.findByComplaintId(id)
-				.orElseGet(() -> createMockAnalysis(complaint));
+				.orElseGet(() -> createAnalysis(complaint));
 		List<KnowledgeDocument> documents = knowledgeDocumentSearchService.search(analysis);
-		String draftText = draftGenerationClientProvider.getIfAvailable() == null
-				? buildDraftText(complaint, analysis, documents)
-				: draftGenerationClientProvider.getObject().generateDraft(complaint, analysis, documents);
-		OfficialDraft draft = officialDraftRepository.save(new OfficialDraft(complaint, draftText, MOCK_MODEL_NAME));
+		DraftGenerationClient draftClient = draftGenerationClientProvider.getIfAvailable();
+		String draftText = draftClient == null
+				? buildFallbackDraftText(complaint, analysis, documents)
+				: draftClient.generateDraft(complaint, analysis, documents);
+		OfficialDraft draft = officialDraftRepository.save(new OfficialDraft(complaint, draftText, modelName()));
 		List<RagContext> contexts = documents.stream()
 				.map(document -> new RagContext(
 						complaint,
@@ -238,11 +244,7 @@ public class ComplaintService {
 				.filter(candidate -> candidate.getComplaintId().equals(complaintId))
 				.orElseThrow(() -> new EntityNotFoundException("Attachment not found: " + attachmentId));
 		StoredFileContent content = fileStorageService.load(attachment.getStorageKey());
-		return new DownloadedAttachment(
-				attachment.getOriginalFilename(),
-				attachment.getContentType(),
-				content.bytes()
-		);
+		return new DownloadedAttachment(attachment.getOriginalFilename(), attachment.getContentType(), content.bytes());
 	}
 
 	@Transactional
@@ -260,37 +262,34 @@ public class ComplaintService {
 		return "attachment; filename*=UTF-8''" + encoded;
 	}
 
-	private ComplaintAnalysis createMockAnalysis(Complaint complaint) {
+	private ComplaintAnalysis createAnalysis(Complaint complaint) {
 		ComplaintAnalysisClient analysisClient = complaintAnalysisClientProvider.getIfAvailable();
 		if (analysisClient != null) {
 			return createAnalysisFromResult(complaint, analysisClient.analyze(complaint));
 		}
+		return createRuleBasedAnalysis(complaint);
+	}
+
+	private ComplaintAnalysis createRuleBasedAnalysis(Complaint complaint) {
 		String text = complaint.getRawText().toLowerCase(Locale.ROOT);
-		boolean waste = containsAny(text, "trash", "waste", "dumping", "garbage", "recycle");
-		boolean road = containsAny(text, "road", "street", "pothole", "broken");
-		boolean trafficSign = containsAny(text, "traffic sign", "no parking sign", "sign");
-		ComplaintType complaintType = waste ? ComplaintType.ILLEGAL_DUMPING
-				: road ? ComplaintType.ROAD_DAMAGE
-				: trafficSign ? ComplaintType.TRAFFIC_SIGN
-				: ComplaintType.GENERAL;
-		String intent = switch (complaintType) {
-			case ILLEGAL_DUMPING -> "Waste dumping report";
-			case ROAD_DAMAGE -> "Road facility complaint";
-			case TRAFFIC_SIGN -> "Traffic sign complaint";
-			default -> "General civil complaint";
-		};
-		Urgency urgency = containsAny(text, "danger", "broken", "urgent", "accident", "risk", "insects", "smell")
-				? Urgency.HIGH : Urgency.NORMAL;
-		Sentiment sentiment = containsAny(text, "complaint", "uncomfortable", "angry", "damage", "unsafe", "smell")
-				? Sentiment.DISCOMFORT : Sentiment.NEUTRAL;
-		Department department = departmentRepository.findByCode(waste ? "RESOURCE_RECYCLING" : road ? "ROAD" : "CIVIL_AFFAIRS")
-				.orElseThrow(() -> new EntityNotFoundException("Department seed data is missing"));
+		ComplaintType complaintType = inferComplaintType(text);
+		String intent = intentFor(complaintType);
+		Urgency urgency = complaintType == ComplaintType.HAZARDOUS_MATERIAL
+				? Urgency.EMERGENCY
+				: containsAny(text, "danger", "broken", "urgent", "accident", "risk", "unsafe", "위험", "긴급", "사고")
+						? Urgency.HIGH
+						: Urgency.NORMAL;
+		Sentiment sentiment = containsAny(text, "complaint", "uncomfortable", "angry", "damage", "unsafe", "불편", "불안", "위험")
+				? Sentiment.DISCOMFORT
+				: Sentiment.NEUTRAL;
+		Department department = departmentRepository.findByCode(departmentCodeFor(complaintType))
+				.orElseThrow(() -> new EntityNotFoundException("Department seed data is missing: " + departmentCodeFor(complaintType)));
 		String geoJson = complaint.getLocationText() == null || complaint.getLocationText().isBlank() ? null : """
 				{"type":"Feature","properties":{"complaintId":"%s","locationText":"%s","department":"%s","urgency":"%s"},"geometry":null}
 				""".formatted(complaint.getId(), escapeJson(complaint.getLocationText()), escapeJson(department.getName()), urgency.name()).trim();
 		String analysisJson = """
-				{"intent":"%s","urgency":"%s","sentiment":"%s","department":"%s","keywords":["waste","dumping","civil complaint"],"requiredAction":"site inspection and removal review"}
-				""".formatted(intent, urgency.name(), sentiment.name(), department.getName()).trim();
+				{"intent":"%s","complaintType":"%s","urgency":"%s","sentiment":"%s","department":"%s","keywords":%s,"requiredAction":"Field verification and department routing"}
+				""".formatted(intent, complaintType.name(), urgency.name(), sentiment.name(), department.getName(), keywordsFor(complaintType)).trim();
 		ComplaintAnalysis analysis = complaintAnalysisRepository.save(new ComplaintAnalysis(
 				complaint,
 				intent,
@@ -312,7 +311,7 @@ public class ComplaintService {
 		ComplaintAnalysis analysis = complaintAnalysisRepository.save(new ComplaintAnalysis(
 				complaint,
 				result.intent(),
-				inferComplaintType(result.intent()),
+				inferComplaintType(result.intent() + " " + result.analysisJson()),
 				Urgency.valueOf(result.urgency().trim().toUpperCase(Locale.ROOT)),
 				Sentiment.valueOf(result.sentiment().trim().toUpperCase(Locale.ROOT)),
 				department,
@@ -324,16 +323,23 @@ public class ComplaintService {
 		return analysis;
 	}
 
-	private String buildDraftText(Complaint complaint, ComplaintAnalysis analysis, List<KnowledgeDocument> documents) {
+	private String buildFallbackDraftText(Complaint complaint, ComplaintAnalysis analysis, List<KnowledgeDocument> documents) {
+		if (documents.isEmpty()) {
+			return """
+					안녕하십니까. 접수하신 민원은 %s 건으로 확인했습니다.
+					현재 민원 내용과 직접적으로 일치하는 내부 참고문서가 확인되지 않아, 관련 없는 법령을 근거로 답변하지 않습니다.
+					%s에서 현장 확인 및 관계기관 협의 필요성을 우선 검토하겠습니다.
+					""".formatted(analysis.getIntent(), analysis.getDepartment().getName()).trim();
+		}
 		String legalBasis = documents.stream()
 				.map(KnowledgeDocument::getLegalBasis)
 				.filter(StringUtils::hasText)
 				.findFirst()
-				.orElse("relevant civil complaint handling standards");
+				.orElse("관련 민원 처리 기준");
 		return """
-				Hello. We have received your complaint and classified it as: %s.
-				The responsible department is expected to be %s. The department will review the submitted details, inspect the site when needed, and take follow-up action according to the relevant procedure.
-				This draft references %s and should be reviewed by the responsible officer before final response.
+				안녕하십니까. 접수하신 민원은 %s 건으로 확인했습니다.
+				해당 민원은 %s에서 검토할 예정이며, 제출하신 위치와 내용을 바탕으로 현장 확인 필요 여부를 판단하겠습니다.
+				검토 과정에서는 %s 등 관련 근거를 참고하되, 본 문안은 담당자 검토용 초안입니다.
 				""".formatted(analysis.getIntent(), analysis.getDepartment().getName(), legalBasis).trim();
 	}
 
@@ -403,6 +409,72 @@ public class ComplaintService {
 		}
 	}
 
+	private ComplaintType inferComplaintType(String text) {
+		if (text == null) {
+			return ComplaintType.GENERAL;
+		}
+		String value = text.toLowerCase(Locale.ROOT);
+		if (containsAny(value, "biohazard", "biochemical", "hazardous", "chemical", "bomb", "explosive",
+				"생화학", "위험물", "화학물질", "유해물질", "폭탄", "폭발물", "재난", "테러")) {
+			return ComplaintType.HAZARDOUS_MATERIAL;
+		}
+		if (containsAny(value, "dumping", "waste", "garbage", "trash", "쓰레기", "폐기물", "무단투기")) {
+			return ComplaintType.ILLEGAL_DUMPING;
+		}
+		if (containsAny(value, "road", "pothole", "sidewalk", "도로", "포트홀", "보도", "파손")) {
+			return ComplaintType.ROAD_DAMAGE;
+		}
+		if (containsAny(value, "parking", "불법주정차", "주차")) {
+			return ComplaintType.ILLEGAL_PARKING;
+		}
+		if (containsAny(value, "traffic sign", "signal", "sign", "교통표지", "신호")) {
+			return ComplaintType.TRAFFIC_SIGN;
+		}
+		if (containsAny(value, "noise", "소음")) {
+			return ComplaintType.NOISE;
+		}
+		if (containsAny(value, "environment", "pollution", "환경", "오염", "악취")) {
+			return ComplaintType.ENVIRONMENT;
+		}
+		return ComplaintType.GENERAL;
+	}
+
+	private String intentFor(ComplaintType complaintType) {
+		return switch (complaintType) {
+			case ILLEGAL_DUMPING -> "무단투기 및 생활폐기물 신고";
+			case ROAD_DAMAGE -> "도로시설물 파손 신고";
+			case ILLEGAL_PARKING -> "불법주정차 신고";
+			case TRAFFIC_SIGN -> "교통시설물 정비 요청";
+			case NOISE -> "소음 민원";
+			case ENVIRONMENT -> "환경 생활불편 민원";
+			case HAZARDOUS_MATERIAL -> "생화학 위험물 및 폭발물 의심 긴급 신고";
+			default -> "일반 민원";
+		};
+	}
+
+	private String departmentCodeFor(ComplaintType complaintType) {
+		return switch (complaintType) {
+			case ILLEGAL_DUMPING, ENVIRONMENT -> "RESOURCE_RECYCLING";
+			case ROAD_DAMAGE -> "ROAD";
+			case ILLEGAL_PARKING, TRAFFIC_SIGN -> "TRAFFIC";
+			case HAZARDOUS_MATERIAL -> "SAFETY_CONTROL";
+			default -> "CIVIL_AFFAIRS";
+		};
+	}
+
+	private String keywordsFor(ComplaintType complaintType) {
+		return switch (complaintType) {
+			case ILLEGAL_DUMPING -> "[\"쓰레기\",\"폐기물\",\"무단투기\",\"현장확인\"]";
+			case ROAD_DAMAGE -> "[\"도로\",\"포트홀\",\"파손\",\"보수\",\"현장점검\"]";
+			case ILLEGAL_PARKING -> "[\"불법주정차\",\"주차\",\"단속\",\"교통\"]";
+			case TRAFFIC_SIGN -> "[\"교통표지\",\"신호\",\"정비\"]";
+			case NOISE -> "[\"소음\",\"생활불편\",\"현장확인\"]";
+			case ENVIRONMENT -> "[\"환경\",\"오염\",\"생활불편\",\"현장확인\"]";
+			case HAZARDOUS_MATERIAL -> "[\"생화학\",\"위험물\",\"폭탄\",\"폭발물\",\"화학물질\",\"유해물질\",\"재난\",\"경찰\",\"소방\"]";
+			default -> "[\"민원\",\"접수\",\"담당부서\"]";
+		};
+	}
+
 	private boolean containsAny(String text, String... keywords) {
 		for (String keyword : keywords) {
 			if (text.contains(keyword)) {
@@ -426,40 +498,17 @@ public class ComplaintService {
 		};
 	}
 
-	private ComplaintType inferComplaintType(String intent) {
-		if (intent == null) {
-			return ComplaintType.GENERAL;
+	private String modelName() {
+		if ("openai".equalsIgnoreCase(aiProvider)) {
+			return "openai:" + openAiModel;
 		}
-		String text = intent.toLowerCase(Locale.ROOT);
-		if (containsAny(text, "dumping", "waste", "garbage", "trash")) {
-			return ComplaintType.ILLEGAL_DUMPING;
-		}
-		if (containsAny(text, "road", "pothole", "sidewalk")) {
-			return ComplaintType.ROAD_DAMAGE;
-		}
-		if (containsAny(text, "parking")) {
-			return ComplaintType.ILLEGAL_PARKING;
-		}
-		if (containsAny(text, "traffic sign", "sign")) {
-			return ComplaintType.TRAFFIC_SIGN;
-		}
-		if (containsAny(text, "noise")) {
-			return ComplaintType.NOISE;
-		}
-		if (containsAny(text, "environment", "pollution")) {
-			return ComplaintType.ENVIRONMENT;
-		}
-		return ComplaintType.GENERAL;
+		return MOCK_MODEL_NAME;
 	}
 
 	private String escapeJson(String value) {
 		return value.replace("\\", "\\\\").replace("\"", "\\\"");
 	}
 
-	public record DownloadedAttachment(
-			String originalFilename,
-			String contentType,
-			byte[] bytes
-	) {
+	public record DownloadedAttachment(String originalFilename, String contentType, byte[] bytes) {
 	}
 }

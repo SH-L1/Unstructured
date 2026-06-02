@@ -444,7 +444,18 @@ Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
 - 최종 산출물과 발표에서는 `egov-boot-web`을 기준 백엔드로 설명한다.
 - `backend`는 eGovFrame 실행환경을 포함하지 않으므로 메인 백엔드로 설명하면 안 된다.
 - API Key, DB 비밀번호, AWS Access Key 등은 코드와 Git에 직접 저장하지 않는다.
-- 실제 LLM/Vector DB 호출은 비용이 발생하므로 개발 초반에는 Mock 구현을 유지한다.
+- 현재 기본 백엔드는 OpenAI LLM 분석/초안 생성과 PostgreSQL RAG 검색을 사용한다. `OPENAI_API_KEY`는 코드나 Git에 저장하지 말고 실행 환경 변수로만 주입한다.
+
+## 2026-06-02 OpenAI 실제 연동 전환
+
+- `app.ai.provider` 기본값을 `openai`로 전환했다.
+- `app.ai.mock-enabled` 기본값을 `false`로 전환했다.
+- OpenAI 기본 모델은 `gpt-4o-mini`로 설정했다. 필요하면 `OPENAI_MODEL` 환경 변수로 교체한다.
+- `OPENAI_API_KEY`가 없으면 분석/초안 생성 API는 실제 호출 전 단계에서 명확한 오류를 반환한다.
+- 생화학 위험물, 폭발물, 폭탄, 유해 화학물질 계열 민원을 `HAZARDOUS_MATERIAL` 및 `SAFETY_CONTROL`로 분류하도록 보강했다.
+- PostgreSQL RAG 검색은 더 이상 무관한 상위 3개 문서를 fallback으로 반환하지 않는다. 관련 키워드가 없으면 빈 근거를 반환하여 잘못된 폐기물 법령 인용을 막는다.
+- seed 지식문서에 생화학 위험물 및 폭발물 의심 신고 긴급 대응 매뉴얼과 공공안전 위해물질 신고 처리 근거를 추가했다.
+- 대시보드는 서버에서 받은 LLM 초안을 그대로 표시하도록 변경했다.
 
 ## 2026-06-01 최종 런타임 검증
 

@@ -4,7 +4,7 @@
 
 본 프로젝트는 전자정부 표준프레임워크(eGovFrame) 5.0 기반 백엔드를 사용해 비정형 민원을 접수, 분석, 분류하고 담당자가 활용할 수 있는 공문 답변 초안을 생성하는 시스템을 목표로 한다.
 
-현재 개발 기준에서는 민원 접수와 분석 결과 조회가 가능한 eGovFrame 기반 백엔드 골격을 확립하고, AI/RAG 기능은 비용이 발생하지 않는 Mock/PostgreSQL 로직으로 운영한다. AWS 실연동은 비용 검토 후 별도 단계에서 명시적으로 켠다.
+현재 개발 기준에서는 민원 접수와 분석 결과 조회가 가능한 eGovFrame 기반 백엔드 골격을 확립하고, AI/초안 생성은 OpenAI LLM 실제 연동으로 운영하며 RAG 기능은 PostgreSQL 지식문서 검색을 사용한다. AWS 실연동은 비용 검토 후 별도 단계에서 명시적으로 켠다.
 
 ## 2. 최종 개발 기준
 
@@ -24,9 +24,9 @@
 flowchart LR
     Citizen["민원 제출자"] --> API["eGovFrame Boot Web API"]
     API --> DB["PostgreSQL complaintdb"]
-    API --> Analyzer["Mock 민원 분석/분류 서비스"]
+    API --> Analyzer["OpenAI LLM 민원 분석/분류 서비스"]
     Analyzer --> Rag["PostgreSQL 기반 RAG 문서 검색"]
-    Rag --> Draft["Mock 답변 초안 생성 서비스"]
+    Rag --> Draft["OpenAI LLM 답변 초안 생성 서비스"]
     Draft --> API
     API --> Staff["담당자/관리자"]
 ```
@@ -81,7 +81,7 @@ egov-boot-web/src/main/java/egovframework/example/complaint
 - Spring Security 기본 허용 설정
 - Actuator health endpoint
 - OpenAPI/Swagger UI 문서
-- Mock 기반 민원 유형/담당 부서 분류
+- OpenAI LLM 기반 민원 유형/담당 부서 분류
 - 공통 API 응답 및 공통 예외 응답
 - 분석, 초안, RAG, 부서 라우팅 서비스 분리
 - Flyway 기반 DB 마이그레이션
@@ -135,7 +135,7 @@ spring.jpa.hibernate.ddl-auto=validate
 spring.flyway.enabled=true
 spring.flyway.baseline-on-migrate=true
 management.endpoints.web.exposure.include=health,info
-app.ai.provider=mock-bedrock
+app.ai.provider=openai
 app.aws.s3.enabled=false
 app.aws.bedrock.enabled=false
 app.rag.provider=postgres-mock
@@ -180,7 +180,7 @@ Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
 
 1. 민원 API 통합 테스트를 보강한다.
 2. 첨부파일 다운로드/삭제 API를 추가한다.
-3. 로컬 Mock 기준 통합 시나리오와 데모 데이터를 보강한다.
+3. OpenAI 실제 연동 기준 통합 시나리오와 PostgreSQL RAG 데이터를 보강한다.
 4. RAG용 문서 저장소와 벡터 검색 구조를 정리한다.
 5. 관리자/담당자 화면 또는 별도 프론트엔드 대시보드를 연결한다.
 6. AWS 실연동은 비용 검토 후 필요한 기능만 명시적으로 켠다.
@@ -225,7 +225,7 @@ Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
 - API 응답은 `ApiResponse`, 오류 응답은 `ApiError` 기반으로 정리되었다.
 - 민원 목록 필터링/페이지네이션, 상태 변경, 분석 조회, GeoJSON 조회, RAG 근거 조회, 초안 생성/수정, 첨부파일 업로드/다운로드/삭제, 부서 조회 API가 구현되었다.
 - 파일 저장소는 local 기본값과 S3 선택 구현으로 분리되었다.
-- AI 분석/초안 생성은 Mock 기본값과 Bedrock 선택 구현으로 분리되었다.
+- AI 분석/초안 생성은 OpenAI 기본값과 Bedrock 선택 구현으로 분리되었다.
 - RAG 검색은 PostgreSQL 기반 기본 구현과 OpenSearch Serverless 선택 구현으로 분리되었다.
 - API Key 인증 옵션, API 사용자 모델, 감사 로그 필터가 추가되었다.
 - Dockerfile, `.dockerignore`, 운영 프로파일 `application-prod.properties`가 추가되었다.

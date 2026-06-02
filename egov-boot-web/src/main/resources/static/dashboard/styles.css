@@ -535,6 +535,10 @@ h2 {
   line-height: 1.8;
 }
 
+#draftText {
+  white-space: pre-line;
+}
+
 pre {
   max-height: 220px;
   overflow: auto;

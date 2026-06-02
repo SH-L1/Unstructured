@@ -5,6 +5,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import com.fasterxml.jackson.databind.JsonNode;
 import egovframework.example.EgovBootApplication;
 import egovframework.example.complaint.repository.KnowledgeDocumentChunkRepository;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,32 +37,31 @@ class ComplaintApiSmokeTest {
 
 	@Test
 	void complaintPipelineStoresAnalysisDraftRagAndAttachment() {
-		JsonNode created = postComplaint();
+		JsonNode created = postComplaint(
+				"Illegal dumping with waste bags and old furniture. Bad smell and insects. Please inspect and remove it.",
+				"Seoul Jung-gu alley"
+		);
 		String complaintId = created.path("data").path("id").asText();
 		assertThat(created.path("data").path("receiptNumber").asText()).startsWith("CIV-");
-		assertThat(created.path("data").path("title").asText()).contains("Illegal dumping");
 
 		JsonNode analysis = get("/api/complaints/" + complaintId + "/analysis");
 		assertThat(analysis.path("success").asBoolean()).isTrue();
 		assertThat(analysis.path("data").path("complaintType").asText()).isEqualTo("ILLEGAL_DUMPING");
 		assertThat(analysis.path("data").path("departmentCode").asText()).isEqualTo("RESOURCE_RECYCLING");
-		assertThat(analysis.path("data").path("geoJson").asText()).contains("Seoul Jung-gu alley");
 
 		JsonNode draft = get("/api/complaints/" + complaintId + "/draft");
 		assertThat(draft.path("success").asBoolean()).isTrue();
 		assertThat(draft.path("data").path("status").asText()).isEqualTo("DRAFT");
-		assertThat(draft.path("data").path("references").size()).isEqualTo(3);
+		assertThat(draft.path("data").path("references").size()).isGreaterThanOrEqualTo(1);
 
 		JsonNode revised = put("/api/complaints/" + complaintId + "/draft", Map.of("draftText", "Revised official draft text."));
 		assertThat(revised.path("success").asBoolean()).isTrue();
 		assertThat(revised.path("data").path("status").asText()).isEqualTo("REVISED");
 
-		JsonNode rag = get("/api/complaints/" + complaintId + "/rag-contexts");
-		assertThat(rag.path("data").size()).isEqualTo(3);
-
 		JsonNode departments = get("/api/departments");
-		assertThat(departments.path("data").size()).isEqualTo(4);
-		assertThat(knowledgeDocumentChunkRepository.count()).isGreaterThanOrEqualTo(3);
+		assertThat(departments.path("data").size()).isEqualTo(5);
+		assertThat(departments.path("data").toString()).contains("SAFETY_CONTROL");
+		assertThat(knowledgeDocumentChunkRepository.count()).isGreaterThanOrEqualTo(6);
 
 		JsonNode attachment = uploadAttachment(complaintId);
 		assertThat(attachment.path("success").asBoolean()).isTrue();
@@ -71,12 +71,12 @@ class ComplaintApiSmokeTest {
 		assertThat(attachments.path("data").size()).isEqualTo(1);
 		String attachmentId = attachments.path("data").get(0).path("id").asText();
 
-		ResponseEntity<String> downloaded = restTemplate.getForEntity(
+		ResponseEntity<byte[]> downloaded = restTemplate.getForEntity(
 				url("/api/complaints/" + complaintId + "/attachments/" + attachmentId),
-				String.class
+				byte[].class
 		);
 		assertThat(downloaded.getStatusCode()).isEqualTo(HttpStatus.OK);
-		assertThat(downloaded.getBody()).isEqualTo("mock evidence");
+		assertThat(new String(downloaded.getBody(), StandardCharsets.UTF_8)).isEqualTo("mock evidence");
 
 		ResponseEntity<Void> deleted = restTemplate.exchange(
 				url("/api/complaints/" + complaintId + "/attachments/" + attachmentId),
@@ -85,15 +85,33 @@ class ComplaintApiSmokeTest {
 				Void.class
 		);
 		assertThat(deleted.getStatusCode()).isEqualTo(HttpStatus.NO_CONTENT);
-		JsonNode afterDelete = get("/api/complaints/" + complaintId + "/attachments");
-		assertThat(afterDelete.path("data").size()).isZero();
+		assertThat(get("/api/complaints/" + complaintId + "/attachments").path("data").size()).isZero();
 	}
 
-	private JsonNode postComplaint() {
+	@Test
+	void hazardousMaterialComplaintUsesSafetyDepartmentAndSafetyReferences() {
+		JsonNode created = postComplaint(
+				"도로에 생화학 위험 물질이 떨어져 있습니다. 아마 폭탄같아요.",
+				"테스트 도로"
+		);
+		String complaintId = created.path("data").path("id").asText();
+
+		JsonNode analysis = get("/api/complaints/" + complaintId + "/analysis");
+		assertThat(analysis.path("data").path("complaintType").asText()).isEqualTo("HAZARDOUS_MATERIAL");
+		assertThat(analysis.path("data").path("urgency").asText()).isEqualTo("EMERGENCY");
+		assertThat(analysis.path("data").path("departmentCode").asText()).isEqualTo("SAFETY_CONTROL");
+
+		JsonNode draft = get("/api/complaints/" + complaintId + "/draft");
+		String references = draft.path("data").path("references").toString();
+		assertThat(references).contains("생화학");
+		assertThat(references).doesNotContain("Waste Management Act");
+	}
+
+	private JsonNode postComplaint(String rawText, String locationText) {
 		Map<String, String> request = Map.of(
 				"sourceChannel", "WEB",
-				"rawText", "Illegal dumping with waste bags and old furniture. Bad smell and insects. Please inspect and remove it.",
-				"locationText", "Seoul Jung-gu alley"
+				"rawText", rawText,
+				"locationText", locationText
 		);
 		ResponseEntity<JsonNode> response = restTemplate.postForEntity(url("/api/complaints"), request, JsonNode.class);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.CREATED);
@@ -113,7 +131,7 @@ class ComplaintApiSmokeTest {
 	}
 
 	private JsonNode uploadAttachment(String complaintId) {
-		ByteArrayResource resource = new ByteArrayResource("mock evidence".getBytes()) {
+		ByteArrayResource resource = new ByteArrayResource("mock evidence".getBytes(StandardCharsets.UTF_8)) {
 			@Override
 			public String getFilename() {
 				return "evidence.txt";

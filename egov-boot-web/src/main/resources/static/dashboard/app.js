@@ -10,7 +10,7 @@ const steps = [
     id: 2,
     label: "원문 분석",
     eyebrow: "ANALYZE",
-    description: "저장된 민원에 대해 Mock 분석 서비스를 실행합니다.",
+    description: "저장된 민원에 대해 OpenAI LLM 분석 서비스를 실행합니다.",
     detail: "GET /api/complaints/{id}/analysis",
   },
   {
@@ -46,6 +46,7 @@ const labels = {
     TRAFFIC_SIGN: "교통 시설물",
     NOISE: "소음",
     ENVIRONMENT: "환경 및 생활 불편",
+    HAZARDOUS_MATERIAL: "생화학 위험물 및 폭발물 의심",
     GENERAL: "일반 민원",
   },
   urgency: {
@@ -79,6 +80,7 @@ const labels = {
     ROAD: "도로관리과",
     TRAFFIC: "교통행정과",
     CIVIL_AFFAIRS: "민원행정과",
+    SAFETY_CONTROL: "재난안전과",
   },
   documentType: {
     LAW: "법령",
@@ -90,12 +92,15 @@ const labels = {
     "Road Act": "도로법",
     "Civil complaint response manual": "민원 응대 매뉴얼",
     "Local waste management ordinance": "지방자치단체 폐기물 관리 조례",
+    "Public safety emergency response standards": "공공안전 긴급 대응 기준",
     "relevant civil complaint handling standards": "관련 민원 처리 기준",
   },
   ragTitle: {
     "Waste Management Act handling basis": "폐기물관리법 처리 근거",
     "Local waste handling ordinance sample": "지역 폐기물 처리 조례 예시",
     "Illegal dumping civil complaint response manual": "무단투기 민원 응대 매뉴얼",
+    "생화학 위험물 및 폭발물 의심 신고 긴급 대응 매뉴얼": "생화학 위험물 및 폭발물 의심 신고 긴급 대응 매뉴얼",
+    "공공안전 위해물질 신고 처리 근거": "공공안전 위해물질 신고 처리 근거",
   },
 };
 
@@ -411,7 +416,7 @@ function buildStepDetail(stepId, mode) {
   if (stepId === 2) {
     return `
       <h3>원문 분석 방식</h3>
-      <p>현재 개발 기본값은 외부 AI/AWS 호출 없이 Mock 분석 클라이언트와 PostgreSQL 저장소를 사용합니다.</p>
+      <p>현재 기본값은 OPENAI_API_KEY가 설정되면 OpenAI LLM 분석/초안 생성과 PostgreSQL RAG 저장소를 사용합니다.</p>
       <p>${analysis ? `분석 결과는 ${escapeHtml(translateIntent(analysis.intent))}로 저장되었습니다.` : "서버 분석 응답을 기다리는 중입니다."}</p>
     `;
   }
@@ -503,6 +508,8 @@ function translateIntent(value) {
     "Waste dumping report": "무단투기 신고",
     "Road facility complaint": "도로 시설 민원",
     "Traffic sign complaint": "교통표지 민원",
+    "Hazardous material and explosive suspected emergency report": "생화학 위험물 및 폭발물 의심 긴급 신고",
+    "생화학 위험물 및 폭발물 의심 긴급 신고": "생화학 위험물 및 폭발물 의심 긴급 신고",
     "General civil complaint": "일반 민원",
   };
 
@@ -517,6 +524,13 @@ function translateKeywords(keywords) {
     road: "도로",
     pothole: "포트홀",
     street: "도로",
+    biohazard: "생화학 위험",
+    biochemical: "생화학",
+    hazardous: "위험물",
+    chemical: "화학물질",
+    bomb: "폭탄",
+    explosive: "폭발물",
+    emergency: "긴급",
   };
 
   return keywords.map((keyword) => dictionary[keyword] || keyword);
@@ -525,6 +539,7 @@ function translateKeywords(keywords) {
 function translateAction(value) {
   const actions = {
     "site inspection and removal review": "현장 확인 및 조치 검토",
+    "emergency safety response and competent agency transfer": "긴급 안전 대응 및 관계기관 이관",
   };
 
   return actions[value] || value || "-";
@@ -542,11 +557,19 @@ function translateDraft(value, analysis = {}) {
     return "-";
   }
 
-  const department = translate("department", analysis?.departmentCode);
-  const type = translate("complaintType", analysis?.complaintType);
-  const basis = translate("legalBasis", firstLegalBasis());
+  return normalizeOfficialDraft(value);
+}
 
-  return `안녕하세요. 접수하신 민원은 "${type}" 유형으로 분류되었습니다. 담당 부서는 ${department}로 예상됩니다. 담당 부서는 제출된 내용과 위치 정보를 검토하고, 필요한 경우 현장 확인을 진행한 뒤 관련 절차에 따라 후속 조치를 안내할 예정입니다. 본 초안은 ${basis} 등을 근거로 작성되었으며, 최종 발송 전 담당자의 검토가 필요합니다.`;
+function normalizeOfficialDraft(value) {
+  return String(value)
+    .replaceAll("```", "")
+    .replace(/^#{1,6}\s*/gm, "")
+    .replace(/\*\*(.*?)\*\*/g, "$1")
+    .replace(/__(.*?)__/g, "$1")
+    .replace(/^\s*[-*]\s+/gm, "")
+    .replace(/^\s*>\s?/gm, "")
+    .replace(/\n{3,}/g, "\n\n")
+    .trim();
 }
 
 function firstLegalBasis() {
