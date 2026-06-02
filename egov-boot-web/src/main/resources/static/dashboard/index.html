@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>민원 분석 Agent Loop</title>
+    <link rel="stylesheet" href="./styles.css" />
+    <script src="./app.js" defer></script>
+  </head>
+  <body>
+    <main class="page-shell">
+      <section class="hero">
+        <div class="section-kicker">
+          <span>01</span>
+          <i></i>
+          <strong>eGovFrame 민원 분석 파이프라인</strong>
+        </div>
+        <div class="hero-grid">
+          <div>
+            <h1>민원 분석 Agent Loop</h1>
+            <p>
+              비정형 민원을 접수하고 eGovFrame API, PostgreSQL 저장소, Mock 분석,
+              RAG 근거 검색, 공문 초안 생성 흐름을 실제 서버와 연결해 시각화합니다.
+            </p>
+          </div>
+          <div class="server-card">
+            <div class="status-row">
+              <span id="serverDot" class="status-dot"></span>
+              <span id="serverStatus">서버 상태 확인 전</span>
+            </div>
+            <p>기준 API: <code id="apiBaseLabel">/api</code></p>
+          </div>
+        </div>
+      </section>
+
+      <section class="loop-section" aria-label="민원 처리 단계">
+        <div class="timeline-scroll">
+          <div class="timeline-stage">
+            <ol id="stepList" class="step-list"></ol>
+          </div>
+        </div>
+
+        <article class="panel">
+          <div class="progress-track">
+            <div id="progressBar" class="progress-bar"></div>
+          </div>
+
+          <div id="inputPanel" class="panel-body">
+            <div class="form-grid">
+              <div class="form-main">
+                <label for="rawText">민원 원문</label>
+                <textarea
+                  id="rawText"
+                  placeholder="예: 학교 앞 도로에 포트홀이 생겨 보행자가 넘어질 위험이 있습니다. 현장 확인과 보수를 요청합니다."
+                ></textarea>
+              </div>
+              <aside class="meta-box">
+                <label for="sourceChannel">접수 채널</label>
+                <select id="sourceChannel">
+                  <option value="WEB">WEB</option>
+                  <option value="MOBILE">MOBILE</option>
+                  <option value="CALL_CENTER">CALL_CENTER</option>
+                </select>
+
+                <label for="locationText">위치 정보</label>
+                <input
+                  id="locationText"
+                  type="text"
+                  placeholder="예: 서울 마포구 학교 앞"
+                />
+
+                <label for="apiKey">API Key 선택 입력</label>
+                <input
+                  id="apiKey"
+                  type="password"
+                  autocomplete="off"
+                  placeholder="운영 프로파일에서 필요"
+                />
+
+                <button id="processButton" type="button">분석 시작</button>
+              </aside>
+            </div>
+          </div>
+
+          <div id="processingPanel" class="panel-body is-hidden" aria-live="polite">
+            <p class="step-eyebrow" id="activeStepNumber">단계 01</p>
+            <h2 id="activeStepTitle">민원 접수</h2>
+            <p id="activeStepDescription">민원 원문 입력을 기다리는 중</p>
+            <div class="running-chip">
+              <span></span>
+              <b id="runningDetail">서버 요청 준비 중</b>
+            </div>
+            <div id="stepDetailCard" class="step-detail-card is-hidden"></div>
+          </div>
+
+          <div id="resultPanel" class="panel-body result-body is-hidden" aria-live="polite">
+            <div class="result-header">
+              <div>
+                <p class="step-eyebrow">생성 결과</p>
+                <h2>민원 답변 공문 초안</h2>
+              </div>
+              <code id="receiptNumber">-</code>
+            </div>
+
+            <div class="metric-grid">
+              <div>
+                <span>민원 유형</span>
+                <strong id="complaintType">-</strong>
+              </div>
+              <div>
+                <span>담당 부서</span>
+                <strong id="department">-</strong>
+              </div>
+              <div>
+                <span>긴급도</span>
+                <strong id="urgency">-</strong>
+              </div>
+              <div>
+                <span>처리 상태</span>
+                <strong id="complaintStatus">-</strong>
+              </div>
+              <div>
+                <span>접수 채널</span>
+                <strong id="sourceChannelResult">-</strong>
+              </div>
+            </div>
+
+            <div class="result-stack">
+              <section>
+                <h3>접수 민원</h3>
+                <p id="complaintSummary">-</p>
+              </section>
+              <section>
+                <h3>분석 JSON</h3>
+                <pre id="analysisJson">-</pre>
+              </section>
+              <section>
+                <h3>RAG 근거 문서</h3>
+                <ul id="ragList" class="rag-list"></ul>
+              </section>
+              <section>
+                <h3>공문 초안</h3>
+                <p id="draftText">-</p>
+              </section>
+            </div>
+
+            <div class="actions">
+              <a id="detailLink" href="#" target="_blank" rel="noreferrer">API 상세 보기</a>
+              <button id="resetButton" type="button">새 민원 입력</button>
+            </div>
+          </div>
+
+          <div id="errorPanel" class="error-panel is-hidden" role="alert"></div>
+        </article>
+      </section>
+    </main>
+  </body>
+</html>
