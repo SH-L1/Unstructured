@@ -1,7 +1,6 @@
 package egovframework.example.complaint.config;
 
 import egovframework.example.complaint.domain.AuditLog;
-import egovframework.example.complaint.domain.ApiUser;
 import egovframework.example.complaint.repository.AuditLogRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -10,6 +9,8 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Component;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 @Component
@@ -24,7 +25,10 @@ public class ApiAuditLogFilter extends OncePerRequestFilter {
 
 	@Override
 	protected boolean shouldNotFilter(HttpServletRequest request) {
-		return !request.getRequestURI().startsWith("/api/");
+		return !request.getRequestURI().startsWith("/api/")
+				|| "GET".equalsIgnoreCase(request.getMethod())
+				|| "HEAD".equalsIgnoreCase(request.getMethod())
+				|| "OPTIONS".equalsIgnoreCase(request.getMethod());
 	}
 
 	@Override
@@ -38,7 +42,7 @@ public class ApiAuditLogFilter extends OncePerRequestFilter {
 			auditLogRepository.save(new AuditLog(
 					request.getMethod(),
 					request.getRequestURI(),
-					resolveActor(request),
+					resolveActor(),
 					resolveClientIp(request),
 					response.getStatus(),
 					System.currentTimeMillis() - startedAt
@@ -46,10 +50,10 @@ public class ApiAuditLogFilter extends OncePerRequestFilter {
 		}
 	}
 
-	private String resolveActor(HttpServletRequest request) {
-		Object actor = request.getAttribute(ApiKeyAuthenticationFilter.ACTOR_ATTRIBUTE);
-		if (actor instanceof ApiUser apiUser) {
-			return apiUser.getUsername();
+	private String resolveActor() {
+		Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+		if (authentication != null && authentication.isAuthenticated() && !"anonymousUser".equals(authentication.getName())) {
+			return authentication.getName();
 		}
 		return "anonymous";
 	}

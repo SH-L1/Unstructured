@@ -1,5 +1,6 @@
 package egovframework.example.complaint.config;
 
+import java.time.Duration;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.transport.aws.AwsSdk2Transport;
 import org.opensearch.client.transport.aws.AwsSdk2TransportOptions;
@@ -18,7 +19,10 @@ public class OpenSearchConfig {
 	@Bean(destroyMethod = "close")
 	@ConditionalOnProperty(name = "app.rag.opensearch.enabled", havingValue = "true")
 	SdkHttpClient openSearchSdkHttpClient() {
-		return ApacheHttpClient.builder().build();
+		return ApacheHttpClient.builder()
+				.connectionTimeout(Duration.ofSeconds(10))
+				.socketTimeout(Duration.ofSeconds(30))
+				.build();
 	}
 
 	@Bean

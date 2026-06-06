@@ -1,584 +1,266 @@
-const steps = [
-  {
-    id: 1,
-    label: "민원 접수",
-    eyebrow: "POST",
-    description: "민원 원문을 eGovFrame API로 접수하고 PostgreSQL에 저장합니다.",
-    detail: "POST /api/complaints",
-  },
-  {
-    id: 2,
-    label: "원문 분석",
-    eyebrow: "ANALYZE",
-    description: "저장된 민원에 대해 OpenAI LLM 분석 서비스를 실행합니다.",
-    detail: "GET /api/complaints/{id}/analysis",
-  },
-  {
-    id: 3,
-    label: "유형 분류",
-    eyebrow: "CLASSIFY",
-    description: "민원 유형, 긴급도, 감정 상태, 담당 부서를 확인합니다.",
-    detail: "ComplaintAnalysisResponse",
-  },
-  {
-    id: 4,
-    label: "RAG 근거",
-    eyebrow: "RAG",
-    description: "PostgreSQL 기반 지식문서 검색 결과를 공문 근거로 연결합니다.",
-    detail: "GET /api/complaints/{id}/rag-contexts",
-  },
-  {
-    id: 5,
-    label: "공문 초안",
-    eyebrow: "DRAFT",
-    description: "분석 결과와 RAG 근거를 바탕으로 답변 공문 초안을 생성합니다.",
-    detail: "GET /api/complaints/{id}/draft",
-  },
-];
+const state = { detail: null, run: null };
 
-const STEP_HOLD_MS = 6000;
+const el = Object.fromEntries(
+  [...document.querySelectorAll("[id]")].map((node) => [node.id, node]),
+);
 
-const labels = {
-  complaintType: {
-    ILLEGAL_DUMPING: "무단투기 및 생활폐기물",
-    ROAD_DAMAGE: "도로 시설물 파손",
-    ILLEGAL_PARKING: "불법주정차",
-    TRAFFIC_SIGN: "교통 시설물",
-    NOISE: "소음",
-    ENVIRONMENT: "환경 및 생활 불편",
-    HAZARDOUS_MATERIAL: "생화학 위험물 및 폭발물 의심",
-    GENERAL: "일반 민원",
-  },
-  urgency: {
-    LOW: "낮음",
-    NORMAL: "보통",
-    HIGH: "높음",
-    EMERGENCY: "긴급",
-  },
-  sentiment: {
-    NEUTRAL: "중립",
-    DISCOMFORT: "불편",
-    ANGER: "불만",
-    URGENT: "긴급",
-  },
-  status: {
-    RECEIVED: "접수됨",
-    ANALYZED: "분석 완료",
-    DRAFT_GENERATED: "초안 생성 완료",
-    COMPLETED: "완료",
-    CLOSED: "종결",
-    DRAFT: "초안",
-    REVISED: "수정됨",
-  },
-  sourceChannel: {
-    WEB: "웹",
-    MOBILE: "모바일",
-    CALL_CENTER: "콜센터",
-  },
-  department: {
-    RESOURCE_RECYCLING: "자원순환과",
-    ROAD: "도로관리과",
-    TRAFFIC: "교통행정과",
-    CIVIL_AFFAIRS: "민원행정과",
-    SAFETY_CONTROL: "재난안전과",
-  },
-  documentType: {
-    LAW: "법령",
-    ORDINANCE: "조례",
-    MANUAL: "업무 매뉴얼",
-  },
-  legalBasis: {
-    "Waste Management Act": "폐기물관리법",
-    "Road Act": "도로법",
-    "Civil complaint response manual": "민원 응대 매뉴얼",
-    "Local waste management ordinance": "지방자치단체 폐기물 관리 조례",
-    "Public safety emergency response standards": "공공안전 긴급 대응 기준",
-    "relevant civil complaint handling standards": "관련 민원 처리 기준",
-  },
-  ragTitle: {
-    "Waste Management Act handling basis": "폐기물관리법 처리 근거",
-    "Local waste handling ordinance sample": "지역 폐기물 처리 조례 예시",
-    "Illegal dumping civil complaint response manual": "무단투기 민원 응대 매뉴얼",
-    "생화학 위험물 및 폭발물 의심 신고 긴급 대응 매뉴얼": "생화학 위험물 및 폭발물 의심 신고 긴급 대응 매뉴얼",
-    "공공안전 위해물질 신고 처리 근거": "공공안전 위해물질 신고 처리 근거",
-  },
-};
-
-const state = {
-  activeStep: 1,
-  completedStep: 0,
-  selectedStep: 1,
-  complaint: null,
-  analysis: null,
-  draft: null,
-  ragContexts: [],
-  isProcessing: false,
-};
-
-const els = {
-  stepList: document.querySelector("#stepList"),
-  progressBar: document.querySelector("#progressBar"),
-  inputPanel: document.querySelector("#inputPanel"),
-  processingPanel: document.querySelector("#processingPanel"),
-  resultPanel: document.querySelector("#resultPanel"),
-  errorPanel: document.querySelector("#errorPanel"),
-  activeStepNumber: document.querySelector("#activeStepNumber"),
-  activeStepTitle: document.querySelector("#activeStepTitle"),
-  activeStepDescription: document.querySelector("#activeStepDescription"),
-  runningDetail: document.querySelector("#runningDetail"),
-  stepDetailCard: document.querySelector("#stepDetailCard"),
-  rawText: document.querySelector("#rawText"),
-  locationText: document.querySelector("#locationText"),
-  sourceChannel: document.querySelector("#sourceChannel"),
-  apiKey: document.querySelector("#apiKey"),
-  processButton: document.querySelector("#processButton"),
-  resetButton: document.querySelector("#resetButton"),
-  serverDot: document.querySelector("#serverDot"),
-  serverStatus: document.querySelector("#serverStatus"),
-  receiptNumber: document.querySelector("#receiptNumber"),
-  complaintType: document.querySelector("#complaintType"),
-  department: document.querySelector("#department"),
-  urgency: document.querySelector("#urgency"),
-  complaintStatus: document.querySelector("#complaintStatus"),
-  sourceChannelResult: document.querySelector("#sourceChannelResult"),
-  complaintSummary: document.querySelector("#complaintSummary"),
-  analysisJson: document.querySelector("#analysisJson"),
-  ragList: document.querySelector("#ragList"),
-  draftText: document.querySelector("#draftText"),
-  detailLink: document.querySelector("#detailLink"),
-};
-
-function renderSteps() {
-  els.stepList.innerHTML = steps
-    .map((step) => {
-      const isActive = step.id === state.activeStep;
-      const isComplete = step.id <= state.completedStep;
-      const classes = ["step-item", isActive ? "is-active" : "", isComplete ? "is-complete" : ""]
-        .filter(Boolean)
-        .join(" ");
-
-      return `
-        <li class="${classes}">
-          <button class="step-button" type="button" data-step-id="${step.id}" ${canSelectStep(step.id) ? "" : "disabled"}>
-          <div class="node">${String(step.id).padStart(2, "0")}</div>
-          <div class="step-label">${step.label}</div>
-          <div class="step-kicker">${step.eyebrow}</div>
-          </button>
-        </li>
-      `;
-    })
-    .join("");
-
-  els.stepList.querySelectorAll(".step-button").forEach((button) => {
-    button.addEventListener("click", () => selectStep(Number(button.dataset.stepId)));
-  });
+function idempotencyKey(action) {
+  return `${action}-${crypto.randomUUID()}`;
 }
 
-function setActiveStep(stepId, completedStep = Math.max(0, stepId - 1)) {
-  const step = steps.find((candidate) => candidate.id === stepId) || steps[0];
-  state.activeStep = step.id;
-  state.selectedStep = step.id;
-  state.completedStep = completedStep;
-
-  els.activeStepNumber.textContent = `단계 ${String(step.id).padStart(2, "0")}`;
-  els.activeStepTitle.textContent = step.label;
-  els.activeStepDescription.textContent = step.description;
-  els.runningDetail.textContent = step.detail;
-  els.progressBar.style.width = `${((Math.max(completedStep, step.id - 1)) / (steps.length - 1)) * 100}%`;
-  renderStepDetail(step.id, state.isProcessing ? "processing" : "review");
-  renderSteps();
+function csrfToken() {
+  const item = document.cookie.split("; ").find((value) => value.startsWith("XSRF-TOKEN="));
+  return item ? decodeURIComponent(item.split("=", 2)[1]) : null;
 }
 
-function showPanel(panel) {
-  [els.inputPanel, els.processingPanel, els.resultPanel].forEach((candidate) => {
-    candidate.classList.toggle("is-hidden", candidate !== panel);
-  });
-}
+async function api(path, options = {}) {
+  const method = options.method || "GET";
+  const headers = { Accept: "application/json", ...(options.headers || {}) };
+  if (options.body) headers["Content-Type"] = "application/json";
+  const token = csrfToken();
+  if (method !== "GET" && token) headers["X-XSRF-TOKEN"] = token;
 
-function setError(message) {
-  els.errorPanel.textContent = message;
-  els.errorPanel.classList.toggle("is-hidden", !message);
-}
-
-function sleep(ms) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-function canSelectStep(stepId) {
-  if (state.isProcessing) {
-    return stepId <= state.completedStep || stepId === state.activeStep;
+  const response = await fetch(path, { ...options, method, headers, credentials: "same-origin" });
+  const body = await response.json().catch(() => null);
+  if (!response.ok || !body?.success) {
+    throw new Error(body?.error?.message || body?.message || `${response.status} ${response.statusText}`);
   }
-
-  if (state.draft) {
-    return stepId <= steps.length;
-  }
-
-  return stepId === 1;
+  return body.data;
 }
 
-function apiHeaders() {
-  const headers = {
-    "Content-Type": "application/json",
-  };
-  const apiKey = els.apiKey.value.trim();
-  if (apiKey) {
-    headers["X-API-Key"] = apiKey;
-  }
+function mutationHeaders(action, version) {
+  const headers = { "Idempotency-Key": idempotencyKey(action) };
+  if (version !== undefined && version !== null) headers["If-Match"] = `"${version}"`;
   return headers;
 }
 
-async function apiRequest(path, options = {}) {
-  const response = await fetch(path, {
-    ...options,
-    headers: {
-      ...apiHeaders(),
-      ...(options.headers || {}),
-    },
-  });
-
-  const contentType = response.headers.get("content-type") || "";
-  const body = contentType.includes("application/json") ? await response.json() : await response.text();
-
-  if (!response.ok || body.success === false) {
-    const message = body?.error?.message || body?.message || `HTTP ${response.status}`;
-    throw new Error(message);
-  }
-
-  return body.data;
+function showMessage(text, error = false) {
+  el.message.textContent = text;
+  el.message.classList.toggle("is-error", error);
+  el.message.classList.remove("is-hidden");
+  window.setTimeout(() => el.message.classList.add("is-hidden"), 6000);
 }
 
 async function checkServer() {
   try {
-    await fetch("/actuator/health");
-    els.serverDot.classList.remove("is-error");
-    els.serverDot.classList.add("is-ok");
-    els.serverStatus.textContent = "서버 응답 가능";
+    const response = await fetch("/dashboard/index.html", { method: "HEAD", credentials: "same-origin" });
+    if (!response.ok) throw new Error(`Server check failed: ${response.status}`);
+    el.serverDot.className = "status-dot ok";
+    el.serverStatus.textContent = "서버 연결됨";
   } catch {
-    els.serverDot.classList.remove("is-ok");
-    els.serverDot.classList.add("is-error");
-    els.serverStatus.textContent = "서버 응답 없음";
+    el.serverDot.className = "status-dot error";
+    el.serverStatus.textContent = "서버 연결 실패";
   }
 }
 
-async function runPipeline() {
-  const rawText = els.rawText.value.trim();
-  const locationText = els.locationText.value.trim();
-
-  if (!rawText) {
-    setError("민원 원문을 입력해야 분석을 시작할 수 있습니다.");
-    return;
-  }
-
-  state.isProcessing = true;
-  els.processButton.disabled = true;
-  setError("");
-  showPanel(els.processingPanel);
-
+async function createComplaint() {
+  if (!el.rawText.value.trim()) return showMessage("민원 원문을 입력하세요.", true);
   try {
-    setActiveStep(1, 0);
-    state.complaint = await apiRequest("/api/complaints", {
+    const complaint = await api("/api/v1/complaints", {
       method: "POST",
+      headers: mutationHeaders("create"),
       body: JSON.stringify({
-        sourceChannel: els.sourceChannel.value,
-        rawText,
-        locationText,
+        sourceChannel: el.sourceChannel.value,
+        rawText: el.rawText.value.trim(),
+        locationText: el.locationText.value.trim() || null,
       }),
     });
-
-    await sleep(STEP_HOLD_MS);
-    setActiveStep(2, 1);
-    state.analysis = await apiRequest(`/api/complaints/${state.complaint.id}/analysis`);
-
-    await sleep(STEP_HOLD_MS);
-    setActiveStep(3, 2);
-    await sleep(STEP_HOLD_MS);
-
-    setActiveStep(4, 3);
-    state.draft = await apiRequest(`/api/complaints/${state.complaint.id}/draft`);
-    state.ragContexts = await apiRequest(`/api/complaints/${state.complaint.id}/rag-contexts`);
-
-    await sleep(STEP_HOLD_MS);
-    setActiveStep(5, 5);
-    els.progressBar.style.width = "100%";
-    renderResult();
-    showPanel(els.resultPanel);
+    el.complaintId.value = complaint.id;
+    await loadComplaint(complaint.id);
+    showMessage("민원이 접수되었습니다. 분석은 아직 실행되지 않았습니다.");
   } catch (error) {
-    setError(`서버 연동 실패: ${error.message}`);
-    showPanel(els.inputPanel);
-  } finally {
-    state.isProcessing = false;
-    els.processButton.disabled = false;
+    showMessage(error.message, true);
   }
 }
 
-function renderResult() {
-  const complaint = state.complaint || {};
-  const analysis = state.analysis || {};
-  const draft = state.draft || {};
-  const references = state.ragContexts?.length ? state.ragContexts : draft.references || [];
-
-  els.receiptNumber.textContent = complaint.receiptNumber || complaint.id || "-";
-  els.complaintType.textContent = translate("complaintType", analysis.complaintType);
-  els.department.textContent = analysis.department
-    ? `${translate("department", analysis.departmentCode)} (${analysis.departmentCode || "-"})`
-    : "-";
-  els.urgency.textContent = translate("urgency", analysis.urgency);
-  els.complaintStatus.textContent = translate("status", complaint.status || draft.status);
-  els.sourceChannelResult.textContent = translate("sourceChannel", complaint.sourceChannel);
-  els.complaintSummary.textContent = complaint.rawText || "-";
-  els.analysisJson.textContent = formatAnalysisJson(analysis);
-  els.draftText.textContent = translateDraft(draft.draftText, analysis);
-  els.detailLink.href = complaint.id ? `/api/complaints/${complaint.id}` : "#";
-
-  if (!references.length) {
-    els.ragList.innerHTML = "<li>조회된 RAG 근거 문서가 없습니다.</li>";
-    return;
-  }
-
-  els.ragList.innerHTML = references
-    .map((item) => {
-      const score = Number.isFinite(item.score) ? item.score.toFixed(2) : "-";
-      return `
-        <li>
-          <strong>${escapeHtml(item.title || "근거 문서")}</strong>
-          <p>${escapeHtml(translate("legalBasis", item.legalBasis) || translate("documentType", item.documentType) || "근거 정보 없음")} · 유사도 ${score}</p>
-          <p>${escapeHtml(translateSnippet(item.contentSnippet || ""))}</p>
-        </li>
-      `;
-    })
-    .join("");
-}
-
-function formatAnalysisJson(analysis) {
-  const view = {
-    intent: translateIntent(analysis.intent),
-    complaintType: translate("complaintType", analysis.complaintType),
-    urgency: translate("urgency", analysis.urgency),
-    sentiment: translate("sentiment", analysis.sentiment),
-    department: translate("department", analysis.departmentCode),
-    departmentCode: analysis.departmentCode || "-",
-    locationText: analysis.locationText || "-",
-  };
-
-  if (!analysis.analysisJson) {
-    return JSON.stringify(view, null, 2);
-  }
-
+async function loadComplaint(id = el.complaintId.value.trim()) {
+  if (!id) return showMessage("민원 UUID를 입력하세요.", true);
   try {
-    const parsed = JSON.parse(analysis.analysisJson);
-    return JSON.stringify(
-      {
-        intent: translateIntent(parsed.intent || analysis.intent),
-        urgency: translate("urgency", parsed.urgency || analysis.urgency),
-        sentiment: translate("sentiment", parsed.sentiment || analysis.sentiment),
-        department: translate("department", analysis.departmentCode),
-        keywords: translateKeywords(parsed.keywords || []),
-        requiredAction: translateAction(parsed.requiredAction),
-      },
-      null,
-      2,
-    );
-  } catch {
-    return JSON.stringify(view, null, 2);
+    state.detail = await api(`/api/v1/complaints/${id}`);
+    el.complaintId.value = id;
+    render();
+  } catch (error) {
+    showMessage(error.message, true);
   }
 }
 
-function renderStepDetail(stepId, mode = "review") {
-  const detail = buildStepDetail(stepId, mode);
-  els.stepDetailCard.innerHTML = detail;
-  els.stepDetailCard.classList.toggle("is-hidden", !detail);
+async function enqueue(kind) {
+  const complaint = state.detail?.complaint;
+  if (!complaint) return;
+  try {
+    state.run = await api(`/api/v1/complaints/${complaint.id}/${kind}-runs`, {
+      method: "POST",
+      headers: mutationHeaders(kind, complaint.version),
+    });
+    renderRun();
+    await pollRun(state.run.id);
+    await loadComplaint(complaint.id);
+  } catch (error) {
+    showMessage(error.message, true);
+  }
 }
 
-function buildStepDetail(stepId, mode) {
-  const complaint = state.complaint;
-  const analysis = state.analysis;
-  const draft = state.draft;
-  const references = state.ragContexts?.length ? state.ragContexts : draft?.references || [];
+async function pollRun(id) {
+  for (let attempt = 0; attempt < 60; attempt += 1) {
+    state.run = await api(`/api/v1/runs/${id}`);
+    renderRun();
+    if (["SUCCEEDED", "FAILED", "BLOCKED"].includes(state.run.status)) return;
+    await new Promise((resolve) => window.setTimeout(resolve, 700));
+  }
+  showMessage("작업 대기 시간이 초과되었습니다. 새로고침으로 상태를 확인하세요.", true);
+}
 
-  if (stepId === 1) {
-    if (!complaint) {
-      return mode === "processing"
-        ? "<h3>실행 내용</h3><p>입력된 민원 원문을 JSON 요청으로 구성해 서버에 접수합니다.</p>"
-        : "";
-    }
+async function confirmLocation(issueId) {
+  const locationText = window.prompt("사람이 확인한 위치를 입력하세요.");
+  if (!locationText?.trim()) return;
+  try {
+    await api(`/api/v1/issues/${issueId}/location-confirmations`, {
+      method: "POST",
+      headers: mutationHeaders("location", state.detail.complaint.version),
+      body: JSON.stringify({ locationText: locationText.trim() }),
+    });
+    await loadComplaint(state.detail.complaint.id);
+    showMessage("위치가 사람 확인으로 기록되었습니다.");
+  } catch (error) {
+    showMessage(error.message, true);
+  }
+}
 
-    return `
-      <h3>접수 결과</h3>
+async function decide(path, approved, action) {
+  const draft = state.detail?.draft;
+  if (!draft) return;
+  try {
+    await api(`/api/v1/drafts/${draft.id}/${path}`, {
+      method: "POST",
+      headers: mutationHeaders(action, draft.version),
+      body: JSON.stringify({ approved, notes: el.reviewNotes.value.trim() || null }),
+    });
+    await loadComplaint(state.detail.complaint.id);
+    showMessage(approved ? "결정이 기록되었습니다." : "거절 또는 반려가 기록되었습니다.");
+  } catch (error) {
+    showMessage(error.message, true);
+  }
+}
+
+async function completeComplaint() {
+  const complaint = state.detail?.complaint;
+  if (!complaint) return;
+  try {
+    await api(`/api/v1/complaints/${complaint.id}/complete`, {
+      method: "POST",
+      headers: mutationHeaders("complete", complaint.version),
+    });
+    await loadComplaint(complaint.id);
+    showMessage("외부 발송 없이 수동 완료 기록만 저장되었습니다.");
+  } catch (error) {
+    showMessage(error.message, true);
+  }
+}
+
+function render() {
+  const {
+    complaint,
+    analysis,
+    issues = [],
+    draft,
+    draftClaims = [],
+    evidence = [],
+    verificationResults = [],
+    aiRuns = [],
+    humanReviews = [],
+  } = state.detail;
+  el.workspace.classList.remove("is-hidden");
+  el.receiptNumber.textContent = complaint.receiptNumber;
+  el.status.textContent = complaint.status;
+  el.blocker.textContent = complaint.workflowBlocker || "없음";
+  el.version.textContent = complaint.version;
+  el.location.textContent = complaint.locationText || "미확정";
+  el.redactedText.textContent = complaint.redactedText;
+  el.analysis.classList.toggle("empty", !analysis);
+  el.analysis.textContent = analysis
+    ? `${analysis.complaintType} · ${analysis.urgency} · 담당 후보 ${analysis.departmentCode} · 감정 정보 ${analysis.sentiment} (참고 전용)`
+    : "분석 결과가 없습니다.";
+
+  el.issues.innerHTML = issues.map((issue) => `
+    <article class="issue">
+      <div><strong>이슈 ${issue.issueIndex + 1}: ${escapeHtml(issue.summary)}</strong><span>${issue.status}</span></div>
+      <p>유형 ${issue.complaintType} · 관할 ${issue.jurisdictionStatus} · 안전 ${issue.safetyRisk} · 처리 가능성 ${issue.processability}</p>
+      <p>담당 후보 ${escapeHtml((issue.departmentCandidates || []).join(", ")) || "없음"} · 위치 후보 ${escapeHtml((issue.locationCandidates || []).join(", ")) || "없음"}</p>
+      <button class="secondary" data-location-id="${issue.id}" type="button">위치 사람 확인</button>
+    </article>
+  `).join("") || '<div class="empty">분석 후 복합 이슈가 표시됩니다.</div>';
+
+  el.evidence.classList.toggle("empty", evidence.length === 0);
+  el.evidence.innerHTML = evidence.map((item) => `
+    <article>
+      <strong>${escapeHtml(item.title)}</strong>
       <dl>
-        <div><dt>접수번호</dt><dd>${escapeHtml(complaint.receiptNumber || "-")}</dd></div>
-        <div><dt>접수 채널</dt><dd>${escapeHtml(translate("sourceChannel", complaint.sourceChannel))}</dd></div>
-        <div><dt>위치</dt><dd>${escapeHtml(complaint.locationText || "-")}</dd></div>
+        <dt>주장 관계</dt><dd>${item.supportsClaim ? "지지 가능" : "반대 또는 검토 필요"}</dd>
+        <dt>검증</dt><dd>${escapeHtml(item.sourceStatus)}</dd>
+        <dt>목적</dt><dd>${escapeHtml(item.sourceType)}</dd>
+        <dt>법적 근거</dt><dd>${escapeHtml(item.legalBasis || "미지정")}</dd>
+        <dt>출처 버전</dt><dd>${escapeHtml(item.sourceVersion || "미지정")}</dd>
+        <dt>관할</dt><dd>${escapeHtml(item.jurisdictionCode || "미지정")}</dd>
+        <dt>시행</dt><dd>${escapeHtml(item.effectiveFrom || "미지정")} ~ ${escapeHtml(item.effectiveTo || "현재")}</dd>
+        <dt>해시</dt><dd>${escapeHtml(item.contentHash)}</dd>
       </dl>
-      <p>${escapeHtml(complaint.rawText || "")}</p>
-    `;
-  }
+      <p>${escapeHtml(item.content)}</p>
+      ${safeHttpUrl(item.sourceUrl) ? `<a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">원 출처</a>` : ""}
+    </article>
+  `).join("") || "연결된 근거가 없습니다.";
 
-  if (stepId === 2) {
-    return `
-      <h3>원문 분석 방식</h3>
-      <p>현재 기본값은 OPENAI_API_KEY가 설정되면 OpenAI LLM 분석/초안 생성과 PostgreSQL RAG 저장소를 사용합니다.</p>
-      <p>${analysis ? `분석 결과는 ${escapeHtml(translateIntent(analysis.intent))}로 저장되었습니다.` : "서버 분석 응답을 기다리는 중입니다."}</p>
-    `;
-  }
-
-  if (stepId === 3) {
-    if (!analysis) {
-      return "<h3>유형 분류</h3><p>분석 응답을 받은 뒤 민원 유형, 긴급도, 감정 상태, 담당 부서를 표시합니다.</p>";
-    }
-
-    return `
-      <h3>분류 결과</h3>
-      <dl>
-        <div><dt>민원 유형</dt><dd>${escapeHtml(translate("complaintType", analysis.complaintType))}</dd></div>
-        <div><dt>긴급도</dt><dd>${escapeHtml(translate("urgency", analysis.urgency))}</dd></div>
-        <div><dt>감정 상태</dt><dd>${escapeHtml(translate("sentiment", analysis.sentiment))}</dd></div>
-        <div><dt>담당 부서</dt><dd>${escapeHtml(translate("department", analysis.departmentCode))}</dd></div>
-      </dl>
-    `;
-  }
-
-  if (stepId === 4) {
-    if (!references.length) {
-      return "<h3>RAG 근거 검색</h3><p>공문 초안 생성 과정에서 PostgreSQL 지식문서 검색 결과를 연결합니다.</p>";
-    }
-
-    return `
-      <h3>RAG 근거 검색 결과</h3>
-      <ul>
-        ${references
-          .map(
-            (item) => `
-              <li>
-                <strong>${escapeHtml(translate("ragTitle", item.title))}</strong>
-                <p>${escapeHtml(translate("legalBasis", item.legalBasis) || translate("documentType", item.documentType))}</p>
-              </li>
-            `,
-          )
-          .join("")}
-      </ul>
-    `;
-  }
-
-  if (stepId === 5) {
-    return `
-      <h3>공문 초안</h3>
-      <p>${escapeHtml(draft?.draftText ? translateDraft(draft.draftText, analysis) : "분석 결과와 RAG 근거를 바탕으로 초안을 생성하는 중입니다.")}</p>
-    `;
-  }
-
-  return "";
+  el.draftStatus.textContent = draft ? `${draft.status} · v${draft.version}` : "초안 없음";
+  el.draftText.textContent = draft?.draftText || "검증된 공식 근거가 있어야 초안이 생성됩니다.";
+  el.draftClaims.classList.toggle("empty", draftClaims.length === 0);
+  el.draftClaims.innerHTML = draftClaims.map((claim) => `
+    <article class="audit-item">
+      <strong>주장 ${claim.claimIndex + 1} · ${escapeHtml(claim.claimType)}</strong>
+      <p>${escapeHtml(claim.claimText)}</p>
+      <p>근거 ID ${escapeHtml((claim.evidenceSourceIds || []).join(", "))}</p>
+    </article>
+  `).join("") || "구조화 주장이 없습니다.";
+  el.verificationResults.classList.toggle("empty", verificationResults.length === 0);
+  el.verificationResults.innerHTML = verificationResults.map((item) => `
+    <article class="${item.hardFailure ? "audit-item hard-failure" : "audit-item"}">
+      <strong>${escapeHtml(item.ruleCode)} · ${escapeHtml(item.status)}</strong>
+      <p>${escapeHtml(item.message)}</p>
+    </article>
+  `).join("") || "검증 결과가 없습니다.";
+  el.aiRuns.classList.toggle("empty", aiRuns.length === 0);
+  el.aiRuns.innerHTML = aiRuns.map((item) => `
+    <article class="audit-item">
+      <strong>${escapeHtml(item.taskType)} · ${escapeHtml(item.status)}</strong>
+      <p>${escapeHtml(item.provider)} / ${escapeHtml(item.modelName)}</p>
+      <p>prompt ${escapeHtml(item.promptVersion)} · schema ${escapeHtml(item.schemaVersion)}</p>
+      <p>입력 해시 ${escapeHtml(item.inputHash)} · 출력 해시 ${escapeHtml(item.outputHash || "없음")}</p>
+      <p>비용 상한 단위 ${item.costUnits} · ${item.durationMs}ms · 재시도 ${item.retryCount}</p>
+      ${item.failureReason ? `<p class="failure">${escapeHtml(item.failureReason)}</p>` : ""}
+    </article>
+  `).join("") || "AI 실행 기록이 없습니다.";
+  el.humanReviews.classList.toggle("empty", humanReviews.length === 0);
+  el.humanReviews.innerHTML = humanReviews.map((item) => `
+    <article class="audit-item">
+      <strong>${escapeHtml(item.action)} · ${escapeHtml(item.actorRole)}</strong>
+      <p>${escapeHtml(item.actor)}${item.notes ? ` · ${escapeHtml(item.notes)}` : ""}</p>
+    </article>
+  `).join("") || "검토·승인 이력이 없습니다.";
+  document.querySelectorAll("[data-location-id]").forEach((button) => {
+    button.addEventListener("click", () => confirmLocation(button.dataset.locationId));
+  });
 }
 
-function selectStep(stepId) {
-  if (!canSelectStep(stepId)) {
-    return;
-  }
-
-  if (state.draft && stepId === 5) {
-    state.selectedStep = stepId;
-    state.activeStep = stepId;
-    renderSteps();
-    renderResult();
-    showPanel(els.resultPanel);
-    return;
-  }
-
-  state.selectedStep = stepId;
-  state.activeStep = stepId;
-  const step = steps.find((candidate) => candidate.id === stepId) || steps[0];
-  els.activeStepNumber.textContent = `단계 ${String(step.id).padStart(2, "0")}`;
-  els.activeStepTitle.textContent = step.label;
-  els.activeStepDescription.textContent = step.description;
-  els.runningDetail.textContent = state.draft ? "완료된 단계 다시 보기" : step.detail;
-  renderStepDetail(stepId, state.draft ? "review" : "processing");
-  showPanel(els.processingPanel);
-  renderSteps();
-}
-
-function translate(group, value) {
-  if (!value) {
-    return "-";
-  }
-
-  return labels[group]?.[value] || value;
-}
-
-function translateIntent(value) {
-  const intents = {
-    "Waste dumping report": "무단투기 신고",
-    "Road facility complaint": "도로 시설 민원",
-    "Traffic sign complaint": "교통표지 민원",
-    "Hazardous material and explosive suspected emergency report": "생화학 위험물 및 폭발물 의심 긴급 신고",
-    "생화학 위험물 및 폭발물 의심 긴급 신고": "생화학 위험물 및 폭발물 의심 긴급 신고",
-    "General civil complaint": "일반 민원",
-  };
-
-  return intents[value] || value || "-";
-}
-
-function translateKeywords(keywords) {
-  const dictionary = {
-    waste: "폐기물",
-    dumping: "무단투기",
-    "civil complaint": "민원",
-    road: "도로",
-    pothole: "포트홀",
-    street: "도로",
-    biohazard: "생화학 위험",
-    biochemical: "생화학",
-    hazardous: "위험물",
-    chemical: "화학물질",
-    bomb: "폭탄",
-    explosive: "폭발물",
-    emergency: "긴급",
-  };
-
-  return keywords.map((keyword) => dictionary[keyword] || keyword);
-}
-
-function translateAction(value) {
-  const actions = {
-    "site inspection and removal review": "현장 확인 및 조치 검토",
-    "emergency safety response and competent agency transfer": "긴급 안전 대응 및 관계기관 이관",
-  };
-
-  return actions[value] || value || "-";
-}
-
-function translateSnippet(value) {
-  return value
-    .replaceAll("Household waste and illegal dumping complaints require site confirmation, removal review and enforcement review according to waste handling standards.", "생활폐기물 및 무단투기 민원은 폐기물 처리 기준에 따라 현장 확인, 수거 검토, 행정 조치 검토가 필요합니다.")
-    .replaceAll("Local governments may inspect reported dumping sites, remove household waste and guide residents according to local waste ordinances.", "지방자치단체는 조례에 따라 신고된 무단투기 장소를 확인하고 생활폐기물 수거 및 주민 안내를 수행할 수 있습니다.")
-    .replaceAll("Responses should mention receipt of the complaint, responsible department, site inspection plan and additional confirmation if required.", "답변에는 민원 접수 사실, 담당 부서, 현장 확인 계획, 추가 확인 필요 여부를 포함해야 합니다.");
-}
-
-function translateDraft(value, analysis = {}) {
-  if (!value) {
-    return "-";
-  }
-
-  return normalizeOfficialDraft(value);
-}
-
-function normalizeOfficialDraft(value) {
-  return String(value)
-    .replaceAll("```", "")
-    .replace(/^#{1,6}\s*/gm, "")
-    .replace(/\*\*(.*?)\*\*/g, "$1")
-    .replace(/__(.*?)__/g, "$1")
-    .replace(/^\s*[-*]\s+/gm, "")
-    .replace(/^\s*>\s?/gm, "")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
-}
-
-function firstLegalBasis() {
-  const references = state.ragContexts?.length ? state.ragContexts : state.draft?.references || [];
-  return references.find((item) => item.legalBasis)?.legalBasis || "Civil complaint response manual";
+function renderRun() {
+  if (!state.run) return;
+  el.runStatus.classList.remove("empty");
+  el.runStatus.innerHTML = `
+    <strong>${state.run.jobType} · ${state.run.status}</strong>
+    <p>시도 ${state.run.attempts}/${state.run.maxAttempts}</p>
+    ${state.run.failureReason ? `<p class="failure">${escapeHtml(state.run.failureReason)}</p>` : ""}
+  `;
 }
 
 function escapeHtml(value) {
-  return String(value)
+  return String(value ?? "")
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")
     .replaceAll(">", "&gt;")
@@ -586,27 +268,24 @@ function escapeHtml(value) {
     .replaceAll("'", "&#039;");
 }
 
-function reset() {
-  state.activeStep = 1;
-  state.completedStep = 0;
-  state.selectedStep = 1;
-  state.complaint = null;
-  state.analysis = null;
-  state.draft = null;
-  state.ragContexts = [];
-  setError("");
-  setActiveStep(1, 0);
-  els.progressBar.style.width = "0";
-  showPanel(els.inputPanel);
+function safeHttpUrl(value) {
+  try {
+    const url = new URL(value);
+    return ["http:", "https:"].includes(url.protocol);
+  } catch {
+    return false;
+  }
 }
 
-els.processButton.addEventListener("click", runPipeline);
-els.resetButton.addEventListener("click", reset);
-els.rawText.addEventListener("input", () => {
-  els.processButton.disabled = state.isProcessing || !els.rawText.value.trim();
-});
+el.createButton.addEventListener("click", createComplaint);
+el.loadButton.addEventListener("click", () => loadComplaint());
+el.refreshButton.addEventListener("click", () => loadComplaint());
+el.analysisButton.addEventListener("click", () => enqueue("analysis"));
+el.draftButton.addEventListener("click", () => enqueue("draft"));
+el.reviewApproveButton.addEventListener("click", () => decide("reviews", true, "review-pass"));
+el.reviewRejectButton.addEventListener("click", () => decide("reviews", false, "review-reject"));
+el.approveButton.addEventListener("click", () => decide("approvals", true, "approve"));
+el.rejectButton.addEventListener("click", () => decide("approvals", false, "approval-reject"));
+el.completeButton.addEventListener("click", completeComplaint);
 
-renderSteps();
-setActiveStep(1, 0);
-els.processButton.disabled = true;
 checkServer();

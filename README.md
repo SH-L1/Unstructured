@@ -1,131 +1,166 @@
-# eGovFrame 기반 민원 분석 및 RAG 공문 초안 시스템
+# 근거 검증형 민원 처리 지원 시스템
 
-전자정부 표준프레임워크(eGovFrame) 5.0 기반 백엔드를 중심으로 비정형 민원 데이터를 접수, 분류, 저장하고 향후 RAG 기반 공문 답변 초안 생성을 연동하기 위한 프로젝트입니다.
+아산시 전체 민원에 대한 답변 템플릿 생성을 목표로 하는 사람 검토 중심 지원 시스템입니다. AI는 복합 이슈 분류, 담당 부서 후보, 근거 연결 초안만 제안하며 접수 여부, 최종 판단, 승인, 발송, 완료 처리는 사람이 수행합니다.
 
-## 현재 기준
+## 현재 구조
 
-현재 메인 백엔드는 `egov-boot-web`입니다.
+- 권위 서버는 `egov-boot-web`입니다. 중복 `backend` 구현은 활성 대상에서 제거했습니다.
+- Spring은 상태 전이, 권한, 검증, 감사, 작업 조정, 민감정보 저장을 담당합니다.
+- Python은 `ai-rag-engine`에서 비동기 작업자, 공공 API 수집기, OCR/첨부 파생 처리, 검색 인덱스 동기화만 담당합니다.
+- 자동 발송과 자동 완료는 지원하지 않습니다. 승인 후에도 `POST /api/v1/complaints/{id}/complete`로 수동 완료 기록만 남깁니다.
+- 기존 3개 유형 MVP 범위는 폐기하고, 아산시 전체 민원을 대상으로 확장했습니다. 아직 부서 규칙이 없는 유형은 `GENERAL`로 들어가며 조직/업무분장 데이터 적재 후 세분화합니다.
 
-- 생성 방식: VS Code Extension `eGovFrame Initializr 5.0.5`
-- 프레임워크: eGovFrame Boot Web 5.0, Spring Boot, Spring MVC
-- 빌드 도구: Maven
-- Java: 17
-- 실행 포트: `8081`
-- DB: PostgreSQL `complaintdb`
+## 현재 반영된 핵심 변경
 
-기존 `backend` 디렉터리는 Spring Initializr 기반 Gradle 프로젝트였으며, 전자정부프레임워크 필수 조건을 만족하기 위해 더 이상 메인 백엔드로 사용하지 않습니다. 필요한 민원 API, 도메인, 서비스 코드는 `egov-boot-web` 하위로 이식했습니다.
+- 브라우저 API 키 제거, 서버 세션 기반 역할 도입
+- `INTAKE`, `REVIEWER`, `APPROVER`, `KNOWLEDGE_ADMIN`, `AUDITOR`, `ADMIN` 역할 분리
+- 검토자와 승인자 동일인 금지
+- 모든 변경 API에 `Idempotency-Key`, 엔티티 버전/`If-Match` 적용
+- 부작용 `GET` 및 임의 상태 변경 API 차단
+- 민원 원문과 민감정보를 제한 저장소로 분리
+- 첨부파일 격리, 악성 파일 검사, OCR/PDF/HWP 추출, 비식별 파생본만 AI 사용
+- PostgreSQL 작업 큐, 작업 임대, 재시도, 실패 기록, 감사 로그 구현
+- 고정 RAG 점수 표현 제거
+- 근거 스냅샷, AI 실행 기록, 구조화 초안 주장, 주장-근거 링크, 검증 결과, 사람 검토 이력 구현
+- 데이터 마트용 raw/normalized/error/ingestion run 테이블 추가
+- 국가법령 동기화와 아산시 자치법규 동기화를 분리
 
-## 주요 디렉터리
+## 데이터 정책
+
+현재 개발 기준의 최종 데이터 범위는 [docs/final-data-scope.md](docs/final-data-scope.md)를 우선한다. DB 구성과 파일 배치 경로는 [docs/current-db-and-file-layout.md](docs/current-db-and-file-layout.md)를 따른다. API 키는 `SGIS`, 공공데이터포털, 국가법령정보 단위로 관리하고, 각 API에서 실제로 가져올 세부 데이터는 문서에 정의된 수집기 기준을 따른다.
+
+| 데이터 | 현재 방침 |
+| --- | --- |
+| 국가법령정보 공동활용 API | `sync_official_sources.py`로 조항 단위 저장. `NATIONAL`, `VERIFIED_OFFICIAL`, `legal_evidence_allowed=true` 조건을 통과한 경우만 법적 근거로 사용 |
+| 아산시 자치법규 | `sync_local_ordinances.py`로 별도 저장. `jurisdiction_code=ASAN`, 시행일/공포일/조항 보존. 기본은 `legal_evidence_allowed=false` |
+| 국민권익위 민원정책 Q&A | 절차 참고 `PROCEDURE`, 법적 근거 금지 |
+| 국민권익위 민원빅데이터 2022~2025 | 경향/유사사례/키워드 참고 `HISTORICAL_CASE`, 법적 근거 금지 |
+| 민원사무서식 Open API | 민원 서식/절차 참고 데이터로 사용 |
+| AIHub 행정법/공공민원 LLM 데이터 | 학습/튜닝/문체 참고 후보. 법적 근거 또는 최종 판단 근거 금지 |
+| AIHub 문서 이해 기반 시각요소 데이터 | 첨부/문서 이해 보조 후보. 법적 근거 금지 |
+| 새올 전자민원창구 | 2021년 이후 비식별 데이터만 사용. 담당 부서 추천/문체 참고에 한정 |
+| 아산시 고시공고 | 1차 범위에서 제외. 검색 오염 가능성이 높아 RAG/DB 적재하지 않음 |
+| 아산시 민원편람/민원사무편람 | 공개 절차 자료로 수집 대상. `PROCEDURE`, 법적 근거 금지 |
+| 아산시 조직도/업무분장 | 사용자가 수집 후 `organization_units`, `assignment_rules`로 적재 예정 |
+| GIS/공간 데이터 | 위치 후보 검증용 별도 공간 데이터 마트로 구축 예정 |
+
+## 최종 확정 데이터 범위
+
+현재 단계에서는 확보 완료 또는 API 키 확보가 끝난 데이터만 사용한다.
+
+API 키 사용 데이터:
+
+- SGIS: 아산시 행정구역, 읍면동, 법정동 경계와 관할 판정용 geometry
+- 공공데이터포털: 전국도시공원정보표준데이터, 전국주차장정보표준데이터, 행정안전부 CCTV정보 조회서비스, 전국주정차금지(지정)구역표준데이터, 국민권익위원회 민원정책 Q&A, 2022~2025 국민권익위원회 민원빅데이터 분석정보
+- 국가법령정보: 국가법령 조항과 아산시 자치법규 본문
+
+다운로드 완료 데이터:
+
+- `202605_건물DB_전체분(주소정보)`
+- `2018~2026 민원편람`
+- `현행 자치법규 리스트`
+- `아산시 새올전자민원창구 공개 상담민원`
+- `문서 이해 기반 시각요소 생성 데이터`
+- `공공 민원 상담 LLM 사전학습 및 Instruction Tuning 데이터`
+- `행정법 LLM 사전학습 및 Instruction Tuning 데이터`
+- `아산시청 조직도`
+
+법적 근거는 국가법령정보 API에서 가져온 국가법령 조항만 허용한다. 아산시 자치법규는 국가법령정보 API로 수집하지만 현재는 참고용 또는 부서 확인용으로만 사용한다. 부족한 내부 GIS, 고시공고, 별도 인허가/관리대장 데이터는 현재 개발 범위에서 제외한다.
+
+## 상태 모델
 
 ```text
-egov-boot-web/   # 메인 백엔드: eGovFrame 5.0 기반 Maven 프로젝트
-ai-rag-engine/   # Python 로컬 AI/RAG 검증 엔진 및 지식문서 적재 스크립트
-backend/         # 이전 Spring Boot/Gradle 백엔드. 참고용 또는 추후 정리 대상
-docs/            # 산출물/문서 참고 영역
+RECEIVED -> TRIAGE_REVIEW -> DRAFT_REVIEW -> APPROVAL_PENDING -> APPROVED -> COMPLETED
 ```
 
-## 구현된 기능
-
-- 민원 접수 API
-- 민원 목록/단건 조회 API
-- 민원 목록 필터링 및 페이지네이션
-- 민원 분석 결과 조회 API
-- RAG 근거 문맥 조회 API
-- 답변 초안 생성/수정 API
-- 첨부파일 등록/목록 API
-- 민원 상태 변경 API
-- 부서 목록 조회 API
-- GeoJSON 조회 API
-- JPA 기반 민원 저장
-- PostgreSQL 연동
-- Flyway 기반 DB 마이그레이션
-- RAG 문서 청크 테이블
-- API Key 인증 옵션
-- API 감사 로그 저장
-- Spring Security 기본 설정
-- Actuator health endpoint
-- OpenAPI/Swagger UI 문서
-- OpenAI LLM 기반 민원 분류/담당 부서 추론
-- Python 기반 로컬 AI/RAG 검증 스크립트
-- 지식문서 Markdown을 `knowledge_documents` 테이블에 적재하는 스크립트
-
-현재 개발 기본값은 OpenAI LLM 분석/초안 생성과 PostgreSQL RAG 검색입니다. `OPENAI_API_KEY`가 설정되어 있어야 분석과 초안 생성 API가 정상 동작합니다. S3, Bedrock, OpenSearch Serverless는 명시적으로 설정을 켰을 때만 연결됩니다.
-기본 모델은 OpenAI Responses API에서 사용할 수 있는 `gpt-4o-mini`이며, 필요하면 `OPENAI_MODEL` 환경 변수로 바꿀 수 있습니다.
-
-`ai-rag-engine`은 별도 Python 검증 도구입니다. OpenAI API를 직접 사용할 수 있으므로 `.env`에 API Key를 넣어야 하며, 기본 백엔드 실행에는 필요하지 않습니다.
-
-## 주요 API
+차단 상태:
 
 ```text
-POST /api/complaints
-GET  /api/complaints?status=&department=&urgency=&page=&size=
-GET  /api/complaints/{id}
-POST /api/complaints/{id}/attachments
-GET  /api/complaints/{id}/attachments
-GET  /api/complaints/{id}/attachments/{attachmentId}
-DELETE /api/complaints/{id}/attachments/{attachmentId}
-PATCH /api/complaints/{id}/status
-GET  /api/complaints/{id}/analysis
-GET  /api/complaints/{id}/draft
-PUT  /api/complaints/{id}/draft
-GET  /api/complaints/{id}/rag-contexts
-GET  /api/complaints/{id}/geojson
-GET  /api/departments
-GET  /actuator/health
-GET  /v3/api-docs
-GET  /swagger-ui/index.html
+NEEDS_LOCATION
+NEEDS_JURISDICTION
+EVIDENCE_INSUFFICIENT
+CONFLICT_DETECTED
+PROCESSING_FAILED
+```
+
+## 공개 V1 API
+
+```text
+POST   /api/v1/complaints
+GET    /api/v1/complaints/{id}
+POST   /api/v1/complaints/{id}/analysis-runs
+POST   /api/v1/complaints/{id}/draft-runs
+GET    /api/v1/runs/{id}
+POST   /api/v1/issues/{id}/location-confirmations
+POST   /api/v1/drafts/{id}/reviews
+POST   /api/v1/drafts/{id}/approvals
+POST   /api/v1/complaints/{id}/complete
+POST   /api/v1/complaints/{id}/attachments
+GET    /api/v1/complaints/{id}/attachments
+DELETE /api/v1/complaints/{id}/attachments/{attachmentId}
 ```
 
 ## 로컬 실행
 
-PostgreSQL 컨테이너 또는 로컬 DB가 먼저 실행되어 있어야 합니다.
+Java 17과 PostgreSQL이 필요합니다.
 
 ```powershell
-cd C:\Users\user\Documents\GitHub\Unstructured\egov-boot-web
+cd egov-boot-web
 mvn test
-mvn spring-boot:run
+mvn spring-boot:run -Dspring-boot.run.profiles=dashboard-h2
 ```
 
-헬스 체크:
+대시보드:
 
-```powershell
-Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
+```text
+http://localhost:8081/dashboard
 ```
 
-Python AI/RAG 엔진을 별도로 확인할 때:
+Python 작업자:
 
 ```powershell
-cd C:\Users\user\Documents\GitHub\Unstructured\ai-rag-engine
+cd ai-rag-engine
 python -m venv .venv
 .venv\Scripts\python.exe -m pip install -r requirements.txt
 Copy-Item .env.example .env
-.venv\Scripts\python.exe test_db_connection.py
-.venv\Scripts\python.exe insert_knowledge_documents.py
+.venv\Scripts\python.exe worker.py
 ```
 
-`main.py`는 OpenAI API를 호출하므로 비용이 발생할 수 있다.
+공식 출처/보조 출처 수집은 `.env`에서 명시적으로 활성화한 뒤 실행합니다.
 
-## DB 기준
-
-```text
-Host: localhost
-Port: 5432
-Database: complaintdb
-User: complaint_user
-Password: complaint_pass
+```powershell
+cd ai-rag-engine
+.venv\Scripts\python.exe sync_official_sources.py
+.venv\Scripts\python.exe sync_local_ordinances.py
+.venv\Scripts\python.exe sync_auxiliary_sources.py
+.venv\Scripts\python.exe knowledge_maintenance.py
 ```
 
-설정 파일:
+## 검증
 
-```text
-egov-boot-web/src/main/resources/application.properties
+```powershell
+cd egov-boot-web
+mvn test
+
+cd ..
+ai-rag-engine\.venv\Scripts\python.exe -m compileall -q ai-rag-engine tools
+cd ai-rag-engine
+.venv\Scripts\python.exe -m unittest test_sync_official_sources.py test_sync_local_ordinances.py test_sync_auxiliary_sources.py test_sync_opensearch_indices.py test_worker.py test_provider_runtime.py test_knowledge_maintenance.py
+.venv\Scripts\python.exe evaluate_golden.py data/evaluation/golden_cases.full.json data/evaluation/predictions.full.json --require-full
+cd ..
+git diff --check
 ```
 
-## 개발 방향
+최근 확인:
 
-1. eGovFrame 기반 백엔드 구조를 기준으로 유지합니다.
-2. 민원 접수, 분석, 담당 부서 분류, 답변 초안 생성/수정 흐름을 API 단위로 안정화합니다.
-3. 개발 중에도 OpenAI LLM 분석/초안 생성과 PostgreSQL RAG 검색을 기본값으로 유지합니다.
-4. AWS 실연동은 비용 검토 후 별도 단계에서 필요한 기능만 명시적으로 켭니다.
-5. PostgreSQL 업무 데이터와 문서/벡터 저장소를 분리해 확장합니다.
-6. 운영 단계에서는 보안, 로깅, 예외 처리, 감사 추적, 배포 자동화를 강화합니다.
+- `test_sync_local_ordinances.py`, `test_sync_official_sources.py` 통과
+- `sync_local_ordinances.py`, `sync_official_sources.py`, `law_api_client.py` 구문 검사 통과
+- 이전 대상 Java 테스트는 통과했으나 Docker 부재로 Testcontainers 기반 Flyway 검증은 skip될 수 있습니다.
+
+## 문서
+
+- [PLAN.md](PLAN.md): 구현 계획과 남은 우선순위
+- [URGENTMODIFY.md](URGENTMODIFY.md): URGENTMODIFY 반영 상태
+- [SETUP_SUMMARY.md](SETUP_SUMMARY.md): 환경 변수와 실행 설정
+- [docs/data-source-ingestion.md](docs/data-source-ingestion.md): 데이터 수집 정책
+- [docs/db-schema-review.md](docs/db-schema-review.md): DB 스키마 검토

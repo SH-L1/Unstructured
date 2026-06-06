@@ -19,6 +19,7 @@ import java.util.List;
 
 import org.egovframe.rte.fdl.property.EgovPropertyService;
 import org.egovframe.rte.ptl.mvc.tags.ui.pagination.PaginationInfo;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.ui.ModelMap;
@@ -53,6 +54,7 @@ import lombok.extern.slf4j.Slf4j;
  */
 
 @Controller
+@ConditionalOnProperty(name = "app.egov-sample.enabled", havingValue = "true")
 @Slf4j
 public class EgovSampleController {
 

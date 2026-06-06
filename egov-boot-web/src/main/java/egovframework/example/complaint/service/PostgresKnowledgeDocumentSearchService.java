@@ -40,7 +40,9 @@ public class PostgresKnowledgeDocumentSearchService implements KnowledgeDocument
 			knowledgeDocumentRepository.searchByKeyword(keyword)
 					.forEach(document -> documents.put(document.getId(), document));
 		}
-		return documents.values().stream().limit(3).toList();
+		return documents.values().stream()
+				.limit(10)
+				.toList();
 	}
 
 	private List<String> keywordsFor(ComplaintAnalysis analysis) {

@@ -1,0 +1,47 @@
+name: verify
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: ai-rag-engine/requirements.txt
+      - name: Install Python worker dependencies
+        run: python -m pip install -r ai-rag-engine/requirements.txt
+      - name: Java tests and PostgreSQL Flyway verification
+        working-directory: egov-boot-web
+        run: mvn --batch-mode test
+      - name: Python syntax
+        run: python -m compileall -q ai-rag-engine tools
+      - name: Golden evaluator smoke test
+        run: >-
+          python ai-rag-engine/evaluate_golden.py
+          ai-rag-engine/data/evaluation/golden_cases.sample.json
+          ai-rag-engine/data/evaluation/predictions.sample.json
+      - name: Restricted worker and knowledge maintenance unit tests
+        working-directory: ai-rag-engine
+        run: >-
+          python -m unittest
+          test_sync_official_sources.py
+          test_sync_opensearch_indices.py
+          test_worker.py
+          test_knowledge_maintenance.py
+      - name: Full synthetic golden safety gates
+        run: >-
+          python ai-rag-engine/evaluate_golden.py
+          ai-rag-engine/data/evaluation/golden_cases.full.json
+          ai-rag-engine/data/evaluation/predictions.full.json
+          --require-full

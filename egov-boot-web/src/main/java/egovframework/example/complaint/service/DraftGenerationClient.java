@@ -7,5 +7,10 @@ import java.util.List;
 
 public interface DraftGenerationClient {
 
-	String generateDraft(Complaint complaint, ComplaintAnalysis analysis, List<KnowledgeDocument> documents);
+	String generateDraft(
+			Complaint complaint,
+			ComplaintAnalysis analysis,
+			List<KnowledgeDocument> documents,
+			List<String> approvedAttachmentTexts
+	);
 }

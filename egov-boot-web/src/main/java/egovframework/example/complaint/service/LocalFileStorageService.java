@@ -5,11 +5,11 @@ import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 @Service
 @ConditionalOnProperty(name = "app.file-storage.provider", havingValue = "local", matchIfMissing = true)
@@ -23,7 +23,7 @@ public class LocalFileStorageService implements FileStorageService {
 
 	@Override
 	public StoredFile store(String originalFilename, String contentType, long size, InputStream inputStream) {
-		String cleanFilename = StringUtils.cleanPath(originalFilename == null ? "attachment" : originalFilename);
+		String cleanFilename = FileStorageService.safeOriginalFilename(originalFilename);
 		String storageKey = UUID.randomUUID() + "-" + cleanFilename;
 		Path target = storageRoot.resolve(storageKey).normalize();
 		if (!target.startsWith(storageRoot)) {
@@ -58,6 +58,31 @@ public class LocalFileStorageService implements FileStorageService {
 		}
 		catch (IOException exception) {
 			throw new IllegalStateException("Failed to delete attachment", exception);
+		}
+	}
+
+	@Override
+	public List<StoredObjectReference> listStoredObjects() {
+		if (!Files.isDirectory(storageRoot)) {
+			return List.of();
+		}
+		try (var paths = Files.list(storageRoot)) {
+			return paths.filter(Files::isRegularFile)
+					.map(path -> {
+						try {
+							return new StoredObjectReference(
+									path.getFileName().toString(),
+									Files.getLastModifiedTime(path).toInstant()
+							);
+						}
+						catch (IOException exception) {
+							throw new IllegalStateException("Failed to inspect attachment storage", exception);
+						}
+					})
+					.toList();
+		}
+		catch (IOException exception) {
+			throw new IllegalStateException("Failed to list attachment storage", exception);
 		}
 	}
 

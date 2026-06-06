@@ -1,0 +1,15 @@
+[
+  {
+    "caseId": "SYNTHETIC-001",
+    "datasetVersion": "synthetic-golden-sample-v1",
+    "split": "test",
+    "inputText": "합성 무단 투기 신고입니다.",
+    "locationText": "가상 시범 구역",
+    "complaintType": "ILLEGAL_DUMPING",
+    "departmentCode": "RESOURCE_RECYCLING",
+    "requiredEvidenceIds": ["OFFICIAL-WASTE-PROVISION-001"],
+    "expectedBlocker": null,
+    "syntheticDemo": true,
+    "containsRealPersonalData": false
+  }
+]

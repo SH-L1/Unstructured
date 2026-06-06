@@ -14,6 +14,6 @@ public class OpenApiConfig {
 				.info(new Info()
 						.title("Civil Complaint API")
 						.version("1.0.0")
-						.description("eGovFrame based civil complaint analysis and draft response API"));
+						.description("Evidence-verified complaint review support API"));
 	}
 }

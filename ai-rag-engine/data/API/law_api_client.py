@@ -9,10 +9,11 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from dotenv import load_dotenv
+from data.API.provider_runtime import execute_provider_call
 
 
-LAW_API_BASE_URL = "http://www.law.go.kr/DRF/lawSearch.do"
-LAW_SERVICE_BASE_URL = "http://www.law.go.kr/DRF/lawService.do"
+LAW_API_BASE_URL = "https://www.law.go.kr/DRF/lawSearch.do"
+LAW_SERVICE_BASE_URL = "https://www.law.go.kr/DRF/lawService.do"
 LAW_SITE_BASE_URL = "https://www.law.go.kr"
 DEFAULT_MUNICIPALITY = "아산시"
 API_DIR = Path(__file__).resolve().parent
@@ -67,6 +68,51 @@ QUERY_PROFILES = [
         "terms": ["하수도", "배수", "맨홀", "하수구"],
         "law_queries": ["하수도법"],
         "ordinance_queries": ["아산시 하수도"],
+    },
+    {
+        "terms": ["민원", "처리기간", "정보공개", "개인정보", "행정절차", "이의신청"],
+        "law_queries": ["민원 처리에 관한 법률", "행정절차법", "개인정보 보호법", "공공기관의 정보공개에 관한 법률"],
+        "ordinance_queries": ["아산시 민원", "아산시 행정정보공개", "아산시 개인정보"],
+    },
+    {
+        "terms": ["건축", "불법건축", "공동주택", "아파트", "주택", "균열", "누수"],
+        "law_queries": ["건축법", "건축물관리법", "주택법", "공동주택관리법"],
+        "ordinance_queries": ["아산시 건축", "아산시 공동주택", "아산시 주택"],
+    },
+    {
+        "terms": ["상수도", "수도", "단수", "누수", "수압"],
+        "law_queries": ["수도법"],
+        "ordinance_queries": ["아산시 수도", "아산시 상수도"],
+    },
+    {
+        "terms": ["공원", "녹지", "가로수", "놀이터", "체육시설"],
+        "law_queries": ["도시공원 및 녹지 등에 관한 법률", "어린이놀이시설 안전관리법"],
+        "ordinance_queries": ["아산시 도시공원", "아산시 녹지", "아산시 가로수"],
+    },
+    {
+        "terms": ["광고물", "현수막", "불법광고", "노점", "적치물"],
+        "law_queries": ["옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률", "도로법"],
+        "ordinance_queries": ["아산시 옥외광고물", "아산시 노점", "아산시 도로점용"],
+    },
+    {
+        "terms": ["식품", "위생", "공중위생", "감염병", "방역"],
+        "law_queries": ["식품위생법", "공중위생관리법", "감염병의 예방 및 관리에 관한 법률"],
+        "ordinance_queries": ["아산시 식품위생", "아산시 공중위생", "아산시 감염병"],
+    },
+    {
+        "terms": ["동물", "유기견", "반려견", "축산", "가축분뇨"],
+        "law_queries": ["동물보호법", "가축분뇨의 관리 및 이용에 관한 법률"],
+        "ordinance_queries": ["아산시 동물보호", "아산시 축산", "아산시 가축분뇨"],
+    },
+    {
+        "terms": ["장애인", "노인", "복지", "교통약자", "편의시설"],
+        "law_queries": ["장애인ㆍ노인ㆍ임산부 등의 편의증진 보장에 관한 법률", "교통약자의 이동편의 증진법"],
+        "ordinance_queries": ["아산시 장애인", "아산시 노인", "아산시 교통약자"],
+    },
+    {
+        "terms": ["재난", "안전", "침수", "붕괴", "위험시설", "화학물질"],
+        "law_queries": ["재난 및 안전관리 기본법", "시설물의 안전 및 유지관리에 관한 특별법", "화학물질관리법"],
+        "ordinance_queries": ["아산시 재난", "아산시 안전관리", "아산시 시설물"],
     },
 ]
 
@@ -148,8 +194,7 @@ def request_law_search(query: str, target: str, display: int = 5) -> ET.Element:
         },
     )
 
-    with urlopen(request, timeout=10) as response:
-        body = response.read()
+    body = execute_provider_call("law-api", 50, lambda: read_response(request)).value
 
     return ET.fromstring(body)
 
@@ -174,10 +219,15 @@ def request_law_detail(law_id: str, source_type: str) -> ET.Element:
         },
     )
 
-    with urlopen(request, timeout=10) as response:
-        body = response.read()
+    body = execute_provider_call("law-api", 100, lambda: read_response(request)).value
 
     return ET.fromstring(body)
+
+
+def read_response(request: Request) -> bytes:
+    timeout = float(os.getenv("PUBLIC_API_TIMEOUT_SECONDS", "10"))
+    with urlopen(request, timeout=timeout) as response:
+        return response.read()
 
 
 def child_text(element: ET.Element, names: List[str]) -> str:

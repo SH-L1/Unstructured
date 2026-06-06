@@ -1,268 +1,157 @@
-# 전자정부 표준프레임워크 기반 민원 분석 및 RAG 공문 초안 시스템 계획
+# 구현 계획과 단계
 
-## 1. 프로젝트 목표
+## 목표
 
-본 프로젝트는 전자정부 표준프레임워크(eGovFrame) 5.0 기반 백엔드를 사용해 비정형 민원을 접수, 분석, 분류하고 담당자가 활용할 수 있는 공문 답변 초안을 생성하는 시스템을 목표로 한다.
+아산시 전체 민원에 대해 근거 검증형 답변 템플릿을 생성한다. 시스템은 자동 민원 처리기가 아니라 검토자와 승인자를 보조하는 도구다. Spring은 권위 있는 상태와 검증을 담당하고, Python은 비동기 수집·검색·OCR·AI 작업자 역할만 수행한다.
 
-현재 개발 기준에서는 민원 접수와 분석 결과 조회가 가능한 eGovFrame 기반 백엔드 골격을 확립하고, AI/초안 생성은 OpenAI LLM 실제 연동으로 운영하며 RAG 기능은 PostgreSQL 지식문서 검색을 사용한다. AWS 실연동은 비용 검토 후 별도 단계에서 명시적으로 켠다.
+## 완료된 전환
 
-## 2. 최종 개발 기준
+- `egov-boot-web`을 권위 서버로 고정
+- 중복 `backend` 활성 구현 제거
+- 세션 기반 역할과 CSRF 보호 도입
+- 브라우저 API 키 제거
+- 부작용 `GET` 및 임의 상태 변경 API 차단
+- `Idempotency-Key`, `If-Match`, 엔티티 버전 기반 변경 API 처리
+- 민원 상태 모델을 `RECEIVED -> TRIAGE_REVIEW -> DRAFT_REVIEW -> APPROVAL_PENDING -> APPROVED -> COMPLETED`로 제한
+- 차단 상태 `NEEDS_LOCATION`, `NEEDS_JURISDICTION`, `EVIDENCE_INSUFFICIENT`, `CONFLICT_DETECTED`, `PROCESSING_FAILED` 도입
+- 검토자와 승인자 동일인 금지
+- 승인 없는 완료 차단
+- 자동 발송/자동 완료 제거
 
-전자정부프레임워크 사용이 필수 조건이므로 최종 메인 백엔드는 `egov-boot-web`이다.
+## DB와 작업 큐
 
-- `egov-boot-web`: eGovFrame Initializr 5.0.5로 생성한 eGovFrame 5.0 기반 Maven 백엔드
-- `backend`: 기존 Spring Initializr/Gradle 기반 백엔드. 참고용 또는 추후 정리 대상
-- 기준 포트: `8081`
-- 기준 DB: PostgreSQL `complaintdb`
-- 기준 Java: 17
+Flyway V1~V18 기준으로 다음 구조가 반영되어 있다.
 
-산출물, 발표, 실행 설명에서는 `egov-boot-web`을 기준으로 설명한다. `backend`를 메인 백엔드로 설명하지 않는다.
+- 지식/출처: `source_registry`, `legal_document_versions`, `legal_provisions`, `legal_relations`, `knowledge_purpose`
+- 조직/배정: `organization_units`, `assignment_rules`
+- 민원 분해: `complaint_issues`, `department_tasks`, `location_candidates`, `historical_complaints`
+- 실행/근거: `processing_jobs`, `retrieval_runs`, `evidence_snapshots`, `ai_runs`
+- 초안/검증: `draft_claims`, `claim_evidence_links`, `verification_results`, `human_reviews`
+- 개인정보/첨부: `complaint_sensitive_payloads`, `attachment_analysis`
+- 감사/멱등성: `audit_logs`, `idempotency_records`, `workflow_audit_events`
+- 데이터 마트: `data_mart_ingestion_runs`, `data_mart_raw_records`, `data_mart_normalized_records`, `data_mart_load_errors`
+- GIS 데이터 마트: `spatial_source_registry`, `spatial_admin_boundaries`, `spatial_address_points`, `spatial_road_segments`, `spatial_facilities`, `spatial_parking_restrictions`, `spatial_location_resolution_runs`, `spatial_location_candidates`
 
-## 3. 시스템 개요
+## 데이터 수집 계획
 
-```mermaid
-flowchart LR
-    Citizen["민원 제출자"] --> API["eGovFrame Boot Web API"]
-    API --> DB["PostgreSQL complaintdb"]
-    API --> Analyzer["OpenAI LLM 민원 분석/분류 서비스"]
-    Analyzer --> Rag["PostgreSQL 기반 RAG 문서 검색"]
-    Rag --> Draft["OpenAI LLM 답변 초안 생성 서비스"]
-    Draft --> API
-    API --> Staff["담당자/관리자"]
-```
+현재 개발 기준의 최종 데이터 범위는 [docs/final-data-scope.md](docs/final-data-scope.md)를 우선한다. 부족한 데이터는 일단 제외하고, SGIS·공공데이터포털·국가법령정보 API와 다운로드 완료 데이터만 사용한다.
 
-## 4. 백엔드 구성
+### 1. 국가법령
 
-백엔드는 eGovFrame Boot Web 프로젝트인 `egov-boot-web`에 구현한다.
+`국가법령정보 공동활용 OPEN API`를 사용한다. `sync_official_sources.py`가 국가법령 `target=law`를 조항 단위로 저장한다.
 
-주요 기술:
+- 저장 관할: `NATIONAL`
+- 검증 상태: `VERIFIED_OFFICIAL`
+- 법적 근거 허용: `true`
+- 필수 검증: 출처, 조항, 시행일, 버전, 관할, 최신성
 
-- eGovFrame Boot Starter Parent 5.0.0
-- Spring Boot
-- Spring MVC
-- Spring Data JPA
-- Spring Security
-- Spring Actuator
-- Flyway
-- PostgreSQL JDBC Driver
-- Maven
+### 2. 아산시 자치법규
 
-주요 패키지:
+`sync_local_ordinances.py`를 추가했다. 법제처 자치법규 `target=ordin`으로 아산시 조례/규칙을 가져온다.
 
-```text
-egov-boot-web/src/main/java/egovframework/example/complaint
-```
+- 저장 관할: `ASAN`
+- 공포일/시행일 보존
+- 조항 단위 저장
+- 검증 상태: `VERIFIED_INTERNAL`
+- 법적 근거 허용: 기본 `false`
 
-구현 영역:
+자치법규는 공식 출처이지만 국가법령과 관할·폐지·시행기간 검증 정책이 다르므로 별도 승인 전에는 자동 법적 근거로 쓰지 않는다.
 
-- `api`: REST API Controller, DTO, 예외 처리
-- `domain`: 민원 Entity, 상태 Enum
-- `repository`: JPA Repository
-- `service`: 민원 접수/조회/분석 서비스
-- `config`: 보안 설정
+### 3. 조직도와 업무분장
 
-## 5. 현재 구현 상태
+사용자가 별도 수집한다. 수집 후 `organization_units`, `assignment_rules`에 적재한다.
 
-현재 구현된 기능:
+필수 필드:
 
-- 민원 접수 API
-- 민원 목록/단건 조회 API
-- 민원 목록 필터링 및 페이지네이션
-- 민원 분석 결과 조회 API
-- 민원 상태 변경 API
-- 첨부파일 등록/목록 API
-- 부서 목록 조회 API
-- 답변 초안 생성/수정 API
-- RAG 근거 문맥 조회 API
-- GeoJSON 조회 API
-- PostgreSQL 저장
-- JPA 트랜잭션 설정
-- eGovFrame 샘플 HSQLDB 설정 제거 및 PostgreSQL 기준 전환
-- Spring Security 기본 허용 설정
-- Actuator health endpoint
-- OpenAPI/Swagger UI 문서
-- OpenAI LLM 기반 민원 유형/담당 부서 분류
-- 공통 API 응답 및 공통 예외 응답
-- 분석, 초안, RAG, 부서 라우팅 서비스 분리
-- Flyway 기반 DB 마이그레이션
-- RAG 문서 청크 테이블
-- API Key 인증 옵션
-- API 감사 로그 저장
-- 선택형 S3/Bedrock/OpenSearch 구현 경계 추가
+- 부서 코드
+- 부서명
+- 팀명
+- 담당 업무
+- 대표 연락처
+- 유효 시작일/종료일
+- 조직개편 이력
+- 민원 유형별 배정 규칙
 
-주요 API:
+### 4. 아산시 민원편람/민원사무편람
 
-```text
-POST /api/complaints
-GET  /api/complaints?status=&department=&urgency=&page=&size=
-GET  /api/complaints/{id}
-POST /api/complaints/{id}/attachments
-GET  /api/complaints/{id}/attachments
-GET  /api/complaints/{id}/attachments/{attachmentId}
-DELETE /api/complaints/{id}/attachments/{attachmentId}
-PATCH /api/complaints/{id}/status
-GET  /api/complaints/{id}/analysis
-GET  /api/complaints/{id}/draft
-PUT  /api/complaints/{id}/draft
-GET  /api/complaints/{id}/rag-contexts
-GET  /api/complaints/{id}/geojson
-GET  /api/departments
-GET  /actuator/health
-GET  /v3/api-docs
-GET  /swagger-ui/index.html
-```
+내부 SOP 공개본을 찾기 어렵기 때문에 공개 민원편람을 `PROCEDURE` 자료로 사용한다.
 
-## 6. 로컬 실행 기준
+- 처리기간
+- 구비서류
+- 접수/처리 부서
+- 민원 사무명
+- 관련 법령/조례명
 
-DB 기준:
+법적 근거가 아니라 절차 참고 자료로만 쓴다.
 
-```text
-Host: localhost
-Port: 5432
-Database: complaintdb
-User: complaint_user
-Password: complaint_pass
-```
+### 5. 새올 전자민원창구 이력
 
-애플리케이션 설정:
+2021년 이후 데이터만 가져온다. 너무 오래된 데이터는 조직개편과 법령 개정으로 배정 품질을 떨어뜨릴 수 있다.
 
-```properties
-server.port=8081
-spring.datasource.url=jdbc:postgresql://localhost:5432/complaintdb
-spring.datasource.username=complaint_user
-spring.datasource.password=complaint_pass
-spring.jpa.hibernate.ddl-auto=validate
-spring.flyway.enabled=true
-spring.flyway.baseline-on-migrate=true
-management.endpoints.web.exposure.include=health,info
-app.ai.provider=openai
-app.aws.s3.enabled=false
-app.aws.bedrock.enabled=false
-app.rag.provider=postgres-mock
-app.rag.opensearch.enabled=false
-app.file-storage.provider=local
-```
+- 원문은 사용하지 않고 비식별 처리본만 저장
+- 담당 부서 추천과 문체 참고에만 사용
+- 법적 근거 금지
+- 평가셋 후보 100~200건은 추후 분리
 
-실행:
+### 6. GIS/공간 데이터
 
-```powershell
-cd C:\Users\user\Documents\GitHub\Unstructured\egov-boot-web
-mvn test
-mvn spring-boot:run
-```
+위치 후보 검증을 위해 별도 공간 데이터 마트를 구축한다.
 
-헬스 체크:
+우선 수집 대상:
 
-```powershell
-Invoke-WebRequest -Uri http://localhost:8081/actuator/health -UseBasicParsing
-```
+- 행정동/법정동 경계
+- 도로명주소 전자지도
+- 건물/주소 포인트
+- 도로 구간
+- 주정차 금지구역
+- 공영주차장
+- 공원/녹지
+- CCTV, 보안등, 가로등
+- 하천/소하천/배수로/상하수도 관련 시설
 
-## 7. 요구사항 정리
+현재 개발 범위에서는 SGIS 경계, `202605_건물DB_전체분(주소정보)`, 공공데이터포털의 도시공원·주차장·CCTV·주정차금지구역 데이터만 사용한다. 처리는 PostgreSQL 공간 데이터 마트 기준으로 구현하고, LLM은 좌표를 생성하지 않고 DB의 위치 후보 ID와 행정구역 판단 결과만 사용한다.
 
-기능 요구사항:
+### 7. 고시공고
 
-- 사용자는 민원 제목, 내용, 주소 정보를 등록할 수 있어야 한다.
-- 시스템은 등록된 민원을 DB에 저장해야 한다.
-- 시스템은 민원 내용을 기반으로 민원 유형과 담당 부서를 추론해야 한다.
-- 담당자는 민원 상세와 분석 결과를 조회할 수 있어야 한다.
-- 시스템은 관련 문서 검색 결과를 바탕으로 답변 초안을 생성해야 한다.
-- 개발 기본값에서는 외부 AWS 서비스를 직접 호출하지 않아야 한다.
+1차 범위에서는 제외한다.
 
-비기능 요구사항:
+제외 사유:
 
-- 전자정부 표준프레임워크 기반 구조를 유지해야 한다.
-- 업무 데이터는 PostgreSQL에 저장한다.
-- API 계층, 서비스 계층, 저장소 계층을 분리한다.
-- 예외 응답은 일관된 JSON 구조로 반환한다.
-- 운영 전환 시 인증, 권한, 감사 로그, 배포 자동화 기준을 강화한다.
+- 공시송달, 운행정지명령 반송, 채용, 입찰, 보조금, 체납 등 검색 오염 가능성이 큼
+- 개별 대상자·기간 한정 문서가 많아 법적 근거로 쓰기 위험함
+- 선별/OCR/개인정보 제거 비용이 현재 우선순위보다 큼
 
-## 8. 향후 개발 계획
+추후 주정차 금지구역, 도로 통행제한, 단수, 안전통제처럼 현재 행정상태를 바꾸는 고시만 `LOCAL_NOTICE`로 별도 수집한다.
 
-1. 민원 API 통합 테스트를 보강한다.
-2. 첨부파일 다운로드/삭제 API를 추가한다.
-3. OpenAI 실제 연동 기준 통합 시나리오와 PostgreSQL RAG 데이터를 보강한다.
-4. RAG용 문서 저장소와 벡터 검색 구조를 정리한다.
-5. 관리자/담당자 화면 또는 별도 프론트엔드 대시보드를 연결한다.
-6. AWS 실연동은 비용 검토 후 필요한 기능만 명시적으로 켠다.
-7. 인증/인가 정책을 실제 사용자 역할 기준으로 구체화한다.
-8. 배포 환경 기준으로 프로파일, 로그, 보안 설정을 분리한다.
+### 8. AIHub 데이터
 
-## 9. 검증 상태
+이미 확보한 데이터:
 
-확인된 항목:
+- 행정법 LLM 사전학습 및 Instruction Tuning 데이터
+- 공공 민원 상담 LLM 사전학습 및 Instruction Tuning 데이터
+- 문서 이해 기반 시각요소 생성 데이터
 
-- PostgreSQL 컨테이너 `complaint-postgres` 실행 확인
-- Maven 테스트 통과
-- `mvn spring-boot:run` 실행 및 8081 포트 기동 확인
-- `/actuator/health` 정상 응답 확인
-- `POST /api/complaints` 민원 등록 확인
-- `GET /api/complaints/{id}/analysis` 분석 결과 조회 확인
-- `mvn test` 기준 컴파일 성공 확인
-- `GET /v3/api-docs` OpenAPI 문서 응답 확인
-- `GET /swagger-ui/index.html` Swagger UI 200 응답 확인
-- 현재 개발 기본값에서 S3, Bedrock, OpenSearch Serverless를 호출하지 않도록 설정 확인
+용도는 학습/튜닝/문체/문서 이해 보조다. 법적 근거, 민원 수용 여부, 최종 승인 판단에는 사용하지 않는다.
 
-## 10. 문서화 기준
+## 남은 우선순위
 
-앞으로 프로젝트 문서는 다음 기준으로 유지한다.
+1. 국가법령정보 API 적재와 조항 검증
+2. SGIS 경계와 건물DB 주소 포인트 적재
+3. 공공데이터포털 공원/주차장/CCTV/주정차금지구역 적재
+4. 아산시 조직도 적재와 부서 추천 규칙 생성
+5. 민원편람 `PROCEDURE` 적재
+6. 새올 공개 상담민원 비식별 이력 적재
+7. AIHub 데이터는 운영 근거가 아니라 평가/튜닝 후보로 분리
 
-- `README.md`: 현재 실행 방법과 프로젝트 구조 요약
-- `SETUP_SUMMARY.md`: 세팅 상태와 변경해야 할 설정 요약
-- `PLAN.md`: 개발 방향, 요구사항, 구현 계획
+## 완료 기준
 
-문서에서 백엔드 기준을 설명할 때는 항상 `egov-boot-web`을 기준으로 작성한다.
-
-## 11. 2026-05-29 팀원 수정사항 파악 결과
-
-팀원 변경 이후 프로젝트 구조와 진행상황을 재확인했다. 현재 기준 메인 서버는 `egov-boot-web`이며, 기존 `backend`는 참고용/정리 대상이다.
-
-새로 확인된 주요 변경사항:
-
-- `egov-boot-web`에 eGovFrame Boot Web 5.0 기반 Maven 백엔드가 추가되었다.
-- 민원 도메인/API가 `egovframework.example.complaint` 패키지로 이식 및 확장되었다.
-- DB 스키마가 Flyway 마이그레이션으로 전환되었다.
-- `complaints`, `complaint_attachments`, `complaint_analysis`, `departments`, `knowledge_documents`, `official_drafts`, `draft_revisions`, `rag_contexts`, `audit_logs`, `api_users` 중심의 정규화 모델이 추가되었다.
-- API 응답은 `ApiResponse`, 오류 응답은 `ApiError` 기반으로 정리되었다.
-- 민원 목록 필터링/페이지네이션, 상태 변경, 분석 조회, GeoJSON 조회, RAG 근거 조회, 초안 생성/수정, 첨부파일 업로드/다운로드/삭제, 부서 조회 API가 구현되었다.
-- 파일 저장소는 local 기본값과 S3 선택 구현으로 분리되었다.
-- AI 분석/초안 생성은 OpenAI 기본값과 Bedrock 선택 구현으로 분리되었다.
-- RAG 검색은 PostgreSQL 기반 기본 구현과 OpenSearch Serverless 선택 구현으로 분리되었다.
-- API Key 인증 옵션, API 사용자 모델, 감사 로그 필터가 추가되었다.
-- Dockerfile, `.dockerignore`, 운영 프로파일 `application-prod.properties`가 추가되었다.
-- `ai-rag-engine` Python 모듈이 추가되어 Markdown 지식문서 기반 OpenAI RAG 실험과 `knowledge_documents` 테이블 적재를 지원한다.
-
-현재 검증 결과:
-
-```text
-egov-boot-web: mvn -q test 통과
-backend: .\gradlew.bat test 통과
-ai-rag-engine: python -m py_compile main.py insert_knowledge_documents.py test_db_connection.py 통과
-```
-
-검증 시 확인된 런타임 특징:
-
-- `egov-boot-web` 테스트는 Spring Boot 3.5.6, Spring 6.2.11, Java 17로 실행된다.
-- H2 테스트 DB에 Flyway V1~V3 마이그레이션이 적용되고 API smoke test가 통과한다.
-- 테스트는 민원 등록, 분석, 초안 생성/수정, RAG 조회, 부서 조회, 첨부파일 업로드/조회/다운로드/삭제 흐름을 검증한다.
-- 개발 기본 설정은 S3, Bedrock, OpenSearch Serverless를 호출하지 않는다.
-
-역할 정리:
-
-```text
-egov-boot-web:
-최종 메인 백엔드. 발표/산출물/실행 설명 기준.
-
-ai-rag-engine:
-Python 기반 AI/RAG 실험 및 지식문서 적재 도구. OpenAI API 사용 시 비용 발생 가능.
-
-backend:
-초기 Spring Boot/Gradle 백엔드. 현재는 참고용 또는 삭제 검토 대상.
-```
-
-다음 우선순위:
-
-1. `backend`를 유지할지 삭제할지 팀 기준으로 결정한다.
-2. 프론트엔드/대시보드를 `egov-boot-web` API에 연결한다.
-3. API 문서, DBeaver 확인 쿼리, 데모 시나리오를 정리한다.
-4. `ai-rag-engine`에서 적재한 지식문서를 `egov-boot-web`의 PostgreSQL RAG 검색과 연결해 데모 데이터를 보강한다.
-5. AWS 실연동은 비용 검토 후 S3, Bedrock, OpenSearch 순서로 별도 활성화한다.
+- 자동 발송 0건
+- 자동 완료 0건
+- 승인 없는 완료 0건
+- 근거 없는 법적 주장 0건
+- 잘못된 시행일/관할 근거 0건
+- PII 외부 유출 0건
+- 프롬프트 인젝션 정책 우회 0건
+- 골든 데이터 기준 `Recall@10 >= 0.95`
+- 초안 주장 근거 연결률 `100%`
+- 담당 부서 추천 `Top-3 >= 0.95`

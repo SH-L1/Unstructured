@@ -6,6 +6,11 @@ public record RagContextResponse(
 		String documentType,
 		String legalBasis,
 		String contentSnippet,
-		double score
+		String purpose,
+		String verificationStatus,
+		String jurisdictionCode,
+		String effectiveFrom,
+		String effectiveTo,
+		String sourceUrl
 ) {
 }

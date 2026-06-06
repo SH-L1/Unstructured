@@ -1,19 +1,21 @@
 package egovframework.example.complaint.service;
 
 import egovframework.example.complaint.domain.ComplaintAnalysis;
-import egovframework.example.complaint.domain.DocumentType;
 import egovframework.example.complaint.domain.KnowledgeDocument;
+import egovframework.example.complaint.domain.KnowledgePurpose;
 import egovframework.example.complaint.repository.KnowledgeDocumentRepository;
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Optional;
 import org.opensearch.client.opensearch.OpenSearchClient;
 import org.opensearch.client.opensearch.core.SearchResponse;
 import org.opensearch.client.opensearch.core.search.Hit;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Service;
-import org.springframework.util.StringUtils;
 
 @Service
 @ConditionalOnProperty(name = "app.rag.provider", havingValue = "opensearch")
@@ -21,36 +23,70 @@ public class OpenSearchKnowledgeDocumentSearchService implements KnowledgeDocume
 
 	private final OpenSearchClient openSearchClient;
 	private final KnowledgeDocumentRepository knowledgeDocumentRepository;
-	private final String indexName;
+	private final String indexPrefix;
 	private final int resultSize;
+	private final int vectorK;
+	private final String vectorField;
+	private final String neuralModelId;
+	private final String searchPipeline;
+	private final ExternalCallGuard externalCallGuard;
 
 	public OpenSearchKnowledgeDocumentSearchService(
 			OpenSearchClient openSearchClient,
 			KnowledgeDocumentRepository knowledgeDocumentRepository,
-			@Value("${app.rag.opensearch.index-name}") String indexName,
-			@Value("${app.rag.opensearch.result-size:3}") int resultSize
+			ExternalCallGuard externalCallGuard,
+			@Value("${app.rag.opensearch.index-prefix}") String indexPrefix,
+			@Value("${app.rag.opensearch.result-size:10}") int resultSize,
+			@Value("${app.rag.opensearch.vector-k:20}") int vectorK,
+			@Value("${app.rag.opensearch.vector-field:embedding}") String vectorField,
+			@Value("${app.rag.opensearch.neural-model-id}") String neuralModelId,
+			@Value("${app.rag.opensearch.search-pipeline}") String searchPipeline
 	) {
 		this.openSearchClient = openSearchClient;
 		this.knowledgeDocumentRepository = knowledgeDocumentRepository;
-		this.indexName = indexName;
+		this.externalCallGuard = externalCallGuard;
+		this.indexPrefix = requireText(indexPrefix, "OpenSearch index prefix");
 		this.resultSize = resultSize;
+		this.vectorK = vectorK;
+		this.vectorField = requireText(vectorField, "OpenSearch vector field");
+		this.neuralModelId = requireText(neuralModelId, "OpenSearch neural model id");
+		this.searchPipeline = requireText(searchPipeline, "OpenSearch hybrid rerank pipeline");
 	}
 
 	@Override
 	public List<KnowledgeDocument> search(ComplaintAnalysis analysis) {
+		return externalCallGuard.execute("opensearch", 0, () -> searchGuarded(analysis));
+	}
+
+	private List<KnowledgeDocument> searchGuarded(ComplaintAnalysis analysis) {
 		try {
+			String queryText = buildQuery(analysis);
 			SearchResponse<Map> response = openSearchClient.search(search -> search
-							.index(indexName)
+							.index(purposeIndexNames(indexPrefix))
+							.ignoreUnavailable(true)
+							.allowNoIndices(true)
+							.pipeline(searchPipeline)
 							.size(resultSize)
-							.query(query -> query.multiMatch(multiMatch -> multiMatch
-									.query(buildQuery(analysis))
-									.fields("title^2", "content", "keywords", "legalBasis", "sourceName")
+							.query(query -> query.hybrid(hybrid -> hybrid
+									.queries(subQuery -> subQuery.multiMatch(multiMatch -> multiMatch
+											.query(queryText)
+											.fields("title^3", "provisionKey^3", "heading^2", "content",
+													"keywords", "legalBasis^2", "sourceName")
+									))
+									.queries(subQuery -> subQuery.neural(neural -> neural
+											.field(vectorField)
+											.queryText(queryText)
+											.modelId(neuralModelId)
+											.k(vectorK)
+									))
 							)),
 					Map.class);
 			List<KnowledgeDocument> documents = response.hits().hits().stream()
 					.map(Hit::source)
 					.filter(source -> source != null)
-					.map(this::toKnowledgeDocument)
+					.map(this::resolveGovernedDocument)
+					.flatMap(Optional::stream)
+					.distinct()
 					.toList();
 			if (documents.isEmpty()) {
 				return fallbackSearch(analysis);
@@ -71,18 +107,23 @@ public class OpenSearchKnowledgeDocumentSearchService implements KnowledgeDocume
 		).trim();
 	}
 
-	private KnowledgeDocument toKnowledgeDocument(Map source) {
-		String title = text(source, "title", "OpenSearch knowledge document");
-		return knowledgeDocumentRepository.findByTitle(title)
-				.orElseGet(() -> knowledgeDocumentRepository.save(new KnowledgeDocument(
-						documentType(source),
-						title,
-						text(source, "sourceName", "Amazon OpenSearch Serverless"),
-						textOrNull(source, "sourceUrl"),
-						text(source, "content", ""),
-						text(source, "keywords", title),
-						textOrNull(source, "legalBasis")
-				)));
+	private Optional<KnowledgeDocument> resolveGovernedDocument(Map source) {
+		Object documentId = source.get("documentId");
+		if (documentId != null) {
+			try {
+				return knowledgeDocumentRepository.findById(Long.valueOf(String.valueOf(documentId)));
+			}
+			catch (NumberFormatException ignored) {
+				return Optional.empty();
+			}
+		}
+		Object title = source.get("title");
+		if (title == null || String.valueOf(title).isBlank()) {
+			return Optional.empty();
+		}
+		// The search index is a discovery aid. Candidates must exist in the
+		// governed registry; deterministic gates decide whether they may support a claim.
+		return knowledgeDocumentRepository.findByTitle(String.valueOf(title));
 	}
 
 	private List<KnowledgeDocument> fallbackSearch(ComplaintAnalysis analysis) {
@@ -91,26 +132,17 @@ public class OpenSearchKnowledgeDocumentSearchService implements KnowledgeDocume
 				.toList();
 	}
 
-	private DocumentType documentType(Map source) {
-		String value = text(source, "documentType", DocumentType.MANUAL.name());
-		try {
-			return DocumentType.valueOf(value.trim().toUpperCase());
-		}
-		catch (IllegalArgumentException exception) {
-			return DocumentType.MANUAL;
-		}
+	static List<String> purposeIndexNames(String prefix) {
+		return Arrays.stream(KnowledgePurpose.values())
+				.filter(purpose -> purpose != KnowledgePurpose.UNVERIFIED_LEGACY)
+				.map(purpose -> prefix + "-" + purpose.name().toLowerCase(Locale.ROOT).replace('_', '-'))
+				.toList();
 	}
 
-	private String text(Map source, String key, String defaultValue) {
-		Object value = source.get(key);
-		if (value == null || !StringUtils.hasText(String.valueOf(value))) {
-			return defaultValue;
+	private static String requireText(String value, String label) {
+		if (value == null || value.isBlank()) {
+			throw new IllegalStateException(label + " is required for hybrid OpenSearch retrieval");
 		}
-		return String.valueOf(value);
-	}
-
-	private String textOrNull(Map source, String key) {
-		Object value = source.get(key);
-		return value == null || !StringUtils.hasText(String.valueOf(value)) ? null : String.valueOf(value);
+		return value.trim();
 	}
 }

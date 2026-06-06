@@ -2,6 +2,7 @@ package egovframework.example.complaint.service;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -13,6 +14,7 @@ import software.amazon.awssdk.services.s3.S3Client;
 import software.amazon.awssdk.services.s3.model.DeleteObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectRequest;
 import software.amazon.awssdk.services.s3.model.GetObjectResponse;
+import software.amazon.awssdk.services.s3.model.ListObjectsV2Request;
 import software.amazon.awssdk.services.s3.model.PutObjectRequest;
 
 @Service
@@ -38,7 +40,7 @@ public class S3FileStorageService implements FileStorageService {
 		if (!StringUtils.hasText(bucketName)) {
 			throw new IllegalStateException("S3 bucket is required when app.file-storage.provider=s3");
 		}
-		String cleanFilename = StringUtils.cleanPath(originalFilename == null ? "attachment" : originalFilename);
+		String cleanFilename = FileStorageService.safeOriginalFilename(originalFilename);
 		String storageKey = normalizePrefix(keyPrefix) + "/" + UUID.randomUUID() + "-" + cleanFilename;
 		try {
 			PutObjectRequest request = PutObjectRequest.builder()
@@ -76,11 +78,28 @@ public class S3FileStorageService implements FileStorageService {
 		s3Client.deleteObject(request);
 	}
 
+	@Override
+	public List<StoredObjectReference> listStoredObjects() {
+		requireBucketName();
+		ListObjectsV2Request request = ListObjectsV2Request.builder()
+				.bucket(bucketName)
+				.prefix(normalizePrefix(keyPrefix) + "/")
+				.build();
+		return s3Client.listObjectsV2Paginator(request).stream()
+				.flatMap(page -> page.contents().stream())
+				.map(object -> new StoredObjectReference(object.key(), object.lastModified()))
+				.toList();
+	}
+
 	private String normalizePrefix(String prefix) {
 		if (!StringUtils.hasText(prefix)) {
 			return "complaints";
 		}
 		String normalized = prefix.trim();
+		if (normalized.startsWith("/") || normalized.startsWith("\\") || normalized.contains("..")
+				|| normalized.contains("\\")) {
+			throw new IllegalArgumentException("Invalid S3 attachment key prefix");
+		}
 		while (normalized.endsWith("/")) {
 			normalized = normalized.substring(0, normalized.length() - 1);
 		}

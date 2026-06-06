@@ -9,9 +9,10 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from dotenv import load_dotenv
+from data.API.provider_runtime import ProviderUnavailableError, execute_provider_call
 
 
-DEFAULT_BASE_URL = "http://apis.data.go.kr/1140100/CivilPolicyQnaService"
+DEFAULT_BASE_URL = "https://apis.data.go.kr/1140100/CivilPolicyQnaService"
 LIST_ENDPOINT = "/PolicyQnaList"
 DEFAULT_TIMEOUT_SECONDS = 10
 API_DIR = Path(__file__).resolve().parent
@@ -81,11 +82,20 @@ def request_policy_qna_list(keyword: str, display: int = 5, search_type: str = "
         },
     )
 
-    with urlopen(request, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
-        body = response.read()
+    body = execute_provider_call(
+        "policy-qna-api",
+        50,
+        lambda: read_response(request),
+    ).value
 
     text = body.decode("utf-8", errors="replace").strip()
     return json.loads(text)
+
+
+def read_response(request: Request) -> bytes:
+    timeout = float(os.getenv("PUBLIC_API_TIMEOUT_SECONDS", str(DEFAULT_TIMEOUT_SECONDS)))
+    with urlopen(request, timeout=timeout) as response:
+        return response.read()
 
 
 def extract_items(data: Dict[str, object]) -> List[Dict[str, object]]:
@@ -162,7 +172,14 @@ def safe_policy_qna_search(keyword: str, display: int = 5) -> List[Dict[str, obj
     for search_type in ["1", "2"]:
         try:
             data = request_policy_qna_list(keyword, display=display, search_type=search_type)
-        except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError) as exc:
+        except (
+            HTTPError,
+            URLError,
+            TimeoutError,
+            ValueError,
+            json.JSONDecodeError,
+            ProviderUnavailableError,
+        ) as exc:
             results.append({
                 "error": f"민원정책 Q&A 조회 실패(searchType={search_type}): {type(exc).__name__}: {exc}",
             })
@@ -211,7 +228,6 @@ def search_policy_qna_documents(query: str, display: int = 5) -> List[Dict[str, 
         "source_type": "POLICY_QNA_API",
         "source_name": "CivilPolicyQnaService/PolicyQnaList",
         "content": content,
-        "score": len(records),
         "matched_terms": [keyword],
     }]
 

@@ -12,7 +12,6 @@ from dotenv import load_dotenv
 
 BASE_DIR = Path(__file__).resolve().parent
 DEFAULT_HISTORY_DIR = BASE_DIR / "data" / "department_history"
-DEFAULT_HISTORY_FILE = BASE_DIR / "data" / "department_history" / "complaint_department_history.xlsx"
 
 NS = {
     "a": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
@@ -54,6 +53,42 @@ SYNONYM_TERMS = {
 
 FALLBACK_DEPARTMENTS = [
     {
+        "terms": ["민원", "행정절차", "접수", "처리기간", "정보공개", "개인정보"],
+        "department": "민원총괄부서 또는 감사·민원 담당 부서 확인 필요",
+    },
+    {
+        "terms": ["건축", "불법건축", "공동주택", "아파트", "주택", "균열", "누수"],
+        "department": "건축·주택 담당 부서 확인 필요",
+    },
+    {
+        "terms": ["공원", "녹지", "가로수", "놀이터", "체육시설"],
+        "department": "공원녹지 담당 부서 확인 필요",
+    },
+    {
+        "terms": ["상수도", "수도", "단수", "하수도", "맨홀", "배수"],
+        "department": "상하수도 담당 부서 확인 필요",
+    },
+    {
+        "terms": ["보건", "위생", "식품", "감염병", "방역", "공중위생"],
+        "department": "보건·위생 담당 부서 확인 필요",
+    },
+    {
+        "terms": ["동물", "유기견", "반려견", "축산", "가축분뇨"],
+        "department": "동물보호·축산 담당 부서 확인 필요",
+    },
+    {
+        "terms": ["현수막", "광고물", "노점", "적치물", "불법광고"],
+        "department": "도시관리·광고물 담당 부서 확인 필요",
+    },
+    {
+        "terms": ["장애인", "노인", "복지", "교통약자", "편의시설"],
+        "department": "복지·교통약자 담당 부서 확인 필요",
+    },
+    {
+        "terms": ["재난", "안전", "위험", "침수", "붕괴", "화학물질"],
+        "department": "안전총괄 담당 부서 확인 필요",
+    },
+    {
         "terms": ["선거", "선거운동", "유세", "확성기"],
         "department": "선거관리위원회 또는 환경보전과 확인 필요",
     },
@@ -86,14 +121,19 @@ def get_history_file() -> Path:
             path = BASE_DIR / path
         return path
 
-    return DEFAULT_HISTORY_FILE
+    raise RuntimeError(
+        "DEPARTMENT_HISTORY_XLSX must point to an approved, de-identified auxiliary-use dataset"
+    )
 
 
 def get_history_files() -> List[Path]:
     load_dotenv()
     configured = os.getenv("DEPARTMENT_HISTORY_XLSX", "").strip()
-    history_files = list(DEFAULT_HISTORY_DIR.glob("*.xlsx"))
+    approved = os.getenv("DEPARTMENT_HISTORY_APPROVED_FOR_AUXILIARY_USE", "").strip().lower()
+    if approved not in {"1", "true", "yes"}:
+        return []
 
+    history_files = []
     if configured:
         path = Path(configured)
         if not path.is_absolute():
@@ -253,11 +293,14 @@ def load_department_history_file(path: Path) -> List[Dict[str, str]]:
 
 def load_department_history(path: Path = None) -> List[Dict[str, str]]:
     if path:
+        approved = os.getenv("DEPARTMENT_HISTORY_APPROVED_FOR_AUXILIARY_USE", "").strip().lower()
+        if approved not in {"1", "true", "yes"}:
+            raise RuntimeError("Historical complaint data is not approved for auxiliary use")
         return load_department_history_file(path)
 
     history_files = get_history_files()
     if not history_files:
-        raise FileNotFoundError(f"민원-부서 이력 엑셀 파일이 없습니다: {DEFAULT_HISTORY_DIR}")
+        return []
 
     records = []
     for history_file in history_files:
@@ -291,15 +334,15 @@ def tokenize(text: str) -> List[str]:
     return list(dict.fromkeys(expanded_tokens))
 
 
-def score_record(query_tokens: List[str], record: Dict[str, str]) -> int:
+def count_matches(query_tokens: List[str], record: Dict[str, str]) -> int:
     target = record["search_text"]
-    score = 0
+    match_count = 0
 
     for token in query_tokens:
         if token in target:
-            score += 1
+            match_count += 1
 
-    return score
+    return match_count
 
 
 def fallback_department(complaint_text: str) -> str:
@@ -312,44 +355,39 @@ def fallback_department(complaint_text: str) -> str:
 def recommend_department(complaint_text: str, top_k: int = 5) -> Dict[str, object]:
     records = load_department_history()
     query_tokens = tokenize(complaint_text)
-    scored = []
+    ranked = []
 
     for record in records:
-        score = score_record(query_tokens, record)
-        if score <= 0:
+        match_count = count_matches(query_tokens, record)
+        if match_count <= 0:
             continue
 
-        scored.append({
+        ranked.append({
             **record,
-            "score": score,
+            "match_count": match_count,
         })
 
-    scored.sort(key=lambda item: item["score"], reverse=True)
-    top_matches = scored[:top_k]
+    ranked.sort(key=lambda item: item["match_count"], reverse=True)
+    top_matches = ranked[:top_k]
     department_counter = Counter()
 
     for match in top_matches:
-        department_counter[match["department"]] += match["score"]
+        department_counter[match["department"]] += match["match_count"]
 
     recommended_department = ""
-    best_score = top_matches[0]["score"] if top_matches else 0
-    if department_counter and best_score >= 3:
+    best_match_count = top_matches[0]["match_count"] if top_matches else 0
+    if department_counter and best_match_count >= 3:
         recommended_department = department_counter.most_common(1)[0][0]
     else:
         recommended_department = fallback_department(complaint_text)
 
     return {
         "recommended_department": recommended_department,
-        "recommendation_source": "history" if department_counter and best_score >= 3 else "keyword_fallback" if recommended_department else "",
-        "best_match_score": best_score,
-        "query_tokens": query_tokens,
+        "recommendation_source": "history" if department_counter and best_match_count >= 3 else "keyword_fallback" if recommended_department else "",
         "top_matches": [
             {
-                "score": item["score"],
                 "department": item["department"],
-                "title": item["title"],
-                "summary": item["summary"][:160],
-                "region": item["region"],
+                "source_file": item["source_file"],
                 "year_sheet": item["year_sheet"],
             }
             for item in top_matches
@@ -368,7 +406,6 @@ def main() -> None:
     print("[과거 민원 기반 담당 부서 추천]")
     print(f"- 민원 본문: {complaint_text}")
     print(f"- 추천 부서: {result['recommended_department'] or '추천 결과 없음'}")
-    print(f"- 검색 토큰: {', '.join(result['query_tokens'])}")
     print("\n[유사 과거 민원]")
 
     if not result["top_matches"]:
@@ -376,10 +413,7 @@ def main() -> None:
         return
 
     for index, item in enumerate(result["top_matches"], start=1):
-        print(f"{index}. score={item['score']} / {item['department']}")
-        print(f"   - 민원명: {item['title']}")
-        print(f"   - 요지: {item['summary']}")
-        print(f"   - 지역: {item['region']} / 시트: {item['year_sheet']}")
+        print(f"{index}. {item['department']} / {item['source_file']} / {item['year_sheet']}")
 
 
 if __name__ == "__main__":

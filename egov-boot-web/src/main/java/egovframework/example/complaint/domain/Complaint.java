@@ -7,6 +7,7 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.Locale;
@@ -33,6 +34,9 @@ public class Complaint extends BaseTimeEntity {
 	@Column(nullable = false, columnDefinition = "text")
 	private String rawText;
 
+	@Column(nullable = false, columnDefinition = "text")
+	private String redactedText;
+
 	@Column(length = 500)
 	private String locationText;
 
@@ -40,12 +44,24 @@ public class Complaint extends BaseTimeEntity {
 	@Column(nullable = false, length = 30)
 	private ComplaintStatus status;
 
+	@Enumerated(EnumType.STRING)
+	@Column(length = 40)
+	private WorkflowBlocker workflowBlocker;
+
+	@Version
+	@Column(nullable = false)
+	private long version;
+
+	@Column(nullable = false)
+	private int attachmentRevision;
+
 	protected Complaint() {
 	}
 
-	public Complaint(SourceChannel sourceChannel, String rawText, String locationText) {
+	public Complaint(SourceChannel sourceChannel, String rawText, String redactedText, String locationText) {
 		this.sourceChannel = sourceChannel;
 		this.rawText = rawText;
+		this.redactedText = redactedText;
 		this.locationText = locationText;
 		this.status = ComplaintStatus.RECEIVED;
 		this.title = buildTitle(rawText);
@@ -85,6 +101,10 @@ public class Complaint extends BaseTimeEntity {
 		return rawText;
 	}
 
+	public String getRedactedText() {
+		return redactedText;
+	}
+
 	public String getLocationText() {
 		return locationText;
 	}
@@ -93,20 +113,69 @@ public class Complaint extends BaseTimeEntity {
 		return status;
 	}
 
-	public void markAnalyzed() {
-		if (status == ComplaintStatus.RECEIVED) {
-			status = ComplaintStatus.ANALYZED;
+	public WorkflowBlocker getWorkflowBlocker() {
+		return workflowBlocker;
+	}
+
+	public long getVersion() {
+		return version;
+	}
+
+	public void markTriageReview() {
+		transitionTo(ComplaintStatus.TRIAGE_REVIEW, ComplaintStatus.RECEIVED, ComplaintStatus.TRIAGE_REVIEW);
+	}
+
+	public void markDraftReview() {
+		transitionTo(ComplaintStatus.DRAFT_REVIEW, ComplaintStatus.TRIAGE_REVIEW, ComplaintStatus.DRAFT_REVIEW);
+	}
+
+	public void markApprovalPending() {
+		transitionTo(ComplaintStatus.APPROVAL_PENDING, ComplaintStatus.DRAFT_REVIEW);
+	}
+
+	public void markApproved() {
+		transitionTo(ComplaintStatus.APPROVED, ComplaintStatus.APPROVAL_PENDING);
+	}
+
+	public void markCompleted() {
+		transitionTo(ComplaintStatus.COMPLETED, ComplaintStatus.APPROVED);
+	}
+
+	public void returnToDraftReview() {
+		transitionTo(ComplaintStatus.DRAFT_REVIEW, ComplaintStatus.APPROVAL_PENDING, ComplaintStatus.DRAFT_REVIEW);
+	}
+
+	public void block(WorkflowBlocker blocker) {
+		this.workflowBlocker = blocker;
+	}
+
+	public void clearBlocker() {
+		this.workflowBlocker = null;
+	}
+
+	public void confirmLocation(String locationText) {
+		if (locationText == null || locationText.isBlank()) {
+			throw new IllegalArgumentException("Confirmed location is required");
+		}
+		this.locationText = locationText;
+		if (workflowBlocker == WorkflowBlocker.NEEDS_LOCATION) {
+			workflowBlocker = null;
 		}
 	}
 
-	public void markDraftGenerated() {
-		if (status == ComplaintStatus.RECEIVED || status == ComplaintStatus.ANALYZED) {
-			status = ComplaintStatus.DRAFT_GENERATED;
-		}
+	public void recordAttachmentChange() {
+		attachmentRevision++;
 	}
 
-	public void changeStatus(ComplaintStatus status) {
-		this.status = status;
+	private void transitionTo(ComplaintStatus target, ComplaintStatus... allowedSources) {
+		for (ComplaintStatus allowedSource : allowedSources) {
+			if (status == allowedSource) {
+				status = target;
+				workflowBlocker = null;
+				return;
+			}
+		}
+		throw new IllegalStateException("Invalid complaint transition: " + status + " -> " + target);
 	}
 
 	private String buildTitle(String rawText) {

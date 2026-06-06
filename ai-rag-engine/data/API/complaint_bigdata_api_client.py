@@ -11,9 +11,10 @@ from urllib.parse import urlencode
 from urllib.request import Request, urlopen
 
 from dotenv import load_dotenv
+from data.API.provider_runtime import ProviderUnavailableError, execute_provider_call
 
 
-DEFAULT_BASE_URL = "http://apis.data.go.kr/1140100/minAnalsInfoView5"
+DEFAULT_BASE_URL = "https://apis.data.go.kr/1140100/minAnalsInfoView5"
 DEFAULT_DISPLAY = 5
 DEFAULT_TIMEOUT_SECONDS = 10
 API_DIR = Path(__file__).resolve().parent
@@ -117,11 +118,19 @@ def request_endpoint(endpoint_key: str, params: Dict[str, str] = None):
         },
     )
 
-    with urlopen(request, timeout=DEFAULT_TIMEOUT_SECONDS) as response:
-        body = response.read()
-        content_type = response.headers.get("Content-Type", "")
+    body, content_type = execute_provider_call(
+        "complaint-bigdata-api",
+        50,
+        lambda: read_response(request),
+    ).value
 
     return parse_response(body, content_type)
+
+
+def read_response(request: Request) -> tuple[bytes, str]:
+    timeout = float(os.getenv("PUBLIC_API_TIMEOUT_SECONDS", str(DEFAULT_TIMEOUT_SECONDS)))
+    with urlopen(request, timeout=timeout) as response:
+        return response.read(), response.headers.get("Content-Type", "")
 
 
 def parse_response(body: bytes, content_type: str = ""):
@@ -234,7 +243,15 @@ def summarize_records(title: str, records: List[Dict[str, object]], max_items: i
 def safe_request(endpoint_key: str, params: Dict[str, str] = None) -> List[Dict[str, object]]:
     try:
         data = request_endpoint(endpoint_key, params=params)
-    except (HTTPError, URLError, TimeoutError, ValueError, json.JSONDecodeError, ET.ParseError) as exc:
+    except (
+        HTTPError,
+        URLError,
+        TimeoutError,
+        ValueError,
+        json.JSONDecodeError,
+        ET.ParseError,
+        ProviderUnavailableError,
+    ) as exc:
         return [{
             "error": f"{endpoint_key} 조회 실패: {type(exc).__name__}: {exc}",
         }]
@@ -290,25 +307,22 @@ def search_complaint_bigdata_documents(query: str, display: int = DEFAULT_DISPLA
         records = safe_request(endpoint_key, params=lookup_params[endpoint_key])
 
         if records and "error" in records[0]:
-            content = records[0]["error"]
-            score = 0
+            continue
         elif records and is_error_record(records[0]):
-            content = record_to_text(records[0])
-            score = 0
-        else:
-            content = summarize_records(title, records, max_items=display)
-            score = len(records)
+            continue
+        if not records:
+            continue
+        content = summarize_records(title, records, max_items=display)
 
         documents.append({
             "title": title,
             "source_type": "COMPLAINT_BIGDATA_API",
             "source_name": endpoint_key,
             "content": content,
-            "score": score,
             "matched_terms": [keyword],
         })
 
-    return [doc for doc in documents if doc["score"] > 0]
+    return documents
 
 
 def debug_complaint_bigdata_requests(query: str, display: int = DEFAULT_DISPLAY) -> List[Dict[str, object]]:

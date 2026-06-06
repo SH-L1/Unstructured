@@ -9,40 +9,55 @@ import egovframework.example.complaint.api.dto.RagContextResponse;
 import egovframework.example.complaint.domain.Complaint;
 import egovframework.example.complaint.domain.ComplaintAnalysis;
 import egovframework.example.complaint.domain.ComplaintAttachment;
+import egovframework.example.complaint.domain.ComplaintSensitivePayload;
+import egovframework.example.complaint.domain.AttachmentAnalysis;
 import egovframework.example.complaint.domain.ComplaintStatus;
 import egovframework.example.complaint.domain.ComplaintType;
 import egovframework.example.complaint.domain.Department;
-import egovframework.example.complaint.domain.DraftRevision;
+import egovframework.example.complaint.domain.DraftClaim;
 import egovframework.example.complaint.domain.KnowledgeDocument;
 import egovframework.example.complaint.domain.OfficialDraft;
 import egovframework.example.complaint.domain.RagContext;
 import egovframework.example.complaint.domain.Sentiment;
 import egovframework.example.complaint.domain.SourceChannel;
 import egovframework.example.complaint.domain.Urgency;
+import egovframework.example.complaint.domain.VerificationResult;
 import egovframework.example.complaint.repository.ComplaintAnalysisRepository;
 import egovframework.example.complaint.repository.ComplaintAttachmentRepository;
+import egovframework.example.complaint.repository.AttachmentAnalysisRepository;
 import egovframework.example.complaint.repository.ComplaintRepository;
+import egovframework.example.complaint.repository.ComplaintSensitivePayloadRepository;
 import egovframework.example.complaint.repository.DepartmentRepository;
-import egovframework.example.complaint.repository.DraftRevisionRepository;
+import egovframework.example.complaint.repository.DraftClaimRepository;
+import egovframework.example.complaint.repository.KnowledgeDocumentRepository;
 import egovframework.example.complaint.repository.OfficialDraftRepository;
 import egovframework.example.complaint.repository.RagContextRepository;
+import egovframework.example.complaint.repository.VerificationResultRepository;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.persistence.criteria.Predicate;
 import java.io.IOException;
-import java.net.URLEncoder;
-import java.nio.charset.StandardCharsets;
+import java.io.ByteArrayInputStream;
+import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
+import java.util.function.Consumer;
 import org.springframework.beans.factory.ObjectProvider;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -56,14 +71,23 @@ public class ComplaintService {
 	private final ComplaintAnalysisRepository complaintAnalysisRepository;
 	private final DepartmentRepository departmentRepository;
 	private final OfficialDraftRepository officialDraftRepository;
-	private final DraftRevisionRepository draftRevisionRepository;
+	private final DraftClaimRepository draftClaimRepository;
 	private final RagContextRepository ragContextRepository;
+	private final KnowledgeDocumentRepository knowledgeDocumentRepository;
 	private final FileStorageService fileStorageService;
 	private final KnowledgeDocumentSearchService knowledgeDocumentSearchService;
-	private final ObjectProvider<ComplaintAnalysisClient> complaintAnalysisClientProvider;
 	private final ObjectProvider<DraftGenerationClient> draftGenerationClientProvider;
-	private final String aiProvider;
-	private final String openAiModel;
+	private final RedactionService redactionService;
+	private final AttachmentSecurityService attachmentSecurityService;
+	private final AttachmentAnalysisRepository attachmentAnalysisRepository;
+	private final ComplaintSensitivePayloadRepository complaintSensitivePayloadRepository;
+	private final SensitivePayloadStorageService sensitivePayloadStorageService;
+	private final AnalysisSchemaValidator analysisSchemaValidator;
+	private final DraftSchemaValidator draftSchemaValidator;
+	private final VerificationResultRepository verificationResultRepository;
+	private final ContentHashService contentHashService;
+	private final ObjectMapper objectMapper;
+	private final TransactionTemplate transactionTemplate;
 
 	public ComplaintService(
 			ComplaintRepository complaintRepository,
@@ -71,38 +95,84 @@ public class ComplaintService {
 			ComplaintAnalysisRepository complaintAnalysisRepository,
 			DepartmentRepository departmentRepository,
 			OfficialDraftRepository officialDraftRepository,
-			DraftRevisionRepository draftRevisionRepository,
+			DraftClaimRepository draftClaimRepository,
 			RagContextRepository ragContextRepository,
+			KnowledgeDocumentRepository knowledgeDocumentRepository,
 			FileStorageService fileStorageService,
 			KnowledgeDocumentSearchService knowledgeDocumentSearchService,
-			ObjectProvider<ComplaintAnalysisClient> complaintAnalysisClientProvider,
 			ObjectProvider<DraftGenerationClient> draftGenerationClientProvider,
-			@Value("${app.ai.provider:mock-bedrock}") String aiProvider,
-			@Value("${app.openai.model:gpt-4o-mini}") String openAiModel
+			RedactionService redactionService,
+			AttachmentSecurityService attachmentSecurityService,
+			AttachmentAnalysisRepository attachmentAnalysisRepository,
+			ComplaintSensitivePayloadRepository complaintSensitivePayloadRepository,
+			SensitivePayloadStorageService sensitivePayloadStorageService,
+			AnalysisSchemaValidator analysisSchemaValidator,
+			DraftSchemaValidator draftSchemaValidator,
+			VerificationResultRepository verificationResultRepository,
+			ContentHashService contentHashService,
+			ObjectMapper objectMapper,
+			TransactionTemplate transactionTemplate
 	) {
 		this.complaintRepository = complaintRepository;
 		this.complaintAttachmentRepository = complaintAttachmentRepository;
 		this.complaintAnalysisRepository = complaintAnalysisRepository;
 		this.departmentRepository = departmentRepository;
 		this.officialDraftRepository = officialDraftRepository;
-		this.draftRevisionRepository = draftRevisionRepository;
+		this.draftClaimRepository = draftClaimRepository;
 		this.ragContextRepository = ragContextRepository;
+		this.knowledgeDocumentRepository = knowledgeDocumentRepository;
 		this.fileStorageService = fileStorageService;
 		this.knowledgeDocumentSearchService = knowledgeDocumentSearchService;
-		this.complaintAnalysisClientProvider = complaintAnalysisClientProvider;
 		this.draftGenerationClientProvider = draftGenerationClientProvider;
-		this.aiProvider = aiProvider;
-		this.openAiModel = openAiModel;
+		this.redactionService = redactionService;
+		this.attachmentSecurityService = attachmentSecurityService;
+		this.attachmentAnalysisRepository = attachmentAnalysisRepository;
+		this.complaintSensitivePayloadRepository = complaintSensitivePayloadRepository;
+		this.sensitivePayloadStorageService = sensitivePayloadStorageService;
+		this.analysisSchemaValidator = analysisSchemaValidator;
+		this.draftSchemaValidator = draftSchemaValidator;
+		this.verificationResultRepository = verificationResultRepository;
+		this.contentHashService = contentHashService;
+		this.objectMapper = objectMapper;
+		this.transactionTemplate = transactionTemplate;
 	}
 
-	@Transactional
 	public ComplaintResponse create(CreateComplaintRequest request) {
+		RedactionService.RedactionResult textRedaction = redactionService.inspect(request.rawText());
+		RedactionService.RedactionResult locationRedaction = redactionService.inspect(request.locationText());
 		Complaint complaint = new Complaint(
 				normalizeSourceChannel(request.sourceChannel()),
-				request.rawText(),
-				request.locationText()
+				textRedaction.redactedText(),
+				textRedaction.redactedText(),
+				locationRedaction.redactedText()
 		);
-		return ComplaintResponse.from(complaintRepository.save(complaint));
+		Complaint saved = complaintRepository.saveAndFlush(complaint);
+		String rawStorageReference = null;
+		try {
+			rawStorageReference = sensitivePayloadStorageService.storeComplaintPayload(
+					saved.getId(), request.rawText(), request.locationText()
+			);
+			complaintSensitivePayloadRepository.saveAndFlush(new ComplaintSensitivePayload(
+					saved,
+					rawStorageReference,
+					textRedaction.redactedText(),
+					"{\"rawText\":" + textRedaction.findingsJson()
+							+ ",\"locationText\":" + locationRedaction.findingsJson() + "}"
+			));
+			return ComplaintResponse.from(saved);
+		}
+		catch (RuntimeException exception) {
+			if (rawStorageReference != null) {
+				try {
+					sensitivePayloadStorageService.delete(rawStorageReference);
+				}
+				catch (RuntimeException cleanupException) {
+					exception.addSuppressed(cleanupException);
+				}
+			}
+			complaintRepository.deleteById(saved.getId());
+			throw exception;
+		}
 	}
 
 	@Transactional(readOnly = true)
@@ -130,102 +200,264 @@ public class ComplaintService {
 		);
 	}
 
-	@Transactional
-	public ComplaintResponse updateStatus(UUID id, ComplaintStatus status) {
-		Complaint complaint = getComplaint(id);
-		complaint.changeStatus(status);
-		return findById(id);
-	}
-
-	@Transactional
 	public ComplaintAnalysisResponse analyze(UUID id) {
 		return complaintAnalysisRepository.findByComplaintId(id)
 				.map(this::toAnalysisResponse)
 				.orElseGet(() -> toAnalysisResponse(createAnalysis(getComplaint(id))));
 	}
 
-	@Transactional
-	public DraftResponse generateDraft(UUID id) {
+	public ComplaintAnalysisResponse applyWorkerAnalysis(UUID id, com.fasterxml.jackson.databind.JsonNode output) {
+		Complaint complaint = getComplaint(id);
+		if (complaintAnalysisRepository.findByComplaintId(id).isPresent()) {
+			return toAnalysisResponse(complaintAnalysisRepository.findByComplaintId(id).orElseThrow());
+		}
+		ComplaintAnalysisResult result = new ComplaintAnalysisResult(
+				output.path("intent").asText(),
+				output.path("urgency").asText(),
+				output.path("sentiment").asText(),
+				output.path("departmentCode").asText(),
+				output.path("locationText").isNull() ? null : output.path("locationText").asText(),
+				null,
+				output.toString()
+		);
+		return transactionTemplate.execute(status -> toAnalysisResponse(createAnalysisFromResult(getComplaint(complaint.getId()), result)));
+	}
+
+	public DraftResponse generateDraft(UUID id, Consumer<List<KnowledgeDocument>> retrievalObserver) {
 		Complaint complaint = getComplaint(id);
 		List<OfficialDraft> existingDrafts = officialDraftRepository.findByComplaintIdOrderByCreatedAtDesc(id);
 		if (!existingDrafts.isEmpty()) {
 			OfficialDraft latest = existingDrafts.get(0);
-			return toDraftResponse(latest, ragContextRepository.findByOfficialDraftIdOrderByScoreDesc(latest.getId()));
+			if (latest.getStatus() != egovframework.example.complaint.domain.DraftStatus.REJECTED) {
+				return toDraftResponse(latest, ragContextRepository.findByOfficialDraftIdOrderByIdAsc(latest.getId()));
+			}
 		}
 
 		ComplaintAnalysis analysis = complaintAnalysisRepository.findByComplaintId(id)
 				.orElseGet(() -> createAnalysis(complaint));
-		List<KnowledgeDocument> documents = knowledgeDocumentSearchService.search(analysis);
+		List<KnowledgeDocument> retrievedDocuments = knowledgeDocumentSearchService.search(analysis);
+		retrievalObserver.accept(List.copyOf(retrievedDocuments));
+		List<KnowledgeDocument> documents = retrievedDocuments.stream()
+				.filter(document -> document.isOfficialLegalEvidence(LocalDate.now()))
+				.filter(this::hasRequiredOfficialMetadata)
+				.toList();
+		if (documents.stream().noneMatch(document -> document.isOfficialLegalEvidence(LocalDate.now()))) {
+			blockForVerification(
+					complaint.getId(),
+					egovframework.example.complaint.domain.WorkflowBlocker.EVIDENCE_INSUFFICIENT,
+					"OFFICIAL_EVIDENCE_REQUIRED",
+					"Verified official national-law evidence with required source metadata is required"
+			);
+			throw new IllegalStateException("Verified official evidence is required before a draft can be generated");
+		}
+		if (hasOverlappingOfficialConflicts(documents)) {
+			blockForVerification(
+					complaint.getId(),
+					egovframework.example.complaint.domain.WorkflowBlocker.CONFLICT_DETECTED,
+					"CONFLICT_SCAN",
+					"Overlapping official sources for the same legal basis contain conflicting content"
+			);
+			throw new IllegalStateException("Conflicting official evidence must be resolved before draft generation");
+		}
 		DraftGenerationClient draftClient = draftGenerationClientProvider.getIfAvailable();
-		String draftText = draftClient == null
-				? buildFallbackDraftText(complaint, analysis, documents)
-				: draftClient.generateDraft(complaint, analysis, documents);
-		OfficialDraft draft = officialDraftRepository.save(new OfficialDraft(complaint, draftText, modelName()));
+		if (draftClient == null) {
+			throw new IllegalStateException("Draft provider is unavailable");
+		}
+		DraftSchemaValidator.ValidatedDraft draft = draftSchemaValidator.validate(
+				draftClient.generateDraft(complaint, analysis, documents, approvedAttachmentTexts(complaint.getId())),
+				documents
+		);
+		if (redactionService.containsSensitivePattern(draft.renderedText())) {
+			blockForVerification(
+					complaint.getId(),
+					egovframework.example.complaint.domain.WorkflowBlocker.PROCESSING_FAILED,
+					"PII_OUTPUT_CHECK",
+					"Draft output contained recognizable PII and was not stored"
+			);
+			throw new IllegalStateException("Draft schema validation failed: output contained recognizable PII");
+		}
+		return transactionTemplate.execute(status -> persistGeneratedDraft(complaint.getId(), draft, documents));
+	}
+
+	public DraftResponse applyWorkerDraft(
+			UUID id,
+			com.fasterxml.jackson.databind.JsonNode output,
+			List<Long> evidenceDocumentIds,
+			String workerModelName,
+			Consumer<List<KnowledgeDocument>> retrievalObserver
+	) {
+		Complaint complaint = getComplaint(id);
+		if (evidenceDocumentIds == null || evidenceDocumentIds.isEmpty() || evidenceDocumentIds.size() > 50) {
+			throw new IllegalStateException("Worker draft must select governed evidence document IDs");
+		}
+		List<KnowledgeDocument> retrievedDocuments = knowledgeDocumentRepository.findAllById(
+				new java.util.LinkedHashSet<>(evidenceDocumentIds)
+		);
+		if (retrievedDocuments.size() != new java.util.HashSet<>(evidenceDocumentIds).size()) {
+			throw new IllegalStateException("Worker draft referenced unknown governed evidence");
+		}
+		retrievalObserver.accept(List.copyOf(retrievedDocuments));
+		List<KnowledgeDocument> documents = retrievedDocuments.stream()
+				.filter(document -> document.isOfficialLegalEvidence(LocalDate.now()))
+				.filter(this::hasRequiredOfficialMetadata)
+				.toList();
+		if (documents.size() != retrievedDocuments.size() || documents.isEmpty()) {
+			blockForVerification(
+					complaint.getId(),
+					egovframework.example.complaint.domain.WorkflowBlocker.EVIDENCE_INSUFFICIENT,
+					"OFFICIAL_EVIDENCE_REQUIRED",
+					"Worker-selected evidence must be complete verified official national-law evidence"
+			);
+			throw new IllegalStateException("Verified official evidence is required before a worker draft can be applied");
+		}
+		if (hasOverlappingOfficialConflicts(documents)) {
+			blockForVerification(
+					complaint.getId(),
+					egovframework.example.complaint.domain.WorkflowBlocker.CONFLICT_DETECTED,
+					"CONFLICT_SCAN",
+					"Worker-selected official sources contain conflicting content"
+			);
+			throw new IllegalStateException("Conflicting official evidence must be resolved before worker draft application");
+		}
+		DraftSchemaValidator.ValidatedDraft draft = draftSchemaValidator.validate(output.toString(), documents);
+		if (redactionService.containsSensitivePattern(draft.renderedText())) {
+			blockForVerification(
+					complaint.getId(),
+					egovframework.example.complaint.domain.WorkflowBlocker.PROCESSING_FAILED,
+					"PII_OUTPUT_CHECK",
+					"Worker draft output contained recognizable PII and was not stored"
+			);
+			throw new IllegalStateException("Draft schema validation failed: output contained recognizable PII");
+		}
+		return transactionTemplate.execute(status -> persistGeneratedDraft(
+				complaint.getId(),
+				draft,
+				documents,
+				workerModelName
+		));
+	}
+
+	private DraftResponse persistGeneratedDraft(
+			UUID complaintId,
+			DraftSchemaValidator.ValidatedDraft generatedDraft,
+			List<KnowledgeDocument> documents
+	) {
+		return persistGeneratedDraft(complaintId, generatedDraft, documents, modelName());
+	}
+
+	private DraftResponse persistGeneratedDraft(
+			UUID complaintId,
+			DraftSchemaValidator.ValidatedDraft generatedDraft,
+			List<KnowledgeDocument> documents,
+			String draftModelName
+	) {
+		Complaint complaint = getComplaint(complaintId);
+		OfficialDraft draft = officialDraftRepository.save(new OfficialDraft(
+				complaint, generatedDraft.renderedText(), draftModelName
+		));
 		List<RagContext> contexts = documents.stream()
 				.map(document -> new RagContext(
 						complaint,
 						draft,
 						document,
 						document.getLegalBasis(),
-						snippet(document.getContent()),
-						scoreFor(document)
+						snippet(document.getContent())
 				))
 				.map(ragContextRepository::save)
 				.toList();
-		complaint.markDraftGenerated();
+		for (int index = 0; index < generatedDraft.claims().size(); index++) {
+			DraftSchemaValidator.ValidatedClaim claim = generatedDraft.claims().get(index);
+			draftClaimRepository.save(new DraftClaim(
+					draft, index, claim.text(), claim.claimType(), claim.sourceDocumentIds()
+			));
+		}
+		complaint.markDraftReview();
+		complaintRepository.save(complaint);
 		return toDraftResponse(draft, contexts);
 	}
 
-	@Transactional
-	public DraftResponse updateDraft(UUID id, String draftText) {
-		Complaint complaint = getComplaint(id);
-		DraftResponse current = generateDraft(id);
-		OfficialDraft draft = officialDraftRepository.findById(current.draftId())
-				.orElseThrow(() -> new EntityNotFoundException("Draft not found: " + current.draftId()));
-		String beforeText = draft.getDraftText();
-		draft.revise(draftText);
-		draftRevisionRepository.save(new DraftRevision(draft, beforeText, draftText, "local-admin"));
-		complaint.markDraftGenerated();
-		return toDraftResponse(draft, ragContextRepository.findByOfficialDraftIdOrderByScoreDesc(draft.getId()));
+	private void blockForVerification(
+			UUID complaintId,
+			egovframework.example.complaint.domain.WorkflowBlocker blocker,
+			String ruleCode,
+			String message
+	) {
+		transactionTemplate.executeWithoutResult(status -> {
+			Complaint complaint = getComplaint(complaintId);
+			complaint.block(blocker);
+			complaintRepository.save(complaint);
+			verificationResultRepository.save(new VerificationResult(
+					complaintId, null, ruleCode, "FAILED", message, true
+			));
+		});
 	}
 
 	@Transactional(readOnly = true)
-	public List<RagContextResponse> findRagContexts(UUID id) {
+	public ComplaintAnalysisResponse findAnalysis(UUID id) {
 		getComplaint(id);
-		return ragContextRepository.findByComplaintIdOrderByScoreDesc(id).stream()
-				.map(this::toRagContextResponse)
-				.toList();
+		return complaintAnalysisRepository.findByComplaintId(id)
+				.map(this::toAnalysisResponse)
+				.orElse(null);
 	}
 
-	@Transactional
-	public String findGeoJson(UUID id) {
-		return analyze(id).geoJson();
+	@Transactional(readOnly = true)
+	public DraftResponse findLatestDraft(UUID id) {
+		getComplaint(id);
+		return officialDraftRepository.findByComplaintIdOrderByCreatedAtDesc(id).stream()
+				.findFirst()
+				.map(draft -> toDraftResponse(draft, ragContextRepository.findByOfficialDraftIdOrderByIdAsc(draft.getId())))
+				.orElse(null);
 	}
 
-	@Transactional
 	public AttachmentResponse addAttachment(UUID id, MultipartFile file) {
 		if (file == null || file.isEmpty()) {
 			throw new IllegalArgumentException("Attachment file is required");
 		}
 		Complaint complaint = getComplaint(id);
+		StoredFile storedFile = null;
+		ComplaintAttachment savedAttachment = null;
 		try {
-			StoredFile storedFile = fileStorageService.store(
+			byte[] bytes = file.getBytes();
+			AttachmentSecurityService.Inspection inspection = attachmentSecurityService.inspect(
+					file.getOriginalFilename(), file.getContentType(), bytes
+			);
+			storedFile = fileStorageService.store(
 					file.getOriginalFilename(),
-					file.getContentType(),
-					file.getSize(),
-					file.getInputStream()
+					inspection.detectedType(),
+					bytes.length,
+					new ByteArrayInputStream(bytes)
 			);
 			ComplaintAttachment attachment = new ComplaintAttachment(
 					complaint,
 					storedFile.originalFilename(),
-					storedFile.contentType(),
+					inspection.detectedType(),
 					storedFile.size(),
 					storedFile.storageKey()
 			);
-			return AttachmentResponse.from(complaintAttachmentRepository.save(attachment));
+			savedAttachment = complaintAttachmentRepository.saveAndFlush(attachment);
+			attachmentAnalysisRepository.saveAndFlush(new AttachmentAnalysis(savedAttachment, inspection.detectedType()));
+			complaint.recordAttachmentChange();
+			complaintRepository.saveAndFlush(complaint);
+			return AttachmentResponse.from(savedAttachment);
 		}
 		catch (IOException exception) {
 			throw new IllegalStateException("Failed to read attachment file", exception);
+		}
+		catch (RuntimeException exception) {
+			if (savedAttachment != null) {
+				attachmentAnalysisRepository.findByAttachment_Id(savedAttachment.getId())
+						.ifPresent(attachmentAnalysisRepository::delete);
+				complaintAttachmentRepository.deleteById(savedAttachment.getId());
+			}
+			if (storedFile != null) {
+				try {
+					fileStorageService.delete(storedFile.storageKey());
+				}
+				catch (RuntimeException cleanupException) {
+					exception.addSuppressed(cleanupException);
+				}
+			}
+			throw exception;
 		}
 	}
 
@@ -237,41 +469,25 @@ public class ComplaintService {
 				.toList();
 	}
 
-	@Transactional(readOnly = true)
-	public DownloadedAttachment downloadAttachment(UUID complaintId, UUID attachmentId) {
-		getComplaint(complaintId);
-		ComplaintAttachment attachment = complaintAttachmentRepository.findById(attachmentId)
-				.filter(candidate -> candidate.getComplaintId().equals(complaintId))
-				.orElseThrow(() -> new EntityNotFoundException("Attachment not found: " + attachmentId));
-		StoredFileContent content = fileStorageService.load(attachment.getStorageKey());
-		return new DownloadedAttachment(attachment.getOriginalFilename(), attachment.getContentType(), content.bytes());
-	}
-
-	@Transactional
 	public void deleteAttachment(UUID complaintId, UUID attachmentId) {
-		getComplaint(complaintId);
+		Complaint complaint = getComplaint(complaintId);
 		ComplaintAttachment attachment = complaintAttachmentRepository.findById(attachmentId)
 				.filter(candidate -> candidate.getComplaintId().equals(complaintId))
 				.orElseThrow(() -> new EntityNotFoundException("Attachment not found: " + attachmentId));
+		attachmentAnalysisRepository.findByAttachment_Id(attachmentId)
+				.ifPresent(attachmentAnalysisRepository::delete);
 		fileStorageService.delete(attachment.getStorageKey());
 		complaintAttachmentRepository.delete(attachment);
-	}
-
-	public String attachmentDisposition(String filename) {
-		String encoded = URLEncoder.encode(filename, StandardCharsets.UTF_8).replace("+", "%20");
-		return "attachment; filename*=UTF-8''" + encoded;
+		complaint.recordAttachmentChange();
+		complaintRepository.saveAndFlush(complaint);
 	}
 
 	private ComplaintAnalysis createAnalysis(Complaint complaint) {
-		ComplaintAnalysisClient analysisClient = complaintAnalysisClientProvider.getIfAvailable();
-		if (analysisClient != null) {
-			return createAnalysisFromResult(complaint, analysisClient.analyze(complaint));
-		}
-		return createRuleBasedAnalysis(complaint);
+		return transactionTemplate.execute(status -> createRuleBasedAnalysis(getComplaint(complaint.getId())));
 	}
 
 	private ComplaintAnalysis createRuleBasedAnalysis(Complaint complaint) {
-		String text = complaint.getRawText().toLowerCase(Locale.ROOT);
+		String text = complaint.getRedactedText().toLowerCase(Locale.ROOT);
 		ComplaintType complaintType = inferComplaintType(text);
 		String intent = intentFor(complaintType);
 		Urgency urgency = complaintType == ComplaintType.HAZARDOUS_MATERIAL
@@ -284,12 +500,39 @@ public class ComplaintService {
 				: Sentiment.NEUTRAL;
 		Department department = departmentRepository.findByCode(departmentCodeFor(complaintType))
 				.orElseThrow(() -> new EntityNotFoundException("Department seed data is missing: " + departmentCodeFor(complaintType)));
-		String geoJson = complaint.getLocationText() == null || complaint.getLocationText().isBlank() ? null : """
-				{"type":"Feature","properties":{"complaintId":"%s","locationText":"%s","department":"%s","urgency":"%s"},"geometry":null}
-				""".formatted(complaint.getId(), escapeJson(complaint.getLocationText()), escapeJson(department.getName()), urgency.name()).trim();
-		String analysisJson = """
-				{"intent":"%s","complaintType":"%s","urgency":"%s","sentiment":"%s","department":"%s","keywords":%s,"requiredAction":"Field verification and department routing"}
-				""".formatted(intent, complaintType.name(), urgency.name(), sentiment.name(), department.getName(), keywordsFor(complaintType)).trim();
+		String geoJson = null;
+		Map<String, Object> issue = new LinkedHashMap<>();
+		issue.put("summary", intent);
+		issue.put("complaintType", complaintType.name());
+		issue.put("jurisdictionStatus", "PILOT_CANDIDATE");
+		issue.put("safetyRisk", urgency == Urgency.EMERGENCY ? "EMERGENCY" : urgency == Urgency.HIGH ? "HIGH" : "NORMAL");
+		issue.put("expressionRisk", "NORMAL");
+		issue.put("processability", complaint.getLocationText() == null || complaint.getLocationText().isBlank()
+				? "NEEDS_LOCATION" : "PROCESSABLE");
+		issue.put("departmentCandidates", List.of(department.getCode()));
+		issue.put("locationCandidates", complaint.getLocationText() == null || complaint.getLocationText().isBlank()
+				? List.of() : List.of(complaint.getLocationText()));
+		issue.put("evidenceIds", List.of());
+		Map<String, Object> root = new LinkedHashMap<>();
+		root.put("schemaVersion", "complaint-support-v1");
+		root.put("intent", intent);
+		root.put("urgency", urgency.name());
+		root.put("sentiment", sentiment.name());
+		root.put("departmentCode", department.getCode());
+		root.put("locationText", complaint.getLocationText());
+		root.put("keywords", keywordsFor(complaintType));
+		root.put("requiredAction", "Field verification and department routing");
+		root.put("issues", List.of(issue));
+		String analysisJson = jsonValue(root);
+		analysisSchemaValidator.validate(new ComplaintAnalysisResult(
+				intent,
+				urgency.name(),
+				sentiment.name(),
+				department.getCode(),
+				complaint.getLocationText(),
+				null,
+				analysisJson
+		));
 		ComplaintAnalysis analysis = complaintAnalysisRepository.save(new ComplaintAnalysis(
 				complaint,
 				intent,
@@ -301,11 +544,19 @@ public class ComplaintService {
 				geoJson,
 				analysisJson
 		));
-		complaint.markAnalyzed();
+		complaint.markTriageReview();
+		if (complaint.getLocationText() == null || complaint.getLocationText().isBlank()) {
+			complaint.block(egovframework.example.complaint.domain.WorkflowBlocker.NEEDS_LOCATION);
+		}
+		complaintRepository.save(complaint);
 		return analysis;
 	}
 
 	private ComplaintAnalysis createAnalysisFromResult(Complaint complaint, ComplaintAnalysisResult result) {
+		analysisSchemaValidator.validate(result);
+		if (redactionService.containsSensitivePattern(result.analysisJson())) {
+			throw new IllegalStateException("Analysis schema validation failed: output contained recognizable PII");
+		}
 		Department department = departmentRepository.findByCode(result.departmentCode())
 				.orElseThrow(() -> new EntityNotFoundException("Department not found: " + result.departmentCode()));
 		ComplaintAnalysis analysis = complaintAnalysisRepository.save(new ComplaintAnalysis(
@@ -316,31 +567,15 @@ public class ComplaintService {
 				Sentiment.valueOf(result.sentiment().trim().toUpperCase(Locale.ROOT)),
 				department,
 				result.locationText(),
-				result.geoJson(),
+				null,
 				result.analysisJson()
 		));
-		complaint.markAnalyzed();
-		return analysis;
-	}
-
-	private String buildFallbackDraftText(Complaint complaint, ComplaintAnalysis analysis, List<KnowledgeDocument> documents) {
-		if (documents.isEmpty()) {
-			return """
-					안녕하십니까. 접수하신 민원은 %s 건으로 확인했습니다.
-					현재 민원 내용과 직접적으로 일치하는 내부 참고문서가 확인되지 않아, 관련 없는 법령을 근거로 답변하지 않습니다.
-					%s에서 현장 확인 및 관계기관 협의 필요성을 우선 검토하겠습니다.
-					""".formatted(analysis.getIntent(), analysis.getDepartment().getName()).trim();
+		complaint.markTriageReview();
+		if (complaint.getLocationText() == null || complaint.getLocationText().isBlank()) {
+			complaint.block(egovframework.example.complaint.domain.WorkflowBlocker.NEEDS_LOCATION);
 		}
-		String legalBasis = documents.stream()
-				.map(KnowledgeDocument::getLegalBasis)
-				.filter(StringUtils::hasText)
-				.findFirst()
-				.orElse("관련 민원 처리 기준");
-		return """
-				안녕하십니까. 접수하신 민원은 %s 건으로 확인했습니다.
-				해당 민원은 %s에서 검토할 예정이며, 제출하신 위치와 내용을 바탕으로 현장 확인 필요 여부를 판단하겠습니다.
-				검토 과정에서는 %s 등 관련 근거를 참고하되, 본 문안은 담당자 검토용 초안입니다.
-				""".formatted(analysis.getIntent(), analysis.getDepartment().getName(), legalBasis).trim();
+		complaintRepository.save(complaint);
+		return analysis;
 	}
 
 	private DraftResponse toDraftResponse(OfficialDraft draft, List<RagContext> references) {
@@ -377,7 +612,12 @@ public class ComplaintService {
 				document.getDocumentType().name(),
 				context.getLegalBasis(),
 				context.getContentSnippet(),
-				context.getScore()
+				document.getPurpose().name(),
+				document.getVerificationStatus().name(),
+				document.getJurisdictionCode(),
+				document.getEffectiveFrom() == null ? null : document.getEffectiveFrom().toString(),
+				document.getEffectiveTo() == null ? null : document.getEffectiveTo().toString(),
+				document.getSourceUrl()
 		);
 	}
 
@@ -462,16 +702,18 @@ public class ComplaintService {
 		};
 	}
 
-	private String keywordsFor(ComplaintType complaintType) {
+	private List<String> keywordsFor(ComplaintType complaintType) {
 		return switch (complaintType) {
-			case ILLEGAL_DUMPING -> "[\"쓰레기\",\"폐기물\",\"무단투기\",\"현장확인\"]";
-			case ROAD_DAMAGE -> "[\"도로\",\"포트홀\",\"파손\",\"보수\",\"현장점검\"]";
-			case ILLEGAL_PARKING -> "[\"불법주정차\",\"주차\",\"단속\",\"교통\"]";
-			case TRAFFIC_SIGN -> "[\"교통표지\",\"신호\",\"정비\"]";
-			case NOISE -> "[\"소음\",\"생활불편\",\"현장확인\"]";
-			case ENVIRONMENT -> "[\"환경\",\"오염\",\"생활불편\",\"현장확인\"]";
-			case HAZARDOUS_MATERIAL -> "[\"생화학\",\"위험물\",\"폭탄\",\"폭발물\",\"화학물질\",\"유해물질\",\"재난\",\"경찰\",\"소방\"]";
-			default -> "[\"민원\",\"접수\",\"담당부서\"]";
+			case ILLEGAL_DUMPING -> List.of("쓰레기", "폐기물", "무단투기", "현장확인");
+			case ROAD_DAMAGE -> List.of("도로", "포트홀", "파손", "보수", "현장점검");
+			case ILLEGAL_PARKING -> List.of("불법주정차", "주차", "단속", "교통");
+			case TRAFFIC_SIGN -> List.of("교통표지", "신호", "정비");
+			case NOISE -> List.of("소음", "생활불편", "현장확인");
+			case ENVIRONMENT -> List.of("환경", "오염", "생활불편", "현장확인");
+			case HAZARDOUS_MATERIAL -> List.of(
+					"생화학", "위험물", "폭탄", "폭발물", "화학물질", "유해물질", "재난", "경찰", "소방"
+			);
+			default -> List.of("민원", "접수", "담당부서");
 		};
 	}
 
@@ -488,27 +730,52 @@ public class ComplaintService {
 		return content.length() <= 180 ? content : content.substring(0, 180);
 	}
 
-	private double scoreFor(KnowledgeDocument document) {
-		return switch (document.getDocumentType()) {
-			case LAW -> 0.94;
-			case ORDINANCE -> 0.91;
-			case MANUAL -> 0.88;
-			case CASE -> 0.84;
-			default -> 0.80;
-		};
+	private String jsonValue(Object value) {
+		try {
+			return objectMapper.writeValueAsString(value);
+		}
+		catch (JsonProcessingException exception) {
+			throw new IllegalStateException("Failed to encode rule-based analysis value", exception);
+		}
+	}
+
+	private boolean hasRequiredOfficialMetadata(KnowledgeDocument document) {
+		return StringUtils.hasText(document.getLegalBasis())
+				&& StringUtils.hasText(document.getSourceUrl())
+				&& StringUtils.hasText(document.getSourceVersion())
+				&& StringUtils.hasText(document.getContentHash())
+				&& document.getContentHash().equals(contentHashService.sha256(document.getContent()));
+	}
+
+	private boolean hasOverlappingOfficialConflicts(List<KnowledgeDocument> documents) {
+		Map<String, Set<String>> contentByLegalBasis = new HashMap<>();
+		for (KnowledgeDocument document : documents) {
+			contentByLegalBasis.computeIfAbsent(document.getLegalBasis().trim(), ignored -> new HashSet<>())
+					.add(document.getContent());
+		}
+		return contentByLegalBasis.values().stream().anyMatch(contents -> contents.size() > 1);
 	}
 
 	private String modelName() {
-		if ("openai".equalsIgnoreCase(aiProvider)) {
-			return "openai:" + openAiModel;
-		}
 		return MOCK_MODEL_NAME;
 	}
 
-	private String escapeJson(String value) {
-		return value.replace("\\", "\\\\").replace("\"", "\\\"");
+	List<String> approvedAttachmentTexts(UUID complaintId) {
+		int maxTotalChars = 20_000;
+		int used = 0;
+		List<String> result = new ArrayList<>();
+		for (AttachmentAnalysis analysis : attachmentAnalysisRepository
+				.findByAttachment_Complaint_IdAndApprovedForAiTrueOrderByCreatedAtAsc(complaintId)) {
+			if (!analysis.isApprovedForAi() || !StringUtils.hasText(analysis.getOcrText()) || used >= maxTotalChars) {
+				continue;
+			}
+			String text = analysis.getOcrText();
+			int remaining = maxTotalChars - used;
+			String bounded = text.length() <= remaining ? text : text.substring(0, remaining);
+			result.add(bounded);
+			used += bounded.length();
+		}
+		return List.copyOf(result);
 	}
 
-	public record DownloadedAttachment(String originalFilename, String contentType, byte[] bytes) {
-	}
 }

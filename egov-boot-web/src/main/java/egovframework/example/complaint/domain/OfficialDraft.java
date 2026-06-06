@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 @Entity
 @Table(name = "official_drafts")
@@ -34,6 +35,19 @@ public class OfficialDraft extends BaseTimeEntity {
 	@Column(nullable = false, length = 30)
 	private DraftStatus status;
 
+	@Column(length = 100)
+	private String reviewedBy;
+
+	@Column(length = 100)
+	private String approvedBy;
+
+	@Column(columnDefinition = "text")
+	private String reviewNotes;
+
+	@Version
+	@Column(nullable = false)
+	private long version;
+
 	protected OfficialDraft() {
 	}
 
@@ -47,6 +61,58 @@ public class OfficialDraft extends BaseTimeEntity {
 	public void revise(String draftText) {
 		this.draftText = draftText;
 		this.status = DraftStatus.REVISED;
+	}
+
+	public void markReviewed(String actor, String notes) {
+		if (status != DraftStatus.DRAFT && status != DraftStatus.REVISED) {
+			throw new IllegalStateException("Draft is not ready for review");
+		}
+		this.reviewedBy = actor;
+		this.reviewNotes = notes;
+		this.status = DraftStatus.APPROVAL_PENDING;
+	}
+
+	public void approve(String actor, String notes) {
+		if (status != DraftStatus.APPROVAL_PENDING) {
+			throw new IllegalStateException("Draft is not awaiting approval");
+		}
+		requireSeparateApprover(actor);
+		this.approvedBy = actor;
+		this.reviewNotes = notes;
+		this.status = DraftStatus.APPROVED;
+	}
+
+	public void rejectFromReview(String notes) {
+		if (status != DraftStatus.DRAFT && status != DraftStatus.REVISED) {
+			throw new IllegalStateException("Only a draft awaiting review can be rejected by a reviewer");
+		}
+		reject(notes);
+	}
+
+	public void rejectFromApproval(String actor, String notes) {
+		if (status != DraftStatus.APPROVAL_PENDING) {
+			throw new IllegalStateException("Only a draft awaiting approval can be rejected by an approver");
+		}
+		requireSeparateApprover(actor);
+		reject(notes);
+	}
+
+	private void requireSeparateApprover(String actor) {
+		if (actor.equals(reviewedBy)) {
+			throw new IllegalStateException("Reviewer cannot make the approval-stage decision on the same draft");
+		}
+	}
+
+	public void rejectForVerification(String notes) {
+		if (status != DraftStatus.DRAFT && status != DraftStatus.REVISED) {
+			throw new IllegalStateException("Only an unreviewed draft can be rejected by deterministic verification");
+		}
+		reject(notes);
+	}
+
+	private void reject(String notes) {
+		this.reviewNotes = notes;
+		this.status = DraftStatus.REJECTED;
 	}
 
 	public Long getId() {
@@ -67,5 +133,17 @@ public class OfficialDraft extends BaseTimeEntity {
 
 	public DraftStatus getStatus() {
 		return status;
+	}
+
+	public String getReviewedBy() {
+		return reviewedBy;
+	}
+
+	public String getApprovedBy() {
+		return approvedBy;
+	}
+
+	public long getVersion() {
+		return version;
 	}
 }

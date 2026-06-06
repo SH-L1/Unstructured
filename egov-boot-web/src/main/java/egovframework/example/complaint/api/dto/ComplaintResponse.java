@@ -10,11 +10,13 @@ public record ComplaintResponse(
 		String receiptNumber,
 		String title,
 		String sourceChannel,
-		String rawText,
+		String redactedText,
 		String locationText,
 		String urgency,
 		String department,
 		ComplaintStatus status,
+		String workflowBlocker,
+		long version,
 		LocalDateTime createdAt,
 		LocalDateTime updatedAt
 ) {
@@ -24,11 +26,13 @@ public record ComplaintResponse(
 				complaint.getReceiptNumber(),
 				complaint.getTitle(),
 				complaint.getSourceChannel().name(),
-				complaint.getRawText(),
+				complaint.getRedactedText(),
 				complaint.getLocationText(),
 				null,
 				null,
 				complaint.getStatus(),
+				complaint.getWorkflowBlocker() == null ? null : complaint.getWorkflowBlocker().name(),
+				complaint.getVersion(),
 				complaint.getCreatedAt(),
 				complaint.getUpdatedAt()
 		);
@@ -40,11 +44,13 @@ public record ComplaintResponse(
 				complaint.getReceiptNumber(),
 				complaint.getTitle(),
 				complaint.getSourceChannel().name(),
-				complaint.getRawText(),
+				complaint.getRedactedText(),
 				complaint.getLocationText(),
 				analysis == null ? null : analysis.urgency(),
 				analysis == null ? null : analysis.department(),
 				complaint.getStatus(),
+				complaint.getWorkflowBlocker() == null ? null : complaint.getWorkflowBlocker().name(),
+				complaint.getVersion(),
 				complaint.getCreatedAt(),
 				complaint.getUpdatedAt()
 		);

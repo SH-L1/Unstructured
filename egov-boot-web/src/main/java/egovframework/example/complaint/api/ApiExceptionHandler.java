@@ -6,6 +6,8 @@ import jakarta.persistence.EntityNotFoundException;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
@@ -34,11 +36,22 @@ public class ApiExceptionHandler {
 	@ExceptionHandler({
 			MethodArgumentTypeMismatchException.class,
 			MissingServletRequestParameterException.class,
-			IllegalArgumentException.class,
-			IllegalStateException.class
+			IllegalArgumentException.class
 	})
 	public ResponseEntity<ApiResponse<Void>> handleBadRequest(Exception exception) {
 		return ResponseEntity.badRequest()
 				.body(ApiResponse.error("BAD_REQUEST", exception.getMessage()));
+	}
+
+	@ExceptionHandler(IllegalStateException.class)
+	public ResponseEntity<ApiResponse<Void>> handleConflict(IllegalStateException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(ApiResponse.error("WORKFLOW_CONFLICT", exception.getMessage()));
+	}
+
+	@ExceptionHandler({DataIntegrityViolationException.class, ObjectOptimisticLockingFailureException.class})
+	public ResponseEntity<ApiResponse<Void>> handleConcurrentConflict(RuntimeException exception) {
+		return ResponseEntity.status(HttpStatus.CONFLICT)
+				.body(ApiResponse.error("CONCURRENT_CONFLICT", "A concurrent request changed or reserved this resource"));
 	}
 }

@@ -12,17 +12,15 @@ import egovframework.example.complaint.api.dto.UpdateComplaintStatusRequest;
 import egovframework.example.complaint.api.dto.UpdateDraftRequest;
 import egovframework.example.complaint.domain.ComplaintStatus;
 import egovframework.example.complaint.service.ComplaintService;
-import egovframework.example.complaint.service.ComplaintService.DownloadedAttachment;
 import jakarta.validation.Valid;
-import java.net.URI;
 import java.util.List;
 import java.util.UUID;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.MediaType;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpStatus;
+import org.springframework.web.server.ResponseStatusException;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -47,10 +45,7 @@ public class ComplaintController {
 
 	@PostMapping
 	public ResponseEntity<ApiResponse<ComplaintResponse>> create(@Valid @RequestBody CreateComplaintRequest request) {
-		ComplaintResponse response = complaintService.create(request);
-		return ResponseEntity
-				.created(URI.create("/api/complaints/" + response.id()))
-				.body(ApiResponse.created(response));
+		throw new ResponseStatusException(HttpStatus.GONE, "Use POST /api/v1/complaints");
 	}
 
 	@GetMapping
@@ -75,17 +70,17 @@ public class ComplaintController {
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdateComplaintStatusRequest request
 	) {
-		return ApiResponse.ok(complaintService.updateStatus(id, request.status()));
+		throw new ResponseStatusException(HttpStatus.GONE, "Use the versioned review workflow under /api/v1");
 	}
 
 	@GetMapping("/{id}/analysis")
 	public ApiResponse<ComplaintAnalysisResponse> analyze(@PathVariable UUID id) {
-		return ApiResponse.ok(complaintService.analyze(id));
+		throw new ResponseStatusException(HttpStatus.GONE, "Use POST /api/v1/complaints/{id}/analysis-runs");
 	}
 
 	@GetMapping("/{id}/draft")
 	public ApiResponse<DraftResponse> draft(@PathVariable UUID id) {
-		return ApiResponse.ok(complaintService.generateDraft(id));
+		throw new ResponseStatusException(HttpStatus.GONE, "Use POST /api/v1/complaints/{id}/draft-runs");
 	}
 
 	@PutMapping("/{id}/draft")
@@ -93,17 +88,17 @@ public class ComplaintController {
 			@PathVariable UUID id,
 			@Valid @RequestBody UpdateDraftRequest request
 	) {
-		return ApiResponse.ok(complaintService.updateDraft(id, request.draftText()));
+		throw new ResponseStatusException(HttpStatus.GONE, "Draft changes require the versioned review workflow");
 	}
 
 	@GetMapping("/{id}/rag-contexts")
 	public ApiResponse<List<RagContextResponse>> ragContexts(@PathVariable UUID id) {
-		return ApiResponse.ok(complaintService.findRagContexts(id));
+		throw new ResponseStatusException(HttpStatus.GONE, "Use GET /api/v1/complaints/{id} for immutable evidence snapshots");
 	}
 
 	@GetMapping("/{id}/geojson")
 	public ApiResponse<String> geoJson(@PathVariable UUID id) {
-		return ApiResponse.ok(complaintService.findGeoJson(id));
+		throw new ResponseStatusException(HttpStatus.GONE, "LLM-generated GeoJSON is disabled");
 	}
 
 	@PostMapping("/{id}/attachments")
@@ -111,7 +106,7 @@ public class ComplaintController {
 			@PathVariable UUID id,
 			@RequestParam("file") MultipartFile file
 	) {
-		return ApiResponse.created(complaintService.addAttachment(id, file));
+		throw new ResponseStatusException(HttpStatus.GONE, "Use POST /api/v1/complaints/{id}/attachments");
 	}
 
 	@GetMapping("/{id}/attachments")
@@ -124,12 +119,7 @@ public class ComplaintController {
 			@PathVariable UUID id,
 			@PathVariable UUID attachmentId
 	) {
-		DownloadedAttachment attachment = complaintService.downloadAttachment(id, attachmentId);
-		String contentType = attachment.contentType() == null ? MediaType.APPLICATION_OCTET_STREAM_VALUE : attachment.contentType();
-		return ResponseEntity.ok()
-				.header(HttpHeaders.CONTENT_DISPOSITION, complaintService.attachmentDisposition(attachment.originalFilename()))
-				.contentType(MediaType.parseMediaType(contentType))
-				.body(attachment.bytes());
+		throw new ResponseStatusException(HttpStatus.GONE, "Quarantined attachment originals are not publicly downloadable");
 	}
 
 	@DeleteMapping("/{id}/attachments/{attachmentId}")
@@ -137,7 +127,6 @@ public class ComplaintController {
 			@PathVariable UUID id,
 			@PathVariable UUID attachmentId
 	) {
-		complaintService.deleteAttachment(id, attachmentId);
-		return ResponseEntity.noContent().build();
+		throw new ResponseStatusException(HttpStatus.GONE, "Use DELETE /api/v1/complaints/{id}/attachments/{attachmentId}");
 	}
 }

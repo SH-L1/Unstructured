@@ -40,26 +40,22 @@ public class RagContext extends BaseTimeEntity {
 	@Column(nullable = false, columnDefinition = "text")
 	private String contentSnippet;
 
-	@Column(nullable = false)
-	private double score;
-
 	protected RagContext() {
 	}
 
 	public RagContext(Complaint complaint, OfficialDraft officialDraft, KnowledgeDocument knowledgeDocument,
-			String legalBasis, String contentSnippet, double score) {
-		this(complaint, officialDraft, knowledgeDocument, null, legalBasis, contentSnippet, score);
+			String legalBasis, String contentSnippet) {
+		this(complaint, officialDraft, knowledgeDocument, null, legalBasis, contentSnippet);
 	}
 
 	public RagContext(Complaint complaint, OfficialDraft officialDraft, KnowledgeDocument knowledgeDocument,
-			KnowledgeDocumentChunk knowledgeDocumentChunk, String legalBasis, String contentSnippet, double score) {
+			KnowledgeDocumentChunk knowledgeDocumentChunk, String legalBasis, String contentSnippet) {
 		this.complaint = complaint;
 		this.officialDraft = officialDraft;
 		this.knowledgeDocument = knowledgeDocument;
 		this.knowledgeDocumentChunk = knowledgeDocumentChunk;
 		this.legalBasis = legalBasis;
 		this.contentSnippet = contentSnippet;
-		this.score = score;
 	}
 
 	public KnowledgeDocument getKnowledgeDocument() {
@@ -78,7 +74,4 @@ public class RagContext extends BaseTimeEntity {
 		return contentSnippet;
 	}
 
-	public double getScore() {
-		return score;
-	}
 }

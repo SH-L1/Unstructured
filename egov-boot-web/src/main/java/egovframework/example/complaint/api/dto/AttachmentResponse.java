@@ -10,7 +10,6 @@ public record AttachmentResponse(
 		String originalFilename,
 		String contentType,
 		long size,
-		String storageKey,
 		LocalDateTime createdAt
 ) {
 	public static AttachmentResponse from(ComplaintAttachment attachment) {
@@ -20,7 +19,6 @@ public record AttachmentResponse(
 				attachment.getOriginalFilename(),
 				attachment.getContentType(),
 				attachment.getSize(),
-				attachment.getStorageKey(),
 				attachment.getCreatedAt()
 		);
 	}
