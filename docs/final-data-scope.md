@@ -22,7 +22,7 @@ DB 테이블 구성과 실제 파일 배치 경로는 [current-db-and-file-layou
 
 - `SGIS_CONSUMER_KEY`
 - `SGIS_CONSUMER_SECRET`
-- `SGIS_ACCESS_TOKEN`
+- `SGIS_ACCESS_TOKEN`: normally empty; the ingestion code issues and refreshes it from the consumer credentials.
 
 가져올 데이터:
 

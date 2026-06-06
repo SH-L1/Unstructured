@@ -1,0 +1,15 @@
+{
+  "decision": "NO_FINE_TUNING",
+  "createdAt": "2026-06-06T09:13:24.371441+00:00",
+  "reason": "AIHub and local historical datasets are not yet proven privacy-safe, label-consistent, jurisdiction-current, or suitable for legal factual grounding. The pipeline keeps deterministic routing, retrieval, and verification gates; AIHub is limited to style or evaluation candidates after separate review.",
+  "allowedUse": [
+    "STYLE_REFERENCE",
+    "EVALUATION_TRAINING"
+  ],
+  "forbiddenUse": [
+    "LEGAL_FACT_MEMORY",
+    "FINAL_APPROVAL",
+    "AUTOMATIC_COMPLETION",
+    "LEGAL_EVIDENCE"
+  ]
+}

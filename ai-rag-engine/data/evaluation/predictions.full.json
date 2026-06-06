@@ -2,21 +2,21 @@
   {
     "caseId": "SYNTHETIC-001",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "CIVIL_AFFAIRS"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-CIVIL-PROCEDURE-001"
+      "민원 처리에 관한 법률"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-001-claim-1",
         "evidenceIds": [
-          "OFFICIAL-CIVIL-PROCEDURE-001"
+          "민원 처리에 관한 법률"
         ]
       }
     ],
@@ -32,15 +32,15 @@
   {
     "caseId": "SYNTHETIC-002",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "CIVIL_AFFAIRS"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-CIVIL-PROCEDURE-001"
+      "민원 처리에 관한 법률"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -55,15 +55,15 @@
   {
     "caseId": "SYNTHETIC-003",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "CIVIL_AFFAIRS"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-CIVIL-PROCEDURE-001"
+      "민원 처리에 관한 법률"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -78,8 +78,8 @@
   {
     "caseId": "SYNTHETIC-004",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -99,15 +99,15 @@
   {
     "caseId": "SYNTHETIC-005",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "CIVIL_AFFAIRS"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-CIVIL-PROCEDURE-001"
+      "민원 처리에 관한 법률"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -122,8 +122,8 @@
   {
     "caseId": "SYNTHETIC-006",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -143,21 +143,21 @@
   {
     "caseId": "SYNTHETIC-007",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "CIVIL_AFFAIRS"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-CIVIL-PROCEDURE-001"
+      "민원 처리에 관한 법률"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-007-claim-1",
         "evidenceIds": [
-          "OFFICIAL-CIVIL-PROCEDURE-001"
+          "민원 처리에 관한 법률"
         ]
       }
     ],
@@ -173,21 +173,21 @@
   {
     "caseId": "SYNTHETIC-008",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "CIVIL_AFFAIRS"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-CIVIL-PROCEDURE-001"
+      "민원 처리에 관한 법률"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-008-claim-1",
         "evidenceIds": [
-          "OFFICIAL-CIVIL-PROCEDURE-001"
+          "민원 처리에 관한 법률"
         ]
       }
     ],
@@ -203,15 +203,15 @@
   {
     "caseId": "SYNTHETIC-009",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "CIVIL_AFFAIRS"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-CIVIL-PROCEDURE-001"
+      "민원 처리에 관한 법률"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -226,15 +226,15 @@
   {
     "caseId": "SYNTHETIC-010",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "CIVIL_AFFAIRS"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-CIVIL-PROCEDURE-001"
+      "민원 처리에 관한 법률"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -249,21 +249,21 @@
   {
     "caseId": "SYNTHETIC-011",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_DUMPING",
     "departmentTop3": [
       "RESOURCE_RECYCLING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WASTE-PROVISION-001"
+      "폐기물관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-011-claim-1",
         "evidenceIds": [
-          "OFFICIAL-WASTE-PROVISION-001"
+          "폐기물관리법"
         ]
       }
     ],
@@ -279,15 +279,15 @@
   {
     "caseId": "SYNTHETIC-012",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_DUMPING",
     "departmentTop3": [
       "RESOURCE_RECYCLING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WASTE-PROVISION-001"
+      "폐기물관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -302,15 +302,15 @@
   {
     "caseId": "SYNTHETIC-013",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_DUMPING",
     "departmentTop3": [
       "RESOURCE_RECYCLING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WASTE-PROVISION-001"
+      "폐기물관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -325,8 +325,8 @@
   {
     "caseId": "SYNTHETIC-014",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_DUMPING",
     "departmentTop3": [
@@ -346,15 +346,15 @@
   {
     "caseId": "SYNTHETIC-015",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_DUMPING",
     "departmentTop3": [
       "RESOURCE_RECYCLING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WASTE-PROVISION-001"
+      "폐기물관리법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -369,8 +369,8 @@
   {
     "caseId": "SYNTHETIC-016",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_DUMPING",
     "departmentTop3": [
@@ -390,21 +390,21 @@
   {
     "caseId": "SYNTHETIC-017",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_DUMPING",
     "departmentTop3": [
       "RESOURCE_RECYCLING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WASTE-PROVISION-001"
+      "폐기물관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-017-claim-1",
         "evidenceIds": [
-          "OFFICIAL-WASTE-PROVISION-001"
+          "폐기물관리법"
         ]
       }
     ],
@@ -420,21 +420,21 @@
   {
     "caseId": "SYNTHETIC-018",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_DUMPING",
     "departmentTop3": [
       "RESOURCE_RECYCLING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WASTE-PROVISION-001"
+      "폐기물관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-018-claim-1",
         "evidenceIds": [
-          "OFFICIAL-WASTE-PROVISION-001"
+          "폐기물관리법"
         ]
       }
     ],
@@ -450,15 +450,15 @@
   {
     "caseId": "SYNTHETIC-019",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_DUMPING",
     "departmentTop3": [
       "RESOURCE_RECYCLING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WASTE-PROVISION-001"
+      "폐기물관리법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -473,15 +473,15 @@
   {
     "caseId": "SYNTHETIC-020",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_DUMPING",
     "departmentTop3": [
       "RESOURCE_RECYCLING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WASTE-PROVISION-001"
+      "폐기물관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -496,21 +496,21 @@
   {
     "caseId": "SYNTHETIC-021",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ROAD_DAMAGE",
     "departmentTop3": [
       "ROAD"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ROAD-PROVISION-001"
+      "도로법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-021-claim-1",
         "evidenceIds": [
-          "OFFICIAL-ROAD-PROVISION-001"
+          "도로법"
         ]
       }
     ],
@@ -526,15 +526,15 @@
   {
     "caseId": "SYNTHETIC-022",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ROAD_DAMAGE",
     "departmentTop3": [
       "ROAD"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ROAD-PROVISION-001"
+      "도로법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -549,15 +549,15 @@
   {
     "caseId": "SYNTHETIC-023",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ROAD_DAMAGE",
     "departmentTop3": [
       "ROAD"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ROAD-PROVISION-001"
+      "도로법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -572,8 +572,8 @@
   {
     "caseId": "SYNTHETIC-024",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ROAD_DAMAGE",
     "departmentTop3": [
@@ -593,15 +593,15 @@
   {
     "caseId": "SYNTHETIC-025",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ROAD_DAMAGE",
     "departmentTop3": [
       "ROAD"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ROAD-PROVISION-001"
+      "도로법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -616,8 +616,8 @@
   {
     "caseId": "SYNTHETIC-026",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ROAD_DAMAGE",
     "departmentTop3": [
@@ -637,21 +637,21 @@
   {
     "caseId": "SYNTHETIC-027",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ROAD_DAMAGE",
     "departmentTop3": [
       "ROAD"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ROAD-PROVISION-001"
+      "도로법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-027-claim-1",
         "evidenceIds": [
-          "OFFICIAL-ROAD-PROVISION-001"
+          "도로법"
         ]
       }
     ],
@@ -667,21 +667,21 @@
   {
     "caseId": "SYNTHETIC-028",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ROAD_DAMAGE",
     "departmentTop3": [
       "ROAD"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ROAD-PROVISION-001"
+      "도로법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-028-claim-1",
         "evidenceIds": [
-          "OFFICIAL-ROAD-PROVISION-001"
+          "도로법"
         ]
       }
     ],
@@ -697,15 +697,15 @@
   {
     "caseId": "SYNTHETIC-029",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ROAD_DAMAGE",
     "departmentTop3": [
       "ROAD"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ROAD-PROVISION-001"
+      "도로법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -720,15 +720,15 @@
   {
     "caseId": "SYNTHETIC-030",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ROAD_DAMAGE",
     "departmentTop3": [
       "ROAD"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ROAD-PROVISION-001"
+      "도로법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -743,21 +743,23 @@
   {
     "caseId": "SYNTHETIC-031",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_PARKING",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARKING-PROVISION-001"
+      "도로교통법",
+      "주차장법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-031-claim-1",
         "evidenceIds": [
-          "OFFICIAL-PARKING-PROVISION-001"
+          "도로교통법",
+          "주차장법"
         ]
       }
     ],
@@ -773,15 +775,16 @@
   {
     "caseId": "SYNTHETIC-032",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_PARKING",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARKING-PROVISION-001"
+      "도로교통법",
+      "주차장법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -796,15 +799,16 @@
   {
     "caseId": "SYNTHETIC-033",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_PARKING",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARKING-PROVISION-001"
+      "도로교통법",
+      "주차장법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -819,8 +823,8 @@
   {
     "caseId": "SYNTHETIC-034",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_PARKING",
     "departmentTop3": [
@@ -840,15 +844,16 @@
   {
     "caseId": "SYNTHETIC-035",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_PARKING",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARKING-PROVISION-001"
+      "도로교통법",
+      "주차장법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -863,8 +868,8 @@
   {
     "caseId": "SYNTHETIC-036",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_PARKING",
     "departmentTop3": [
@@ -884,21 +889,23 @@
   {
     "caseId": "SYNTHETIC-037",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_PARKING",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARKING-PROVISION-001"
+      "도로교통법",
+      "주차장법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-037-claim-1",
         "evidenceIds": [
-          "OFFICIAL-PARKING-PROVISION-001"
+          "도로교통법",
+          "주차장법"
         ]
       }
     ],
@@ -914,21 +921,23 @@
   {
     "caseId": "SYNTHETIC-038",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_PARKING",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARKING-PROVISION-001"
+      "도로교통법",
+      "주차장법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-038-claim-1",
         "evidenceIds": [
-          "OFFICIAL-PARKING-PROVISION-001"
+          "도로교통법",
+          "주차장법"
         ]
       }
     ],
@@ -944,15 +953,16 @@
   {
     "caseId": "SYNTHETIC-039",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_PARKING",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARKING-PROVISION-001"
+      "도로교통법",
+      "주차장법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -967,15 +977,16 @@
   {
     "caseId": "SYNTHETIC-040",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ILLEGAL_PARKING",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARKING-PROVISION-001"
+      "도로교통법",
+      "주차장법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -990,21 +1001,21 @@
   {
     "caseId": "SYNTHETIC-041",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "TRAFFIC_SIGN",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-TRAFFIC-FACILITY-001"
+      "도로교통법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-041-claim-1",
         "evidenceIds": [
-          "OFFICIAL-TRAFFIC-FACILITY-001"
+          "도로교통법"
         ]
       }
     ],
@@ -1020,15 +1031,15 @@
   {
     "caseId": "SYNTHETIC-042",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "TRAFFIC_SIGN",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-TRAFFIC-FACILITY-001"
+      "도로교통법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -1043,15 +1054,15 @@
   {
     "caseId": "SYNTHETIC-043",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "TRAFFIC_SIGN",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-TRAFFIC-FACILITY-001"
+      "도로교통법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -1066,8 +1077,8 @@
   {
     "caseId": "SYNTHETIC-044",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "TRAFFIC_SIGN",
     "departmentTop3": [
@@ -1087,15 +1098,15 @@
   {
     "caseId": "SYNTHETIC-045",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "TRAFFIC_SIGN",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-TRAFFIC-FACILITY-001"
+      "도로교통법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -1110,8 +1121,8 @@
   {
     "caseId": "SYNTHETIC-046",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "TRAFFIC_SIGN",
     "departmentTop3": [
@@ -1131,21 +1142,21 @@
   {
     "caseId": "SYNTHETIC-047",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "TRAFFIC_SIGN",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-TRAFFIC-FACILITY-001"
+      "도로교통법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-047-claim-1",
         "evidenceIds": [
-          "OFFICIAL-TRAFFIC-FACILITY-001"
+          "도로교통법"
         ]
       }
     ],
@@ -1161,21 +1172,21 @@
   {
     "caseId": "SYNTHETIC-048",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "TRAFFIC_SIGN",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-TRAFFIC-FACILITY-001"
+      "도로교통법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-048-claim-1",
         "evidenceIds": [
-          "OFFICIAL-TRAFFIC-FACILITY-001"
+          "도로교통법"
         ]
       }
     ],
@@ -1191,15 +1202,15 @@
   {
     "caseId": "SYNTHETIC-049",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "TRAFFIC_SIGN",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-TRAFFIC-FACILITY-001"
+      "도로교통법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -1214,15 +1225,15 @@
   {
     "caseId": "SYNTHETIC-050",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "TRAFFIC_SIGN",
     "departmentTop3": [
       "TRAFFIC"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-TRAFFIC-FACILITY-001"
+      "도로교통법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -1237,21 +1248,21 @@
   {
     "caseId": "SYNTHETIC-051",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "NOISE",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-NOISE-PROVISION-001"
+      "소음ㆍ진동관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-051-claim-1",
         "evidenceIds": [
-          "OFFICIAL-NOISE-PROVISION-001"
+          "소음ㆍ진동관리법"
         ]
       }
     ],
@@ -1267,15 +1278,15 @@
   {
     "caseId": "SYNTHETIC-052",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "NOISE",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-NOISE-PROVISION-001"
+      "소음ㆍ진동관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -1290,15 +1301,15 @@
   {
     "caseId": "SYNTHETIC-053",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "NOISE",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-NOISE-PROVISION-001"
+      "소음ㆍ진동관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -1313,8 +1324,8 @@
   {
     "caseId": "SYNTHETIC-054",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "NOISE",
     "departmentTop3": [
@@ -1334,15 +1345,15 @@
   {
     "caseId": "SYNTHETIC-055",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "NOISE",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-NOISE-PROVISION-001"
+      "소음ㆍ진동관리법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -1357,8 +1368,8 @@
   {
     "caseId": "SYNTHETIC-056",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "NOISE",
     "departmentTop3": [
@@ -1378,21 +1389,21 @@
   {
     "caseId": "SYNTHETIC-057",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "NOISE",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-NOISE-PROVISION-001"
+      "소음ㆍ진동관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-057-claim-1",
         "evidenceIds": [
-          "OFFICIAL-NOISE-PROVISION-001"
+          "소음ㆍ진동관리법"
         ]
       }
     ],
@@ -1408,21 +1419,21 @@
   {
     "caseId": "SYNTHETIC-058",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "NOISE",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-NOISE-PROVISION-001"
+      "소음ㆍ진동관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-058-claim-1",
         "evidenceIds": [
-          "OFFICIAL-NOISE-PROVISION-001"
+          "소음ㆍ진동관리법"
         ]
       }
     ],
@@ -1438,15 +1449,15 @@
   {
     "caseId": "SYNTHETIC-059",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "NOISE",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-NOISE-PROVISION-001"
+      "소음ㆍ진동관리법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -1461,15 +1472,15 @@
   {
     "caseId": "SYNTHETIC-060",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "NOISE",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-NOISE-PROVISION-001"
+      "소음ㆍ진동관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -1484,21 +1495,25 @@
   {
     "caseId": "SYNTHETIC-061",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ENVIRONMENT",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ENVIRONMENT-PROVISION-001"
+      "악취방지법",
+      "대기환경보전법",
+      "물환경보전법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-061-claim-1",
         "evidenceIds": [
-          "OFFICIAL-ENVIRONMENT-PROVISION-001"
+          "악취방지법",
+          "대기환경보전법",
+          "물환경보전법"
         ]
       }
     ],
@@ -1514,15 +1529,17 @@
   {
     "caseId": "SYNTHETIC-062",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ENVIRONMENT",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ENVIRONMENT-PROVISION-001"
+      "악취방지법",
+      "대기환경보전법",
+      "물환경보전법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -1537,15 +1554,17 @@
   {
     "caseId": "SYNTHETIC-063",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ENVIRONMENT",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ENVIRONMENT-PROVISION-001"
+      "악취방지법",
+      "대기환경보전법",
+      "물환경보전법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -1560,8 +1579,8 @@
   {
     "caseId": "SYNTHETIC-064",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ENVIRONMENT",
     "departmentTop3": [
@@ -1581,15 +1600,17 @@
   {
     "caseId": "SYNTHETIC-065",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ENVIRONMENT",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ENVIRONMENT-PROVISION-001"
+      "악취방지법",
+      "대기환경보전법",
+      "물환경보전법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -1604,8 +1625,8 @@
   {
     "caseId": "SYNTHETIC-066",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ENVIRONMENT",
     "departmentTop3": [
@@ -1625,21 +1646,25 @@
   {
     "caseId": "SYNTHETIC-067",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ENVIRONMENT",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ENVIRONMENT-PROVISION-001"
+      "악취방지법",
+      "대기환경보전법",
+      "물환경보전법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-067-claim-1",
         "evidenceIds": [
-          "OFFICIAL-ENVIRONMENT-PROVISION-001"
+          "악취방지법",
+          "대기환경보전법",
+          "물환경보전법"
         ]
       }
     ],
@@ -1655,21 +1680,25 @@
   {
     "caseId": "SYNTHETIC-068",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ENVIRONMENT",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ENVIRONMENT-PROVISION-001"
+      "악취방지법",
+      "대기환경보전법",
+      "물환경보전법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-068-claim-1",
         "evidenceIds": [
-          "OFFICIAL-ENVIRONMENT-PROVISION-001"
+          "악취방지법",
+          "대기환경보전법",
+          "물환경보전법"
         ]
       }
     ],
@@ -1685,15 +1714,17 @@
   {
     "caseId": "SYNTHETIC-069",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ENVIRONMENT",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ENVIRONMENT-PROVISION-001"
+      "악취방지법",
+      "대기환경보전법",
+      "물환경보전법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -1708,15 +1739,17 @@
   {
     "caseId": "SYNTHETIC-070",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "ENVIRONMENT",
     "departmentTop3": [
       "ENVIRONMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ENVIRONMENT-PROVISION-001"
+      "악취방지법",
+      "대기환경보전법",
+      "물환경보전법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -1731,21 +1764,23 @@
   {
     "caseId": "SYNTHETIC-071",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WATER_SEWER"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WATER-SEWER-001"
+      "수도법",
+      "하수도법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-071-claim-1",
         "evidenceIds": [
-          "OFFICIAL-WATER-SEWER-001"
+          "수도법",
+          "하수도법"
         ]
       }
     ],
@@ -1761,15 +1796,16 @@
   {
     "caseId": "SYNTHETIC-072",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WATER_SEWER"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WATER-SEWER-001"
+      "수도법",
+      "하수도법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -1784,15 +1820,16 @@
   {
     "caseId": "SYNTHETIC-073",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WATER_SEWER"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WATER-SEWER-001"
+      "수도법",
+      "하수도법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -1807,8 +1844,8 @@
   {
     "caseId": "SYNTHETIC-074",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -1828,15 +1865,16 @@
   {
     "caseId": "SYNTHETIC-075",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WATER_SEWER"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WATER-SEWER-001"
+      "수도법",
+      "하수도법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -1851,8 +1889,8 @@
   {
     "caseId": "SYNTHETIC-076",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -1872,21 +1910,23 @@
   {
     "caseId": "SYNTHETIC-077",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WATER_SEWER"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WATER-SEWER-001"
+      "수도법",
+      "하수도법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-077-claim-1",
         "evidenceIds": [
-          "OFFICIAL-WATER-SEWER-001"
+          "수도법",
+          "하수도법"
         ]
       }
     ],
@@ -1902,21 +1942,23 @@
   {
     "caseId": "SYNTHETIC-078",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WATER_SEWER"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WATER-SEWER-001"
+      "수도법",
+      "하수도법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-078-claim-1",
         "evidenceIds": [
-          "OFFICIAL-WATER-SEWER-001"
+          "수도법",
+          "하수도법"
         ]
       }
     ],
@@ -1932,15 +1974,16 @@
   {
     "caseId": "SYNTHETIC-079",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WATER_SEWER"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WATER-SEWER-001"
+      "수도법",
+      "하수도법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -1955,15 +1998,16 @@
   {
     "caseId": "SYNTHETIC-080",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WATER_SEWER"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WATER-SEWER-001"
+      "수도법",
+      "하수도법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -1978,21 +2022,23 @@
   {
     "caseId": "SYNTHETIC-081",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "BUILDING_HOUSING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-BUILDING-HOUSING-001"
+      "건축법",
+      "공동주택관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-081-claim-1",
         "evidenceIds": [
-          "OFFICIAL-BUILDING-HOUSING-001"
+          "건축법",
+          "공동주택관리법"
         ]
       }
     ],
@@ -2008,15 +2054,16 @@
   {
     "caseId": "SYNTHETIC-082",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "BUILDING_HOUSING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-BUILDING-HOUSING-001"
+      "건축법",
+      "공동주택관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -2031,15 +2078,16 @@
   {
     "caseId": "SYNTHETIC-083",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "BUILDING_HOUSING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-BUILDING-HOUSING-001"
+      "건축법",
+      "공동주택관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -2054,8 +2102,8 @@
   {
     "caseId": "SYNTHETIC-084",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -2075,15 +2123,16 @@
   {
     "caseId": "SYNTHETIC-085",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "BUILDING_HOUSING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-BUILDING-HOUSING-001"
+      "건축법",
+      "공동주택관리법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -2098,8 +2147,8 @@
   {
     "caseId": "SYNTHETIC-086",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -2119,21 +2168,23 @@
   {
     "caseId": "SYNTHETIC-087",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "BUILDING_HOUSING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-BUILDING-HOUSING-001"
+      "건축법",
+      "공동주택관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-087-claim-1",
         "evidenceIds": [
-          "OFFICIAL-BUILDING-HOUSING-001"
+          "건축법",
+          "공동주택관리법"
         ]
       }
     ],
@@ -2149,21 +2200,23 @@
   {
     "caseId": "SYNTHETIC-088",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "BUILDING_HOUSING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-BUILDING-HOUSING-001"
+      "건축법",
+      "공동주택관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-088-claim-1",
         "evidenceIds": [
-          "OFFICIAL-BUILDING-HOUSING-001"
+          "건축법",
+          "공동주택관리법"
         ]
       }
     ],
@@ -2179,15 +2232,16 @@
   {
     "caseId": "SYNTHETIC-089",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "BUILDING_HOUSING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-BUILDING-HOUSING-001"
+      "건축법",
+      "공동주택관리법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -2202,15 +2256,16 @@
   {
     "caseId": "SYNTHETIC-090",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "BUILDING_HOUSING"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-BUILDING-HOUSING-001"
+      "건축법",
+      "공동주택관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -2225,21 +2280,23 @@
   {
     "caseId": "SYNTHETIC-091",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "PARK_GREEN"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARK-GREEN-001"
+      "도시공원 및 녹지 등에 관한 법률",
+      "어린이놀이시설 안전관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-091-claim-1",
         "evidenceIds": [
-          "OFFICIAL-PARK-GREEN-001"
+          "도시공원 및 녹지 등에 관한 법률",
+          "어린이놀이시설 안전관리법"
         ]
       }
     ],
@@ -2255,15 +2312,16 @@
   {
     "caseId": "SYNTHETIC-092",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "PARK_GREEN"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARK-GREEN-001"
+      "도시공원 및 녹지 등에 관한 법률",
+      "어린이놀이시설 안전관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -2278,15 +2336,16 @@
   {
     "caseId": "SYNTHETIC-093",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "PARK_GREEN"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARK-GREEN-001"
+      "도시공원 및 녹지 등에 관한 법률",
+      "어린이놀이시설 안전관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -2301,8 +2360,8 @@
   {
     "caseId": "SYNTHETIC-094",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -2322,15 +2381,16 @@
   {
     "caseId": "SYNTHETIC-095",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "PARK_GREEN"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARK-GREEN-001"
+      "도시공원 및 녹지 등에 관한 법률",
+      "어린이놀이시설 안전관리법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -2345,8 +2405,8 @@
   {
     "caseId": "SYNTHETIC-096",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -2366,21 +2426,23 @@
   {
     "caseId": "SYNTHETIC-097",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "PARK_GREEN"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARK-GREEN-001"
+      "도시공원 및 녹지 등에 관한 법률",
+      "어린이놀이시설 안전관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-097-claim-1",
         "evidenceIds": [
-          "OFFICIAL-PARK-GREEN-001"
+          "도시공원 및 녹지 등에 관한 법률",
+          "어린이놀이시설 안전관리법"
         ]
       }
     ],
@@ -2396,21 +2458,23 @@
   {
     "caseId": "SYNTHETIC-098",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "PARK_GREEN"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARK-GREEN-001"
+      "도시공원 및 녹지 등에 관한 법률",
+      "어린이놀이시설 안전관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-098-claim-1",
         "evidenceIds": [
-          "OFFICIAL-PARK-GREEN-001"
+          "도시공원 및 녹지 등에 관한 법률",
+          "어린이놀이시설 안전관리법"
         ]
       }
     ],
@@ -2426,15 +2490,16 @@
   {
     "caseId": "SYNTHETIC-099",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "PARK_GREEN"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARK-GREEN-001"
+      "도시공원 및 녹지 등에 관한 법률",
+      "어린이놀이시설 안전관리법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -2449,15 +2514,16 @@
   {
     "caseId": "SYNTHETIC-100",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "PARK_GREEN"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-PARK-GREEN-001"
+      "도시공원 및 녹지 등에 관한 법률",
+      "어린이놀이시설 안전관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -2472,21 +2538,23 @@
   {
     "caseId": "SYNTHETIC-101",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "HEALTH_SANITATION"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-HEALTH-SANITATION-001"
+      "식품위생법",
+      "공중위생관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-101-claim-1",
         "evidenceIds": [
-          "OFFICIAL-HEALTH-SANITATION-001"
+          "식품위생법",
+          "공중위생관리법"
         ]
       }
     ],
@@ -2502,15 +2570,16 @@
   {
     "caseId": "SYNTHETIC-102",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "HEALTH_SANITATION"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-HEALTH-SANITATION-001"
+      "식품위생법",
+      "공중위생관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -2525,15 +2594,16 @@
   {
     "caseId": "SYNTHETIC-103",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "HEALTH_SANITATION"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-HEALTH-SANITATION-001"
+      "식품위생법",
+      "공중위생관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -2548,8 +2618,8 @@
   {
     "caseId": "SYNTHETIC-104",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -2569,15 +2639,16 @@
   {
     "caseId": "SYNTHETIC-105",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "HEALTH_SANITATION"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-HEALTH-SANITATION-001"
+      "식품위생법",
+      "공중위생관리법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -2592,8 +2663,8 @@
   {
     "caseId": "SYNTHETIC-106",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -2613,21 +2684,23 @@
   {
     "caseId": "SYNTHETIC-107",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "HEALTH_SANITATION"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-HEALTH-SANITATION-001"
+      "식품위생법",
+      "공중위생관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-107-claim-1",
         "evidenceIds": [
-          "OFFICIAL-HEALTH-SANITATION-001"
+          "식품위생법",
+          "공중위생관리법"
         ]
       }
     ],
@@ -2643,21 +2716,23 @@
   {
     "caseId": "SYNTHETIC-108",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "HEALTH_SANITATION"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-HEALTH-SANITATION-001"
+      "식품위생법",
+      "공중위생관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-108-claim-1",
         "evidenceIds": [
-          "OFFICIAL-HEALTH-SANITATION-001"
+          "식품위생법",
+          "공중위생관리법"
         ]
       }
     ],
@@ -2673,15 +2748,16 @@
   {
     "caseId": "SYNTHETIC-109",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "HEALTH_SANITATION"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-HEALTH-SANITATION-001"
+      "식품위생법",
+      "공중위생관리법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -2696,15 +2772,16 @@
   {
     "caseId": "SYNTHETIC-110",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "HEALTH_SANITATION"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-HEALTH-SANITATION-001"
+      "식품위생법",
+      "공중위생관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -2719,21 +2796,23 @@
   {
     "caseId": "SYNTHETIC-111",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "ANIMAL_LIVESTOCK"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ANIMAL-LIVESTOCK-001"
+      "동물보호법",
+      "가축전염병 예방법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-111-claim-1",
         "evidenceIds": [
-          "OFFICIAL-ANIMAL-LIVESTOCK-001"
+          "동물보호법",
+          "가축전염병 예방법"
         ]
       }
     ],
@@ -2749,15 +2828,16 @@
   {
     "caseId": "SYNTHETIC-112",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "ANIMAL_LIVESTOCK"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ANIMAL-LIVESTOCK-001"
+      "동물보호법",
+      "가축전염병 예방법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -2772,15 +2852,16 @@
   {
     "caseId": "SYNTHETIC-113",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "ANIMAL_LIVESTOCK"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ANIMAL-LIVESTOCK-001"
+      "동물보호법",
+      "가축전염병 예방법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -2795,8 +2876,8 @@
   {
     "caseId": "SYNTHETIC-114",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -2816,15 +2897,16 @@
   {
     "caseId": "SYNTHETIC-115",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "ANIMAL_LIVESTOCK"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ANIMAL-LIVESTOCK-001"
+      "동물보호법",
+      "가축전염병 예방법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -2839,8 +2921,8 @@
   {
     "caseId": "SYNTHETIC-116",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -2860,21 +2942,23 @@
   {
     "caseId": "SYNTHETIC-117",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "ANIMAL_LIVESTOCK"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ANIMAL-LIVESTOCK-001"
+      "동물보호법",
+      "가축전염병 예방법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-117-claim-1",
         "evidenceIds": [
-          "OFFICIAL-ANIMAL-LIVESTOCK-001"
+          "동물보호법",
+          "가축전염병 예방법"
         ]
       }
     ],
@@ -2890,21 +2974,23 @@
   {
     "caseId": "SYNTHETIC-118",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "ANIMAL_LIVESTOCK"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ANIMAL-LIVESTOCK-001"
+      "동물보호법",
+      "가축전염병 예방법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-118-claim-1",
         "evidenceIds": [
-          "OFFICIAL-ANIMAL-LIVESTOCK-001"
+          "동물보호법",
+          "가축전염병 예방법"
         ]
       }
     ],
@@ -2920,15 +3006,16 @@
   {
     "caseId": "SYNTHETIC-119",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "ANIMAL_LIVESTOCK"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ANIMAL-LIVESTOCK-001"
+      "동물보호법",
+      "가축전염병 예방법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -2943,15 +3030,16 @@
   {
     "caseId": "SYNTHETIC-120",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "ANIMAL_LIVESTOCK"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-ANIMAL-LIVESTOCK-001"
+      "동물보호법",
+      "가축전염병 예방법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -2966,21 +3054,21 @@
   {
     "caseId": "SYNTHETIC-121",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "URBAN_MANAGEMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-URBAN-MANAGEMENT-001"
+      "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-121-claim-1",
         "evidenceIds": [
-          "OFFICIAL-URBAN-MANAGEMENT-001"
+          "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률"
         ]
       }
     ],
@@ -2996,15 +3084,15 @@
   {
     "caseId": "SYNTHETIC-122",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "URBAN_MANAGEMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-URBAN-MANAGEMENT-001"
+      "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -3019,15 +3107,15 @@
   {
     "caseId": "SYNTHETIC-123",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "URBAN_MANAGEMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-URBAN-MANAGEMENT-001"
+      "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -3042,8 +3130,8 @@
   {
     "caseId": "SYNTHETIC-124",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -3063,15 +3151,15 @@
   {
     "caseId": "SYNTHETIC-125",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "URBAN_MANAGEMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-URBAN-MANAGEMENT-001"
+      "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -3086,8 +3174,8 @@
   {
     "caseId": "SYNTHETIC-126",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -3107,21 +3195,21 @@
   {
     "caseId": "SYNTHETIC-127",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "URBAN_MANAGEMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-URBAN-MANAGEMENT-001"
+      "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-127-claim-1",
         "evidenceIds": [
-          "OFFICIAL-URBAN-MANAGEMENT-001"
+          "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률"
         ]
       }
     ],
@@ -3137,21 +3225,21 @@
   {
     "caseId": "SYNTHETIC-128",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "URBAN_MANAGEMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-URBAN-MANAGEMENT-001"
+      "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-128-claim-1",
         "evidenceIds": [
-          "OFFICIAL-URBAN-MANAGEMENT-001"
+          "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률"
         ]
       }
     ],
@@ -3167,15 +3255,15 @@
   {
     "caseId": "SYNTHETIC-129",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "URBAN_MANAGEMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-URBAN-MANAGEMENT-001"
+      "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -3190,15 +3278,15 @@
   {
     "caseId": "SYNTHETIC-130",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "URBAN_MANAGEMENT"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-URBAN-MANAGEMENT-001"
+      "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -3213,21 +3301,21 @@
   {
     "caseId": "SYNTHETIC-131",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WELFARE"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WELFARE-ACCESSIBILITY-001"
+      "장애인복지법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-131-claim-1",
         "evidenceIds": [
-          "OFFICIAL-WELFARE-ACCESSIBILITY-001"
+          "장애인복지법"
         ]
       }
     ],
@@ -3243,15 +3331,15 @@
   {
     "caseId": "SYNTHETIC-132",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WELFARE"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WELFARE-ACCESSIBILITY-001"
+      "장애인복지법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -3266,15 +3354,15 @@
   {
     "caseId": "SYNTHETIC-133",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WELFARE"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WELFARE-ACCESSIBILITY-001"
+      "장애인복지법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -3289,8 +3377,8 @@
   {
     "caseId": "SYNTHETIC-134",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -3310,15 +3398,15 @@
   {
     "caseId": "SYNTHETIC-135",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WELFARE"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WELFARE-ACCESSIBILITY-001"
+      "장애인복지법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -3333,8 +3421,8 @@
   {
     "caseId": "SYNTHETIC-136",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
@@ -3354,21 +3442,21 @@
   {
     "caseId": "SYNTHETIC-137",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WELFARE"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WELFARE-ACCESSIBILITY-001"
+      "장애인복지법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-137-claim-1",
         "evidenceIds": [
-          "OFFICIAL-WELFARE-ACCESSIBILITY-001"
+          "장애인복지법"
         ]
       }
     ],
@@ -3384,21 +3472,21 @@
   {
     "caseId": "SYNTHETIC-138",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WELFARE"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WELFARE-ACCESSIBILITY-001"
+      "장애인복지법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-138-claim-1",
         "evidenceIds": [
-          "OFFICIAL-WELFARE-ACCESSIBILITY-001"
+          "장애인복지법"
         ]
       }
     ],
@@ -3414,15 +3502,15 @@
   {
     "caseId": "SYNTHETIC-139",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WELFARE"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WELFARE-ACCESSIBILITY-001"
+      "장애인복지법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -3437,15 +3525,15 @@
   {
     "caseId": "SYNTHETIC-140",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "GENERAL",
     "departmentTop3": [
       "WELFARE"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-WELFARE-ACCESSIBILITY-001"
+      "장애인복지법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -3460,21 +3548,23 @@
   {
     "caseId": "SYNTHETIC-141",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "HAZARDOUS_MATERIAL",
     "departmentTop3": [
       "SAFETY_CONTROL"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-SAFETY-PROVISION-001"
+      "위험물안전관리법",
+      "화학물질관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-141-claim-1",
         "evidenceIds": [
-          "OFFICIAL-SAFETY-PROVISION-001"
+          "위험물안전관리법",
+          "화학물질관리법"
         ]
       }
     ],
@@ -3490,15 +3580,16 @@
   {
     "caseId": "SYNTHETIC-142",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "HAZARDOUS_MATERIAL",
     "departmentTop3": [
       "SAFETY_CONTROL"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-SAFETY-PROVISION-001"
+      "위험물안전관리법",
+      "화학물질관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_LOCATION",
@@ -3513,15 +3604,16 @@
   {
     "caseId": "SYNTHETIC-143",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "HAZARDOUS_MATERIAL",
     "departmentTop3": [
       "SAFETY_CONTROL"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-SAFETY-PROVISION-001"
+      "위험물안전관리법",
+      "화학물질관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",
@@ -3536,8 +3628,8 @@
   {
     "caseId": "SYNTHETIC-144",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "HAZARDOUS_MATERIAL",
     "departmentTop3": [
@@ -3557,15 +3649,16 @@
   {
     "caseId": "SYNTHETIC-145",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "HAZARDOUS_MATERIAL",
     "departmentTop3": [
       "SAFETY_CONTROL"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-SAFETY-PROVISION-001"
+      "위험물안전관리법",
+      "화학물질관리법"
     ],
     "claims": [],
     "predictedBlocker": "CONFLICT_DETECTED",
@@ -3580,8 +3673,8 @@
   {
     "caseId": "SYNTHETIC-146",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "HAZARDOUS_MATERIAL",
     "departmentTop3": [
@@ -3601,21 +3694,23 @@
   {
     "caseId": "SYNTHETIC-147",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "HAZARDOUS_MATERIAL",
     "departmentTop3": [
       "SAFETY_CONTROL"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-SAFETY-PROVISION-001"
+      "위험물안전관리법",
+      "화학물질관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-147-claim-1",
         "evidenceIds": [
-          "OFFICIAL-SAFETY-PROVISION-001"
+          "위험물안전관리법",
+          "화학물질관리법"
         ]
       }
     ],
@@ -3631,21 +3726,23 @@
   {
     "caseId": "SYNTHETIC-148",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "HAZARDOUS_MATERIAL",
     "departmentTop3": [
       "SAFETY_CONTROL"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-SAFETY-PROVISION-001"
+      "위험물안전관리법",
+      "화학물질관리법"
     ],
     "claims": [
       {
         "claimId": "SYNTHETIC-148-claim-1",
         "evidenceIds": [
-          "OFFICIAL-SAFETY-PROVISION-001"
+          "위험물안전관리법",
+          "화학물질관리법"
         ]
       }
     ],
@@ -3661,15 +3758,16 @@
   {
     "caseId": "SYNTHETIC-149",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "HAZARDOUS_MATERIAL",
     "departmentTop3": [
       "SAFETY_CONTROL"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-SAFETY-PROVISION-001"
+      "위험물안전관리법",
+      "화학물질관리법"
     ],
     "claims": [],
     "predictedBlocker": "PROCESSING_FAILED",
@@ -3684,15 +3782,16 @@
   {
     "caseId": "SYNTHETIC-150",
     "predictionSource": "deterministic-synthetic-baseline",
-    "modelVersion": "rule-baseline-v1",
-    "promptVersion": "synthetic-evaluation-prompt-v1",
+    "modelVersion": "rule-baseline-v2",
+    "promptVersion": "synthetic-evaluation-prompt-v2",
     "schemaVersion": "complaint-support-v1",
     "complaintType": "HAZARDOUS_MATERIAL",
     "departmentTop3": [
       "SAFETY_CONTROL"
     ],
     "retrievedEvidenceIds": [
-      "OFFICIAL-SAFETY-PROVISION-001"
+      "위험물안전관리법",
+      "화학물질관리법"
     ],
     "claims": [],
     "predictedBlocker": "NEEDS_JURISDICTION",

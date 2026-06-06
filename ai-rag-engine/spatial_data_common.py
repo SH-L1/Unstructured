@@ -6,6 +6,7 @@ import csv
 import hashlib
 import json
 import os
+import time
 import urllib.parse
 import urllib.request
 from datetime import datetime
@@ -16,6 +17,10 @@ from dotenv import load_dotenv
 
 
 load_dotenv()
+
+
+_sgis_cached_token: str | None = None
+_sgis_cached_token_expires_at = 0.0
 
 
 def connection_kwargs() -> dict[str, object]:
@@ -124,13 +129,56 @@ def data_go_kr_service_key() -> str | None:
     )
 
 
-def sgis_access_token() -> str | None:
-    token = clean(os.getenv("SGIS_ACCESS_TOKEN"))
-    if token:
-        return token
+def _sgis_token_ttl_seconds(response: dict[str, Any]) -> int:
+    result = response.get("result") or {}
+    for key in ("accessTimeout", "access_token_timeout", "expires_in", "expiresIn"):
+        value = clean(result.get(key) or response.get(key))
+        if not value:
+            continue
+        try:
+            return int(float(value))
+        except ValueError:
+            continue
+    return int(os.getenv("SGIS_ACCESS_TOKEN_TTL_SECONDS", str(60 * 60 * 4)))
+
+
+def _sgis_response_code(response: dict[str, Any]) -> str | None:
+    for key in ("errCd", "err_cd", "errCode", "err_code"):
+        value = clean(response.get(key))
+        if value is not None:
+            return value
+    return None
+
+
+def _sgis_response_message(response: dict[str, Any]) -> str:
+    for key in ("errMsg", "err_msg", "message", "msg"):
+        value = clean(response.get(key))
+        if value:
+            return value
+    return raw_json(response)[:500]
+
+
+def sgis_access_token(force_refresh: bool = False) -> str | None:
+    global _sgis_cached_token, _sgis_cached_token_expires_at
+
+    env_token = clean(os.getenv("SGIS_ACCESS_TOKEN"))
+    consumer_key = clean(os.getenv("SGIS_CONSUMER_KEY"))
+    consumer_secret = clean(os.getenv("SGIS_CONSUMER_SECRET"))
+    if env_token and not force_refresh:
+        return env_token
+
+    if (
+        _sgis_cached_token
+        and not force_refresh
+        and time.time() < _sgis_cached_token_expires_at - int(os.getenv("SGIS_TOKEN_REFRESH_SKEW_SECONDS", "300"))
+    ):
+        return _sgis_cached_token
+
     consumer_key = clean(os.getenv("SGIS_CONSUMER_KEY"))
     consumer_secret = clean(os.getenv("SGIS_CONSUMER_SECRET"))
     if not consumer_key or not consumer_secret:
+        if env_token and force_refresh:
+            return None
         return None
     auth_url = clean(os.getenv("SGIS_AUTH_URL")) or "https://sgisapi.kostat.go.kr/OpenAPI3/auth/authentication.json"
     parsed = urllib.parse.urlparse(auth_url)
@@ -139,17 +187,38 @@ def sgis_access_token() -> str | None:
     query.setdefault("consumer_secret", consumer_secret)
     request_url = urllib.parse.urlunparse(parsed._replace(query=urllib.parse.urlencode(query)))
     response = fetch_json(request_url, None)
+    code = _sgis_response_code(response)
+    if code not in (None, "0"):
+        raise RuntimeError(f"SGIS authentication failed: errCd={code}, message={_sgis_response_message(response)}")
     result = response.get("result") or {}
-    return clean(result.get("accessToken") or result.get("access_token"))
+    token = clean(result.get("accessToken") or result.get("access_token"))
+    if not token:
+        raise RuntimeError("SGIS authentication response did not include accessToken")
+    _sgis_cached_token = token
+    _sgis_cached_token_expires_at = time.time() + _sgis_token_ttl_seconds(response)
+    return token
 
 
 def fetch_sgis_json(url: str) -> dict[str, Any]:
     token = sgis_access_token()
     if not token:
         raise RuntimeError("SGIS URL configured but SGIS_ACCESS_TOKEN or SGIS_CONSUMER_KEY/SGIS_CONSUMER_SECRET is missing")
+    response = fetch_sgis_json_with_token(url, token)
+    if _sgis_response_code(response) == "-401":
+        refreshed = sgis_access_token(force_refresh=True)
+        if not refreshed:
+            raise RuntimeError("SGIS accessToken expired and consumer credentials are not available for refresh")
+        response = fetch_sgis_json_with_token(url, refreshed)
+    code = _sgis_response_code(response)
+    if code not in (None, "0"):
+        raise RuntimeError(f"SGIS request failed: errCd={code}, message={_sgis_response_message(response)}")
+    return response
+
+
+def fetch_sgis_json_with_token(url: str, token: str) -> dict[str, Any]:
     parsed = urllib.parse.urlparse(url)
     query = dict(urllib.parse.parse_qsl(parsed.query, keep_blank_values=True))
-    query.setdefault("accessToken", token)
+    query["accessToken"] = token
     request_url = urllib.parse.urlunparse(parsed._replace(query=urllib.parse.urlencode(query)))
     return fetch_json(request_url, None)
 

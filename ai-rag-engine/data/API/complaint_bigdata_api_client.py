@@ -7,7 +7,7 @@ from datetime import date, timedelta
 from pathlib import Path
 from typing import Dict, List
 from urllib.error import HTTPError, URLError
-from urllib.parse import urlencode
+from urllib.parse import unquote, urlencode
 from urllib.request import Request, urlopen
 
 from dotenv import load_dotenv
@@ -58,7 +58,7 @@ def get_api_key() -> str:
     if not api_key:
         raise ValueError("COMPLAINT_BIGDATA_API_KEY가 없습니다. .env 파일에 인증키를 설정하세요.")
 
-    return api_key
+    return unquote(api_key)
 
 
 def get_base_url() -> str:

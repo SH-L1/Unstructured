@@ -157,6 +157,7 @@ def collect_documents() -> list[LocalOrdinanceDocument]:
     display = int(os.getenv("ASAN_ORDINANCE_SEARCH_DISPLAY", "10"))
     jurisdiction_code = os.getenv("ASAN_ORDINANCE_JURISDICTION_CODE", DEFAULT_JURISDICTION_CODE).strip()
     documents: dict[tuple[str, str], LocalOrdinanceDocument] = {}
+    skipped = 0
     for query in queries:
         for item in search_ordinances(query, display=display):
             if len(documents) >= max_documents:
@@ -164,11 +165,17 @@ def collect_documents() -> list[LocalOrdinanceDocument]:
             external_id = str(item.get("law_id") or "").strip()
             if not external_id:
                 continue
-            root = request_law_detail(external_id, "ORDINANCE_API")
-            document = build_document(item, root, jurisdiction_code)
+            try:
+                root = request_law_detail(external_id, "ORDINANCE_API")
+                document = build_document(item, root, jurisdiction_code)
+            except ValueError:
+                skipped += 1
+                continue
             documents[(document.external_id, document.content_hash)] = document
     if not documents:
-        raise RuntimeError("Asan ordinance synchronization produced no complete local-law documents")
+        raise RuntimeError(f"Asan ordinance synchronization produced no complete local-law documents; skipped={skipped}")
+    if skipped:
+        print(f"Skipped {skipped} Asan ordinance candidates without complete effective-date/provision data")
     return list(documents.values())
 
 

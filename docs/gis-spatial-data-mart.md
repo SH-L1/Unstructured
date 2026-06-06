@@ -51,13 +51,16 @@ Credential handling:
 - `SPATIAL_DATA_GO_KR_SERVICE_KEY` is only an optional override when you want a
   different data.go.kr key for spatial APIs.
 - SGIS uses separate credentials: `SGIS_CONSUMER_KEY` and
-  `SGIS_CONSUMER_SECRET`, or a preissued `SGIS_ACCESS_TOKEN`.
+  `SGIS_CONSUMER_SECRET`. Leave `SGIS_ACCESS_TOKEN` empty for normal use; the
+  ingestion helper issues and refreshes short-lived SGIS access tokens from the
+  consumer credentials.
 - SGIS credentials are needed only when `SPATIAL_*_GEOJSON` points directly to
   an SGIS API URL. If you downloaded the SGIS boundary file first, no SGIS key is
   needed at load time.
 - Current local SGIS state: not loaded yet. `SGIS_CONSUMER_KEY`,
-  `SGIS_CONSUMER_SECRET`/`SGIS_ACCESS_TOKEN`, and a concrete
-  `SGIS_ADMIN_BOUNDARY_URL` are required for direct API download. Otherwise put
+  `SGIS_CONSUMER_SECRET`, and a concrete `SGIS_ADMIN_BOUNDARY_URL` are required
+  for direct API download. Do not include `accessToken` in the boundary URL; the
+  code adds it and retries once after SGIS returns `errCd=-401`. Otherwise put
   the downloaded GeoJSON at `data/spatial/asan_admin_boundaries.geojson`.
 
 ## Phase 1 Data

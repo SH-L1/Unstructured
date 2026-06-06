@@ -1,0 +1,96 @@
+{
+  "generatedAt": "2026-06-06T09:13:24.183843+00:00",
+  "overallStatus": "PASS_WITH_EXTERNAL_BLOCKERS",
+  "db": {
+    "sourceRegistry": 11,
+    "knowledgeDocuments": 797,
+    "knowledgePurpose": 784,
+    "legalDocumentVersions": 236,
+    "legalProvisions": 11330,
+    "rawRecords": 657,
+    "normalizedRecords": 514,
+    "adminBoundaries": 0,
+    "addressPoints": 70533,
+    "spatialFacilities": 664,
+    "parkingRestrictions": 249,
+    "illegalEvidenceRows": 0,
+    "binaryHwpRawRecords": 142,
+    "purposeDistribution": {
+      "EVALUATION_TRAINING": 64,
+      "HISTORICAL_CASE": 34,
+      "LOCAL_ORDINANCE_REFERENCE": 1,
+      "OFFICIAL_LAW": 236,
+      "PROCEDURE": 425,
+      "STYLE_REFERENCE": 24
+    },
+    "rawBySourceType": {
+      "AIHUB_ADMINISTRATIVE_LAW_LLM_FILES": 22,
+      "AIHUB_DOCUMENT_VISUAL_FILES": 42,
+      "AIHUB_PUBLIC_COMPLAINT_LLM_FILES": 24,
+      "ASAN_ORDINANCE_LIST_FILE": 1,
+      "MINWON_FORM_API": 360,
+      "MINWON_MANUAL_FILES": 207,
+      "SAEOL_PUBLIC_COMPLAINTS_FILE": 1
+    }
+  },
+  "artifacts": {
+    "judgeReportExists": true,
+    "trainingDecisionExists": true,
+    "predictionsExist": true,
+    "trainingDecision": "NO_FINE_TUNING",
+    "predictionCount": 150,
+    "automaticSendFlags": 0,
+    "automaticCompletionFlags": 0,
+    "ungroundedLegalClaimFlags": 0
+  },
+  "items": [
+    {
+      "requirement": "Phase 1 data load excluding department organization chart",
+      "status": "PASS",
+      "evidence": "knowledge=797, raw=657, normalized=514, address=70533, facilities=664, parkingRestrictions=249",
+      "action": "Load any missing source before claiming Phase 1 complete."
+    },
+    {
+      "requirement": "Legal evidence quarantine",
+      "status": "PASS",
+      "evidence": "illegalEvidenceRows=0",
+      "action": "Only VERIFIED_OFFICIAL NATIONAL law records may be legal evidence."
+    },
+    {
+      "requirement": "End-to-end template evaluation artifacts",
+      "status": "PASS",
+      "evidence": "artifacts={'judgeReportExists': True, 'trainingDecisionExists': True, 'predictionsExist': True, 'trainingDecision': 'NO_FINE_TUNING', 'predictionCount': 150, 'automaticSendFlags': 0, 'automaticCompletionFlags': 0, 'ungroundedLegalClaimFlags': 0}",
+      "action": "Run run_trust_pipeline_evaluation.py."
+    },
+    {
+      "requirement": "No automatic send, automatic completion, or ungrounded legal claim",
+      "status": "PASS",
+      "evidence": "automaticSend=0, automaticCompletion=0, ungroundedLegalClaim=0",
+      "action": "Keep all final actions human-reviewed and citation-gated."
+    },
+    {
+      "requirement": "Fine-tuning decision is evidence-gated",
+      "status": "PASS",
+      "evidence": "trainingDecision=NO_FINE_TUNING",
+      "action": "Do not fine-tune until privacy, labels, and legal-fact suitability are proven."
+    },
+    {
+      "requirement": "SGIS/admin boundary layer",
+      "status": "BLOCKED_EXTERNAL",
+      "evidence": "adminBoundaries=0",
+      "action": "Provide SGIS boundary API configuration or ai-rag-engine/data/spatial/asan_admin_boundaries.geojson."
+    },
+    {
+      "requirement": "HWP full-text extraction",
+      "status": "LIMITED",
+      "evidence": "binaryHwpRawRecords=142",
+      "action": "Configure WORKER_HWP_TEXT_COMMAND if HWP bodies must be searchable."
+    },
+    {
+      "requirement": "Restricted worker DB account",
+      "status": "PASS",
+      "evidence": "WORKER_DB_USER connection check",
+      "action": "Worker DB login is valid."
+    }
+  ]
+}

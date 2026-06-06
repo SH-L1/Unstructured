@@ -284,3 +284,78 @@ python sync_auxiliary_sources.py
 ## 원칙
 
 API 키와 수집 코드는 DB에 저장하지 않는다. DB에는 수집된 데이터, 출처 메타데이터, 해시, 버전, 검증 상태, 법적 근거 허용 여부만 저장한다.
+## Current Implementation Snapshot
+
+This section is authoritative when terminal rendering of Korean text is broken.
+
+### Loaded API Sources
+
+| Source | Loader | Current result | Legal evidence |
+| --- | --- | ---: | --- |
+| National Law API | `sync_official_sources.py` | 131 national law documents loaded | Yes, only when `NATIONAL`, `VERIFIED_OFFICIAL`, valid effective date, and provision text exist |
+| National Law API, Asan ordinances | `sync_local_ordinances.py` | 105 Asan ordinance reference documents loaded | No for current scope |
+| Anti-Corruption and Civil Rights Commission complaint big data 2022-2025 | `sync_auxiliary_sources.py` | Included in 34 auxiliary documents | No |
+| Anti-Corruption and Civil Rights Commission policy Q&A | `sync_auxiliary_sources.py` | 0 records for the current query set | No |
+| Chungnam civil complaint form/procedure API | `sync_minwon_forms.py` | 360 procedure records loaded | No |
+| data.go.kr spatial APIs | `fetch_spatial_api_sources.py`, `sync_spatial_sources.py` | Parks 121, parking lots 43, CCTV 500, parking restrictions 249 | No |
+
+### Loaded Downloaded Sources
+
+| Source | Loader | Current result | Use |
+| --- | --- | ---: | --- |
+| Chungnam building address DB, filtered to Asan | `convert_chungnam_building_db.py`, `sync_spatial_sources.py` | 70,533 address points | Location candidate generation and jurisdiction support |
+| 2018-2026 Asan civil complaint manuals | `sync_local_file_data_mart.py` | Included in local file data mart | Procedure reference only |
+| Current Asan ordinance list | `sync_local_file_data_mart.py` | 1 reference record | Reference/department confirmation only |
+| Saeol public complaints from 2021 onward | `sync_local_file_data_mart.py` | 1 source file record | Historical/style/routing support only |
+| AIHub document visual dataset | `sync_local_file_data_mart.py` | 42 file records | Evaluation/training candidate only |
+| AIHub public complaint LLM dataset | `sync_local_file_data_mart.py` | 24 file records | Style/training candidate only |
+| AIHub administrative law LLM dataset | `sync_local_file_data_mart.py` | 22 file records | Evaluation/training candidate only |
+
+### Current DB Counts
+
+| Table or group | Rows |
+| --- | ---: |
+| `source_registry` | 11 |
+| `knowledge_documents` | 797 |
+| `legal_document_versions` | 236 |
+| `legal_provisions` | 11,330 |
+| `data_mart_raw_records` | 657 |
+| `data_mart_normalized_records` | 514 |
+| `spatial_address_points` | 70,533 |
+| `spatial_facilities` CCTV | 500 |
+| `spatial_facilities` PARK | 121 |
+| `spatial_facilities` PARKING_LOT | 43 |
+| `spatial_parking_restrictions` | 249 |
+| `spatial_admin_boundaries` | 0 |
+
+### Current Judge Metrics
+
+| Metric | Value |
+| --- | ---: |
+| Classification accuracy | 1.0000 |
+| Department Top-3 | 1.0000 |
+| Blocker accuracy | 1.0000 |
+| Claim evidence coverage | 1.0000 |
+| Evidence title relevance | 1.0000 |
+| Template completeness | 1.0000 |
+| Safety failures | 0 |
+| Data readiness score | 0.8333 |
+
+The evidence check now verifies expected official law-title relevance, not only
+the existence of a citation ID.
+
+Completion audit outputs:
+
+- `ai-rag-engine/data/evaluation/completion_audit.latest.json`
+- `ai-rag-engine/data/evaluation/completion_audit.latest.md`
+
+Current audit status is `PASS_WITH_EXTERNAL_BLOCKERS`: loaded data, worker DB
+authentication, and safety gates pass, but SGIS boundaries and binary HWP
+full-text extraction remain unresolved or limited.
+
+### Remaining External Inputs
+
+- SGIS administrative boundary data is not loaded yet. Configure a concrete SGIS boundary API URL/credentials or provide `ai-rag-engine/data/spatial/asan_admin_boundaries.geojson`.
+- `WORKER_DB_USER` and `WORKER_DB_PASSWORD` now authenticate successfully against the local DB.
+- Binary `.hwp` manuals are loaded as raw file metadata unless a trusted extractor is configured with `WORKER_HWP_TEXT_COMMAND`.
+- Asan organization/work assignment data is intentionally deferred by the user and is not part of the current loaded dataset.

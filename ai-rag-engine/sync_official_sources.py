@@ -56,6 +56,8 @@ DEFAULT_QUERIES = (
     "어린이놀이시설 안전관리법",
     "동물보호법",
     "가축분뇨의 관리 및 이용에 관한 법률",
+    "가축전염병 예방법",
+    "장애인복지법",
     "장애인ㆍ노인ㆍ임산부 등의 편의증진 보장에 관한 법률",
     "교통약자의 이동편의 증진법",
     "화학물질관리법",
@@ -126,14 +128,21 @@ def parse_yyyymmdd(value: str) -> date:
 def parse_provisions(root: ET.Element) -> tuple[Provision, ...]:
     provisions: list[Provision] = []
     seen: set[str] = set()
+    def direct_value(direct: dict[str, ET.Element], *names: str) -> ET.Element | None:
+        for name in names:
+            if name in direct:
+                return direct[name]
+        return None
+
     for element in root.iter():
         direct = {strip_namespace(child.tag): child for child in list(element)}
-        number = direct.get("조문번호")
-        content = direct.get("조문내용")
+        number = direct_value(direct, "조문번호", "議곕Ц踰덊샇")
+        content = direct_value(direct, "조문내용", "조내용", "議곕Ц?댁슜")
         if number is None or content is None:
             continue
         number_text = re.sub(r"^제|조$", "", normalized_text(number)).strip()
-        branch_text = normalized_text(direct["조문가지번호"]) if "조문가지번호" in direct else ""
+        branch = direct_value(direct, "조문가지번호", "議곕Ц媛吏踰덊샇")
+        branch_text = normalized_text(branch) if branch is not None else ""
         branch_text = re.sub(r"^의", "", branch_text).strip()
         key = f"제{number_text}조" + (f"의{branch_text}" if branch_text and branch_text != "0" else "")
         if key in seen:
@@ -141,7 +150,8 @@ def parse_provisions(root: ET.Element) -> tuple[Provision, ...]:
         content_text = normalized_text(element)
         if not content_text:
             continue
-        heading = normalized_text(direct["조문제목"]) if "조문제목" in direct else ""
+        heading_node = direct_value(direct, "조문제목", "조제목", "議곕Ц?쒕ぉ")
+        heading = normalized_text(heading_node) if heading_node is not None else ""
         provisions.append(Provision(key=key[:200], heading=heading[:500], content=content_text))
         seen.add(key)
     if not provisions:

@@ -203,11 +203,12 @@ def request_law_detail(law_id: str, source_type: str) -> ET.Element:
     target = SERVICE_TARGETS.get(source_type)
     if not target:
         raise ValueError(f"상세 조회를 지원하지 않는 source_type입니다: {source_type}")
+    id_param = "MST" if source_type == "LAW_API" else "ID"
 
     params = {
         "OC": get_law_api_key(),
         "target": target,
-        "ID": law_id,
+        id_param: law_id,
         "type": "XML",
     }
     url = f"{LAW_SERVICE_BASE_URL}?{urlencode(params)}"

@@ -60,10 +60,13 @@ Unstructured/
     sync_official_sources.py             National law ingestion
     sync_local_ordinances.py             Asan ordinance reference ingestion
     sync_auxiliary_sources.py            Q&A and complaint big-data ingestion
+    sync_minwon_forms.py                 Chungnam civil complaint form/procedure ingestion
+    sync_local_file_data_mart.py         downloaded manuals, Saeol, ordinance-list, AIHub file ingestion
     fetch_spatial_api_sources.py         data.go.kr spatial API downloader
     convert_chungnam_building_db.py      Chungnam building DB to Asan CSV converter
     sync_spatial_sources.py              GIS/spatial mart ingestion
     spatial_location_resolver.py         GIS-backed location candidate resolver
+    run_trust_pipeline_evaluation.py     DB-backed template pipeline evaluation and judge report
   docs/
     final-data-scope.md                  final data source and usage rules
     current-db-and-file-layout.md        this synchronized DB/file layout
@@ -102,8 +105,61 @@ the `.env` variable to the main normalized CSV/XLSX file or directory.
 | National Law API, `LAW_API_OC` for Asan ordinances | `sync_local_ordinances.py` | same legal/source tables | Current scope: reference/department confirmation only |
 | data.go.kr Q&A | `sync_auxiliary_sources.py` | `knowledge_documents`, `knowledge_purpose`, data mart tables | `PROCEDURE`, not legal evidence |
 | data.go.kr complaint big data 2022~2025 | `sync_auxiliary_sources.py` | `knowledge_documents`, `knowledge_purpose`, data mart tables | `HISTORICAL_CASE`, not legal evidence |
+| Chungnam civil complaint form API | `sync_minwon_forms.py` | `knowledge_documents`, `knowledge_purpose`, data mart tables | `PROCEDURE`, not legal evidence |
 | SGIS direct API URL | `sync_spatial_sources.py` | `spatial_admin_boundaries` | Only when `SPATIAL_ADMIN_BOUNDARIES_GEOJSON` points to SGIS API URL |
 | data.go.kr spatial standard APIs | `fetch_spatial_api_sources.py`, then `sync_spatial_sources.py` | `spatial_facilities`, `spatial_parking_restrictions` | Writes normalized CSV files under `ai-rag-engine/data/spatial/` before DB load |
+
+## Current Knowledge/Data-Mart Load Snapshot
+
+Last verified local load:
+
+| Area | Rows |
+| --- | ---: |
+| `source_registry` | 11 |
+| `knowledge_documents` | 797 |
+| `knowledge_purpose` | 784 |
+| `legal_document_versions` | 236 |
+| `legal_provisions` | 11,330 |
+| `data_mart_ingestion_runs` | 7 |
+| `data_mart_raw_records` | 657 |
+| `data_mart_normalized_records` | 514 |
+
+Knowledge purpose distribution:
+
+| Purpose | Rows |
+| --- | ---: |
+| `OFFICIAL_LAW` | 236 |
+| `PROCEDURE` | 425 |
+| `HISTORICAL_CASE` | 34 |
+| `STYLE_REFERENCE` | 24 |
+| `EVALUATION_TRAINING` | 64 |
+| `LOCAL_ORDINANCE_REFERENCE` | 1 |
+| `UNVERIFIED_LEGACY` | 13 |
+
+Evaluation artifacts:
+
+- `ai-rag-engine/data/evaluation/pipeline_predictions.latest.json`
+- `ai-rag-engine/data/evaluation/training_decision.latest.json`
+- `ai-rag-engine/data/evaluation/judge_report.latest.md`
+- `ai-rag-engine/data/evaluation/completion_audit.latest.json`
+- `ai-rag-engine/data/evaluation/completion_audit.latest.md`
+
+Latest deterministic judge metrics:
+
+| Metric | Value |
+| --- | ---: |
+| Classification accuracy | 1.0000 |
+| Department Top-3 | 1.0000 |
+| Blocker accuracy | 1.0000 |
+| Claim evidence coverage | 1.0000 |
+| Evidence title relevance | 1.0000 |
+| Template completeness | 1.0000 |
+| Safety failures | 0 |
+| Data readiness score | 0.8333 |
+
+The score is limited by the missing SGIS administrative-boundary layer.
+The completion audit also marks binary HWP manual full-text extraction as
+`LIMITED` until `WORKER_HWP_TEXT_COMMAND` is configured.
 
 ## Current Spatial Load Snapshot
 

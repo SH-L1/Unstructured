@@ -358,11 +358,26 @@ def fetch_source(source: PublicApiSource, service_key: str) -> str:
 
 
 def fetch_sgis_boundary() -> str:
+    configured_boundary = clean(os.getenv("SPATIAL_ADMIN_BOUNDARIES_GEOJSON"))
     url = clean(os.getenv("SGIS_ADMIN_BOUNDARY_URL"))
-    target = clean(os.getenv("SPATIAL_ADMIN_BOUNDARIES_GEOJSON")) or "data/spatial/asan_admin_boundaries.geojson"
+    if not url and configured_boundary and configured_boundary.startswith(("http://", "https://")):
+        url = configured_boundary
+    target = (
+        clean(os.getenv("SPATIAL_ADMIN_BOUNDARIES_OUTPUT_GEOJSON"))
+        or (configured_boundary if configured_boundary and not configured_boundary.startswith(("http://", "https://")) else None)
+        or "data/spatial/asan_admin_boundaries.geojson"
+    )
     if not url:
         return "sgis_boundaries: skipped; set SGIS_ADMIN_BOUNDARY_URL after confirming the SGIS boundary endpoint for Asan"
     data = fetch_sgis_json(url)
+    if "features" not in data:
+        for key in ("result", "data"):
+            nested = data.get(key)
+            if isinstance(nested, dict) and "features" in nested:
+                data = nested
+                break
+    if "features" not in data:
+        raise RuntimeError("sgis_boundaries: SGIS response is not GeoJSON FeatureCollection-compatible; expected a top-level features array")
     Path(target).parent.mkdir(parents=True, exist_ok=True)
     Path(target).write_text(json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8")
     return f"sgis_boundaries: output={target}"
@@ -370,11 +385,12 @@ def fetch_sgis_boundary() -> str:
 
 def main() -> None:
     service_key = data_go_kr_service_key()
-    if not service_key:
-        raise RuntimeError("A data.go.kr serviceKey is required: set SPATIAL_DATA_GO_KR_SERVICE_KEY or an existing public-data API key")
-    service_key = urllib.parse.unquote(service_key)
-    for source in SOURCES:
-        print(fetch_source(source, service_key))
+    if service_key:
+        service_key = urllib.parse.unquote(service_key)
+        for source in SOURCES:
+            print(fetch_source(source, service_key))
+    else:
+        print("data.go.kr spatial sources: skipped; set SPATIAL_DATA_GO_KR_SERVICE_KEY or an existing public-data API key")
     print(fetch_sgis_boundary())
 
 
