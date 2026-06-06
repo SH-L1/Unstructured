@@ -1,6 +1,6 @@
 # Judge Report - Trust Template Pipeline
 
-Generated at: 2026-06-06T09:13:24.372087+00:00
+Generated at: 2026-06-06T15:35:27.396944+00:00
 
 ## Verdict
 
@@ -26,15 +26,17 @@ expected complaint type.
 
 - Illegal legal-evidence rows: 0
 - Legal provisions loaded: 11330
-- Raw data-mart records: 657
-- Normalized data-mart records: 514
+- Raw data-mart records: 658
+- Normalized data-mart records: 559
 - Address points loaded: 70533
 - CCTV facilities loaded: 500
 - Parking restrictions loaded: 249
-- SGIS/admin boundaries loaded: 0
-- Data readiness score: 0.8333
-- Data readiness checks: `{"addressPointsLoaded": true, "dataMartLoaded": true, "nonEvidenceSourcesQuarantined": true, "officialLawPresent": true, "sgisBoundariesLoaded": false, "spatialFacilitiesLoaded": true}`
-- Knowledge by purpose: `{"EVALUATION_TRAINING": 64, "HISTORICAL_CASE": 34, "LOCAL_ORDINANCE_REFERENCE": 1, "OFFICIAL_LAW": 236, "PROCEDURE": 425, "STYLE_REFERENCE": 24, "UNVERIFIED_LEGACY": 13}`
+- SGIS/admin boundaries loaded: 17
+- Asan organization units loaded: 34
+- Asan assignment rules loaded: 110
+- Data readiness score: 1.0000
+- Data readiness checks: `{"addressPointsLoaded": true, "asanOrganizationLoaded": true, "dataMartLoaded": true, "nonEvidenceSourcesQuarantined": true, "officialLawPresent": true, "sgisBoundariesLoaded": true, "spatialFacilitiesLoaded": true}`
+- Knowledge by purpose: `{"EVALUATION_TRAINING": 64, "HISTORICAL_CASE": 34, "LOCAL_ORDINANCE_REFERENCE": 1, "OFFICIAL_LAW": 236, "ORGANIZATION_ROUTING": 1, "PROCEDURE": 469, "STYLE_REFERENCE": 24, "UNVERIFIED_LEGACY": 13}`
 
 ## Critical Assessment
 
@@ -48,10 +50,13 @@ expected complaint type.
    behavior and hard-gate behavior, not real Asan production performance.
 4. Fine-tuning remains rejected: `NO_FINE_TUNING`. Current datasets do
    not prove privacy safety, label quality, and legal-fact suitability.
-5. Remaining weaknesses: SGIS boundary layer is missing, department organization
-   data is intentionally deferred, HWP binary manuals are metadata-only until a
-   trusted extractor is configured, and policy Q&A returned no records for the
-   current query set.
+5. Remaining weaknesses: the provided organization chart is loaded only for the
+   departments and duties present in `asan_city_organization.docx`; it is routing
+   support, not an automatic final assignment authority. HWP binary manuals are
+   raw-loaded but only meaningful extractions are promoted into searchable
+   procedure knowledge, and policy Q&A returned no records for the current query
+   set. These sources remain routing/procedure/style support only and cannot
+   become legal evidence.
 
 ## Complaint Type Distribution
 

@@ -361,6 +361,28 @@ def db_quality_summary() -> dict[str, Any]:
             parking_restrictions = int(cursor.fetchone()[0])
             cursor.execute("select count(*) from spatial_facilities where facility_type = 'CCTV'")
             cctv = int(cursor.fetchone()[0])
+            cursor.execute(
+                """
+                select count(*)
+                from organization_units
+                where jurisdiction_code = 'ASAN'
+                  and synthetic_demo = false
+                  and active = true
+                """
+            )
+            asan_organization_units = int(cursor.fetchone()[0])
+            cursor.execute(
+                """
+                select count(*)
+                from assignment_rules ar
+                join organization_units ou on ou.id = ar.organization_unit_id
+                where ar.jurisdiction_code = 'ASAN'
+                  and ar.synthetic_demo = false
+                  and ar.active = true
+                  and ou.synthetic_demo = false
+                """
+            )
+            asan_assignment_rules = int(cursor.fetchone()[0])
     data_readiness_checks = {
         "officialLawPresent": legal_provisions > 0,
         "nonEvidenceSourcesQuarantined": illegal_evidence_rows == 0,
@@ -368,6 +390,7 @@ def db_quality_summary() -> dict[str, Any]:
         "addressPointsLoaded": address_points > 0,
         "spatialFacilitiesLoaded": cctv > 0 and parking_restrictions > 0,
         "sgisBoundariesLoaded": admin_boundaries > 0,
+        "asanOrganizationLoaded": asan_organization_units > 0 and asan_assignment_rules > 0,
     }
     readiness_score = sum(data_readiness_checks.values()) / len(data_readiness_checks)
     return {
@@ -380,6 +403,8 @@ def db_quality_summary() -> dict[str, Any]:
         "addressPoints": address_points,
         "parkingRestrictions": parking_restrictions,
         "cctvFacilities": cctv,
+        "asanOrganizationUnits": asan_organization_units,
+        "asanAssignmentRules": asan_assignment_rules,
         "dataReadinessChecks": data_readiness_checks,
         "dataReadinessScore": readiness_score,
     }
@@ -445,6 +470,8 @@ expected complaint type.
 - CCTV facilities loaded: {quality["cctvFacilities"]}
 - Parking restrictions loaded: {quality["parkingRestrictions"]}
 - SGIS/admin boundaries loaded: {quality["adminBoundaries"]}
+- Asan organization units loaded: {quality["asanOrganizationUnits"]}
+- Asan assignment rules loaded: {quality["asanAssignmentRules"]}
 - Data readiness score: {quality["dataReadinessScore"]:.4f}
 - Data readiness checks: `{json.dumps(quality["dataReadinessChecks"], ensure_ascii=False, sort_keys=True)}`
 - Knowledge by purpose: `{json.dumps(quality["knowledgeByPurpose"], ensure_ascii=False, sort_keys=True)}`
@@ -461,10 +488,13 @@ expected complaint type.
    behavior and hard-gate behavior, not real Asan production performance.
 4. Fine-tuning remains rejected: `{training["decision"]}`. Current datasets do
    not prove privacy safety, label quality, and legal-fact suitability.
-5. Remaining weaknesses: SGIS boundary layer is missing, department organization
-   data is intentionally deferred, HWP binary manuals are metadata-only until a
-   trusted extractor is configured, and policy Q&A returned no records for the
-   current query set.
+5. Remaining weaknesses: the provided organization chart is loaded only for the
+   departments and duties present in `asan_city_organization.docx`; it is routing
+   support, not an automatic final assignment authority. HWP binary manuals are
+   raw-loaded but only meaningful extractions are promoted into searchable
+   procedure knowledge, and policy Q&A returned no records for the current query
+   set. These sources remain routing/procedure/style support only and cannot
+   become legal evidence.
 
 ## Complaint Type Distribution
 

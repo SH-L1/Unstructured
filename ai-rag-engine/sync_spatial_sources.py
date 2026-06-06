@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any
 
 import psycopg2
+from pyproj import Transformer
 
 from spatial_data_common import (
     bbox_from_geometry,
@@ -43,6 +44,8 @@ FACILITY_SOURCES = {
     "SPATIAL_SEWER_FACILITIES_CSV": (3, "SEWER_FACILITY", "Asan sewer and drainage facilities"),
     "SPATIAL_ROAD_MANAGEMENT_CSV": (3, "ROAD_MANAGEMENT_SEGMENT", "Asan road management ledger"),
 }
+
+UTMK_TO_WGS84 = Transformer.from_crs("EPSG:5179", "EPSG:4326", always_xy=True)
 
 
 @dataclass(frozen=True)
@@ -105,15 +108,55 @@ def normalize_parking_restriction_record(row: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def iter_coordinate_pairs(coordinates: Any):
+    if (
+        isinstance(coordinates, list)
+        and len(coordinates) >= 2
+        and all(isinstance(value, (int, float)) for value in coordinates[:2])
+    ):
+        yield coordinates
+        return
+    if isinstance(coordinates, list):
+        for item in coordinates:
+            yield from iter_coordinate_pairs(item)
+
+
+def geometry_uses_projected_coordinates(geometry: dict[str, Any]) -> bool:
+    for pair in iter_coordinate_pairs(geometry.get("coordinates")):
+        x, y = float(pair[0]), float(pair[1])
+        return abs(x) > 180 or abs(y) > 90
+    return False
+
+
+def transform_coordinates_to_wgs84(coordinates: Any) -> Any:
+    if (
+        isinstance(coordinates, list)
+        and len(coordinates) >= 2
+        and all(isinstance(value, (int, float)) for value in coordinates[:2])
+    ):
+        lon, lat = UTMK_TO_WGS84.transform(float(coordinates[0]), float(coordinates[1]))
+        rest = coordinates[2:] if len(coordinates) > 2 else []
+        return [lon, lat, *rest]
+    if isinstance(coordinates, list):
+        return [transform_coordinates_to_wgs84(item) for item in coordinates]
+    return coordinates
+
+
+def transform_geometry_to_wgs84(geometry: dict[str, Any]) -> dict[str, Any]:
+    return {**geometry, "coordinates": transform_coordinates_to_wgs84(geometry.get("coordinates"))}
+
+
 def normalize_admin_boundary_feature(feature: dict[str, Any]) -> dict[str, Any]:
     properties = feature.get("properties") or {}
     geometry = feature.get("geometry")
+    if geometry and geometry_uses_projected_coordinates(geometry):
+        geometry = transform_geometry_to_wgs84(geometry)
     min_lat, max_lat, min_lon, max_lon = bbox_from_geometry(geometry)
     centroid_lat, centroid_lon = centroid_from_bbox(min_lat, max_lat, min_lon, max_lon)
     return {
         "boundary_type": pick(properties, ("boundary_type", "구분", "type")) or "EUPMYEONDONG",
-        "boundary_code": pick(properties, ("boundary_code", "행정구역코드", "ADM_CD", "code")),
-        "boundary_name": pick(properties, ("boundary_name", "행정구역명", "ADM_NM", "name")) or "UNKNOWN",
+        "boundary_code": pick(properties, ("boundary_code", "행정구역코드", "ADM_CD", "adm_cd", "code")),
+        "boundary_name": pick(properties, ("boundary_name", "행정구역명", "ADM_NM", "adm_nm", "name")) or "UNKNOWN",
         "parent_code": pick(properties, ("parent_code", "상위코드", "parent")),
         "centroid_lat": centroid_lat,
         "centroid_lon": centroid_lon,

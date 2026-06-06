@@ -1,26 +1,34 @@
 {
-  "generatedAt": "2026-06-06T09:13:24.183843+00:00",
-  "overallStatus": "PASS_WITH_EXTERNAL_BLOCKERS",
+  "generatedAt": "2026-06-06T15:35:27.321156+00:00",
+  "overallStatus": "PASS",
   "db": {
-    "sourceRegistry": 11,
-    "knowledgeDocuments": 797,
-    "knowledgePurpose": 784,
+    "sourceRegistry": 12,
+    "knowledgeDocuments": 842,
+    "knowledgePurpose": 829,
     "legalDocumentVersions": 236,
     "legalProvisions": 11330,
-    "rawRecords": 657,
-    "normalizedRecords": 514,
-    "adminBoundaries": 0,
+    "rawRecords": 658,
+    "normalizedRecords": 559,
+    "adminBoundaries": 17,
     "addressPoints": 70533,
     "spatialFacilities": 664,
     "parkingRestrictions": 249,
+    "asanOrganizationUnits": 34,
+    "asanAssignmentRules": 110,
+    "organizationRawRecords": 1,
     "illegalEvidenceRows": 0,
     "binaryHwpRawRecords": 142,
+    "hwpExtractedRecords": 44,
+    "hwpMeaningfulTextRecords": 44,
+    "lowQualityHwpPromotions": 0,
+    "lowQualityHwpLoadErrors": 98,
     "purposeDistribution": {
       "EVALUATION_TRAINING": 64,
       "HISTORICAL_CASE": 34,
       "LOCAL_ORDINANCE_REFERENCE": 1,
       "OFFICIAL_LAW": 236,
-      "PROCEDURE": 425,
+      "ORGANIZATION_ROUTING": 1,
+      "PROCEDURE": 469,
       "STYLE_REFERENCE": 24
     },
     "rawBySourceType": {
@@ -28,6 +36,7 @@
       "AIHUB_DOCUMENT_VISUAL_FILES": 42,
       "AIHUB_PUBLIC_COMPLAINT_LLM_FILES": 24,
       "ASAN_ORDINANCE_LIST_FILE": 1,
+      "ASAN_ORGANIZATION_FILE": 1,
       "MINWON_FORM_API": 360,
       "MINWON_MANUAL_FILES": 207,
       "SAEOL_PUBLIC_COMPLAINTS_FILE": 1
@@ -45,10 +54,16 @@
   },
   "items": [
     {
-      "requirement": "Phase 1 data load excluding department organization chart",
+      "requirement": "Phase 1 data load including Asan organization chart",
       "status": "PASS",
-      "evidence": "knowledge=797, raw=657, normalized=514, address=70533, facilities=664, parkingRestrictions=249",
+      "evidence": "knowledge=842, raw=658, normalized=559, address=70533, facilities=664, parkingRestrictions=249, asanOrganizationUnits=34, asanAssignmentRules=110",
       "action": "Load any missing source before claiming Phase 1 complete."
+    },
+    {
+      "requirement": "Asan organization routing data",
+      "status": "PASS",
+      "evidence": "asanOrganizationUnits=34, asanAssignmentRules=110, organizationRawRecords=1",
+      "action": "Organization data is routing support only and still requires human confirmation."
     },
     {
       "requirement": "Legal evidence quarantine",
@@ -76,15 +91,21 @@
     },
     {
       "requirement": "SGIS/admin boundary layer",
-      "status": "BLOCKED_EXTERNAL",
-      "evidence": "adminBoundaries=0",
+      "status": "PASS",
+      "evidence": "adminBoundaries=17",
       "action": "Provide SGIS boundary API configuration or ai-rag-engine/data/spatial/asan_admin_boundaries.geojson."
     },
     {
-      "requirement": "HWP full-text extraction",
-      "status": "LIMITED",
-      "evidence": "binaryHwpRawRecords=142",
-      "action": "Configure WORKER_HWP_TEXT_COMMAND if HWP bodies must be searchable."
+      "requirement": "HWP raw file coverage",
+      "status": "PASS",
+      "evidence": "binaryHwpRawRecords=142, searchableHwpRecords=44",
+      "action": "All HWP files remain in raw records; only meaningful text should be searchable."
+    },
+    {
+      "requirement": "HWP searchable text quality gate",
+      "status": "PASS",
+      "evidence": "searchableHwpRecords=44, meaningfulSearchable=44, lowQualityPromotions=0, lowQualityLoadErrors=98",
+      "action": "Low-quality HWP extraction must stay raw-only and be excluded from retrieval."
     },
     {
       "requirement": "Restricted worker DB account",

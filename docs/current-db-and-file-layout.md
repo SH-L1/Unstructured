@@ -35,7 +35,7 @@ Operational table groups:
 Legal evidence rule:
 
 - Allowed: verified national law provisions from the National Law API.
-- Not allowed: SGIS, data.go.kr spatial data, civil complaint Q&A, civil complaint big data, Saeol history, AIHub datasets, manuals, organization chart, downloaded ordinance list.
+- Not allowed as legal evidence: SGIS, data.go.kr spatial data, civil complaint Q&A, civil complaint big data, Saeol history, AIHub datasets, manuals, organization chart, downloaded ordinance list.
 - Asan ordinances are collected with `LAW_API_OC`, but for the current scope they are reference/department-confirmation data only.
 
 ## Project File Layout
@@ -62,6 +62,7 @@ Unstructured/
     sync_auxiliary_sources.py            Q&A and complaint big-data ingestion
     sync_minwon_forms.py                 Chungnam civil complaint form/procedure ingestion
     sync_local_file_data_mart.py         downloaded manuals, Saeol, ordinance-list, AIHub file ingestion
+    sync_organization_chart.py           Asan organization chart and routing-rule ingestion
     fetch_spatial_api_sources.py         data.go.kr spatial API downloader
     convert_chungnam_building_db.py      Chungnam building DB to Asan CSV converter
     sync_spatial_sources.py              GIS/spatial mart ingestion
@@ -92,7 +93,7 @@ the `.env` variable to the main normalized CSV/XLSX file or directory.
 | `2018~2026 민원편람` | `ai-rag-engine/data/minwon_manuals/` | `MINWON_MANUAL_DIR` | `knowledge_documents`, `knowledge_purpose`, data mart tables | Procedure guidance only |
 | `현행 자치법규 리스트` | `ai-rag-engine/data/local_ordinances/asan_current_ordinances.xlsx` | `ASAN_CURRENT_ORDINANCE_LIST_FILE` | source metadata/reference records | Reference and department confirmation only |
 | `아산시 새올전자민원창구 공개 상담민원` | `ai-rag-engine/data/saeol/asan_saeol_public_complaints_2021_2026.xlsx` | `SAEOL_PUBLIC_COMPLAINTS_FILE` | `historical_complaints` | Department routing and style reference after de-identification |
-| `아산시청 조직도` | `ai-rag-engine/data/organization/asan_city_organization.xlsx` | `ASAN_ORGANIZATION_FILE` | `organization_units`, `assignment_rules` | Department candidate generation |
+| `아산시청 조직도` | `ai-rag-engine/data/organization/asan_city_organization.docx` | `ASAN_ORGANIZATION_FILE` | `organization_units`, `assignment_rules`, data mart tables | Department candidate generation with human confirmation |
 | `문서 이해 기반 시각요소 생성 데이터` | `ai-rag-engine/data/aihub/document_visual/` | `AIHUB_DOCUMENT_VISUAL_DIR` | training/evaluation area only | Document understanding experiments |
 | `공공 민원 상담 LLM 사전학습 및 Instruction Tuning 데이터` | `ai-rag-engine/data/aihub/public_complaint_llm/` | `AIHUB_PUBLIC_COMPLAINT_LLM_DIR` | training/evaluation area or restricted `STYLE_REFERENCE` | Style/tuning candidate |
 | `행정법 LLM 사전학습 및 Instruction Tuning 데이터` | `ai-rag-engine/data/aihub/administrative_law_llm/` | `AIHUB_ADMINISTRATIVE_LAW_LLM_DIR` | training/evaluation area only | Prompt/tuning candidate |
@@ -115,26 +116,28 @@ Last verified local load:
 
 | Area | Rows |
 | --- | ---: |
-| `source_registry` | 11 |
-| `knowledge_documents` | 797 |
-| `knowledge_purpose` | 784 |
+| `source_registry` | 12 |
+| `knowledge_documents` | 842 |
+| `knowledge_purpose` | 829 |
 | `legal_document_versions` | 236 |
 | `legal_provisions` | 11,330 |
-| `data_mart_ingestion_runs` | 7 |
-| `data_mart_raw_records` | 657 |
-| `data_mart_normalized_records` | 514 |
+| `data_mart_ingestion_runs` | 11 |
+| `data_mart_raw_records` | 658 |
+| `data_mart_normalized_records` | 559 |
+| `organization_units` actual Asan | 34 |
+| `assignment_rules` actual Asan | 110 |
 
 Knowledge purpose distribution:
 
 | Purpose | Rows |
 | --- | ---: |
 | `OFFICIAL_LAW` | 236 |
-| `PROCEDURE` | 425 |
+| `PROCEDURE` | 469 |
 | `HISTORICAL_CASE` | 34 |
 | `STYLE_REFERENCE` | 24 |
 | `EVALUATION_TRAINING` | 64 |
 | `LOCAL_ORDINANCE_REFERENCE` | 1 |
-| `UNVERIFIED_LEGACY` | 13 |
+| `ORGANIZATION_ROUTING` | 1 |
 
 Evaluation artifacts:
 
@@ -155,11 +158,12 @@ Latest deterministic judge metrics:
 | Evidence title relevance | 1.0000 |
 | Template completeness | 1.0000 |
 | Safety failures | 0 |
-| Data readiness score | 0.8333 |
+| Data readiness score | 1.0000 |
 
-The score is limited by the missing SGIS administrative-boundary layer.
-The completion audit also marks binary HWP manual full-text extraction as
-`LIMITED` until `WORKER_HWP_TEXT_COMMAND` is configured.
+The completion audit status is `PASS`. Binary HWP manuals are all retained as raw
+records (`142`), but only meaningful extracted text is searchable (`44` promoted
+records). Low-quality table-placeholder extractions (`98`) are blocked from
+retrieval and recorded in `data_mart_load_errors`.
 
 ## Current Spatial Load Snapshot
 
@@ -172,7 +176,7 @@ Last verified local load:
 | National parking lot standard data | `ai-rag-engine/data/spatial/asan_parking_lots.csv` | 43 |
 | Ministry of the Interior and Safety CCTV information | `ai-rag-engine/data/spatial/asan_cctv.csv` | 500 |
 | National parking/standing restriction-zone standard data | `ai-rag-engine/data/spatial/asan_parking_restrictions.csv` | 249 |
-| SGIS boundary file | `ai-rag-engine/data/spatial/asan_admin_boundaries.geojson` | not loaded yet; SGIS credentials/API URL are not configured |
+| SGIS boundary file | `ai-rag-engine/data/spatial/asan_admin_boundaries.geojson` | 17 |
 
 ## Excluded For Current Scope
 

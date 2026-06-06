@@ -213,17 +213,19 @@ def run_external_command(
         result = subprocess.run(
             command,
             capture_output=True,
-            text=True,
             timeout=timeout_seconds,
             check=False,
         )
     except (OSError, subprocess.TimeoutExpired) as exception:
         raise RuntimeError(f"{label} failed: {exception}") from exception
     allowed_codes = {0, 1} if allow_exit_one else {0}
+    stdout = result.stdout.decode("utf-8", errors="replace")
+    stderr = result.stderr.decode("utf-8", errors="replace")
+    decoded = subprocess.CompletedProcess(command, result.returncode, stdout, stderr)
     if result.returncode not in allowed_codes:
-        reason = (result.stderr or result.stdout or "unknown failure").strip()
+        reason = (stderr or stdout or "unknown failure").strip()
         raise RuntimeError(f"{label} failed with exit {result.returncode}: {reason[:500]}")
-    return result
+    return decoded
 
 
 def redact_text(value: str) -> tuple[str, list[dict[str, object]]]:

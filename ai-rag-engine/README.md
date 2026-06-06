@@ -181,6 +181,7 @@ python sync_local_ordinances.py
 python sync_auxiliary_sources.py
 python sync_minwon_forms.py
 python sync_local_file_data_mart.py
+python sync_organization_chart.py
 python sync_spatial_sources.py
 python run_trust_pipeline_evaluation.py
 python run_completion_audit.py
@@ -190,19 +191,20 @@ Current verified DB state:
 
 | Area | Rows |
 | --- | ---: |
-| National law documents | 131 |
-| Asan ordinance reference documents | 105 |
+| National law documents | 236 |
+| Asan ordinance reference documents | 1 |
 | Chungnam civil complaint form/procedure records | 360 |
-| `knowledge_documents` total | 797 |
+| Asan organization routing reference | 34 units / 110 rules |
+| `knowledge_documents` total | 842 |
 | `legal_provisions` | 11,330 |
-| `data_mart_raw_records` | 657 |
-| `data_mart_normalized_records` | 514 |
+| `data_mart_raw_records` | 658 |
+| `data_mart_normalized_records` | 559 |
 | Asan address points | 70,533 |
 | Parks | 121 |
 | Parking lots | 43 |
 | CCTV | 500 |
 | Parking restriction zones | 249 |
-| SGIS/admin boundaries | 0 |
+| SGIS/admin boundaries | 17 |
 
 Evaluation outputs:
 
@@ -215,8 +217,11 @@ Evaluation outputs:
 Current evaluation status is `PASS_WITH_LIMITATIONS`. The deterministic synthetic
 judge run passed classification, department Top-3, blocker, claim evidence
 coverage, official law-title relevance, template completeness, and safety checks.
-This is still not a production-quality claim until SGIS boundaries and HWP text
-extraction are completed. Department organization data is excluded from the
-current active scope by user request, and AIHub/local historical data remains
-blocked from legal-evidence or fine-tuning use until privacy and label quality
-are proven.
+The completion audit status is `PASS`. This is still not a production-quality
+claim. SGIS boundaries are loaded, and the provided `asan_city_organization.docx`
+is loaded as routing support with 34 organization units and 110 assignment
+rules. Binary HWP manuals are all retained as raw records. Only 44 HWP files with
+meaningful extracted text are promoted into searchable procedure knowledge; 98
+low-quality table-placeholder extractions are blocked from retrieval and logged
+in `data_mart_load_errors`. AIHub/local historical data remains blocked from
+legal-evidence or fine-tuning use until privacy and label quality are proven.

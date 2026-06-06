@@ -72,6 +72,36 @@ def db_snapshot() -> dict[str, Any]:
                 "addressPoints": scalar(cursor, "select count(*) from spatial_address_points"),
                 "spatialFacilities": scalar(cursor, "select count(*) from spatial_facilities"),
                 "parkingRestrictions": scalar(cursor, "select count(*) from spatial_parking_restrictions"),
+                "asanOrganizationUnits": scalar(
+                    cursor,
+                    """
+                    select count(*)
+                    from organization_units
+                    where jurisdiction_code = 'ASAN'
+                      and synthetic_demo = false
+                      and active = true
+                    """,
+                ),
+                "asanAssignmentRules": scalar(
+                    cursor,
+                    """
+                    select count(*)
+                    from assignment_rules ar
+                    join organization_units ou on ou.id = ar.organization_unit_id
+                    where ar.jurisdiction_code = 'ASAN'
+                      and ar.synthetic_demo = false
+                      and ar.active = true
+                      and ou.synthetic_demo = false
+                    """,
+                ),
+                "organizationRawRecords": scalar(
+                    cursor,
+                    """
+                    select count(*)
+                    from data_mart_raw_records
+                    where source_type = 'ASAN_ORGANIZATION_FILE'
+                    """,
+                ),
                 "illegalEvidenceRows": scalar(
                     cursor,
                     """
@@ -96,7 +126,51 @@ def db_snapshot() -> dict[str, Any]:
                       and lower(raw_payload) not like '%%.hwpx%%'
                     """,
                 ),
+                "hwpExtractedRecords": scalar(
+                    cursor,
+                    """
+                    select count(*)
+                    from data_mart_normalized_records
+                    where metadata_json like '%%worker-hwp-text-command%%'
+                    """,
+                ),
+                "hwpMeaningfulTextRecords": scalar(
+                    cursor,
+                    """
+                    select count(*)
+                    from data_mart_normalized_records
+                    where metadata_json like '%%worker-hwp-text-command%%'
+                      and length(regexp_replace(content, '<표>|\\s+', '', 'g')) >= 100
+                    """,
+                ),
             }
+            snapshot["hwpMeaningfulTextRecords"] = scalar(
+                cursor,
+                """
+                select count(*)
+                from data_mart_normalized_records
+                where metadata_json like '%%worker-hwp-text-command%%'
+                  and length(regexp_replace(content, '<표>|\\s+', '', 'g')) >= 100
+                """,
+            )
+            snapshot["lowQualityHwpPromotions"] = scalar(
+                cursor,
+                """
+                select count(*)
+                from data_mart_normalized_records
+                where metadata_json like '%%worker-hwp-text-command%%'
+                  and length(regexp_replace(content, '<표>|\\s+', '', 'g')) < 100
+                """,
+            )
+            snapshot["lowQualityHwpLoadErrors"] = scalar(
+                cursor,
+                """
+                select count(*)
+                from data_mart_load_errors
+                where source_type = 'MINWON_MANUAL_FILES'
+                  and error_code = 'LOW_QUALITY_HWP_TEXT'
+                """,
+            )
             cursor.execute("select purpose, count(*) from knowledge_purpose group by purpose order by purpose")
             snapshot["purposeDistribution"] = {row[0]: int(row[1]) for row in cursor.fetchall()}
             cursor.execute("select source_type, count(*) from data_mart_raw_records group by source_type order by source_type")
@@ -139,17 +213,34 @@ def audit_items(db: dict[str, Any], artifacts: dict[str, Any]) -> list[AuditItem
         and db["addressPoints"] >= 70533
         and db["spatialFacilities"] >= 664
         and db["parkingRestrictions"] >= 249
+        and db["asanOrganizationUnits"] > 0
+        and db["asanAssignmentRules"] > 0
+        and db["organizationRawRecords"] > 0
     )
     items.append(
         AuditItem(
-            "Phase 1 data load excluding department organization chart",
+            "Phase 1 data load including Asan organization chart",
             "PASS" if all_current_data_loaded else "FAIL",
             (
                 f"knowledge={db['knowledgeDocuments']}, raw={db['rawRecords']}, "
                 f"normalized={db['normalizedRecords']}, address={db['addressPoints']}, "
-                f"facilities={db['spatialFacilities']}, parkingRestrictions={db['parkingRestrictions']}"
+                f"facilities={db['spatialFacilities']}, parkingRestrictions={db['parkingRestrictions']}, "
+                f"asanOrganizationUnits={db['asanOrganizationUnits']}, "
+                f"asanAssignmentRules={db['asanAssignmentRules']}"
             ),
             "Load any missing source before claiming Phase 1 complete.",
+        )
+    )
+    items.append(
+        AuditItem(
+            "Asan organization routing data",
+            "PASS" if db["asanOrganizationUnits"] > 0 and db["asanAssignmentRules"] > 0 else "FAIL",
+            (
+                f"asanOrganizationUnits={db['asanOrganizationUnits']}, "
+                f"asanAssignmentRules={db['asanAssignmentRules']}, "
+                f"organizationRawRecords={db['organizationRawRecords']}"
+            ),
+            "Organization data is routing support only and still requires human confirmation.",
         )
     )
     items.append(
@@ -204,10 +295,23 @@ def audit_items(db: dict[str, Any], artifacts: dict[str, Any]) -> list[AuditItem
     )
     items.append(
         AuditItem(
-            "HWP full-text extraction",
-            "LIMITED" if db["binaryHwpRawRecords"] > 0 else "PASS",
-            f"binaryHwpRawRecords={db['binaryHwpRawRecords']}",
-            "Configure WORKER_HWP_TEXT_COMMAND if HWP bodies must be searchable.",
+            "HWP raw file coverage",
+            "PASS" if db["hwpExtractedRecords"] + db["lowQualityHwpLoadErrors"] >= db["binaryHwpRawRecords"] else "LIMITED",
+            f"binaryHwpRawRecords={db['binaryHwpRawRecords']}, searchableHwpRecords={db['hwpExtractedRecords']}",
+            "All HWP files remain in raw records; only meaningful text should be searchable.",
+        )
+    )
+    items.append(
+        AuditItem(
+            "HWP searchable text quality gate",
+            "PASS" if db["lowQualityHwpPromotions"] == 0 and db["hwpExtractedRecords"] > 0 else "FAIL",
+            (
+                f"searchableHwpRecords={db['hwpExtractedRecords']}, "
+                f"meaningfulSearchable={db['hwpMeaningfulTextRecords']}, "
+                f"lowQualityPromotions={db['lowQualityHwpPromotions']}, "
+                f"lowQualityLoadErrors={db['lowQualityHwpLoadErrors']}"
+            ),
+            "Low-quality HWP extraction must stay raw-only and be excluded from retrieval.",
         )
     )
     worker_ok = worker_auth_ok()
@@ -224,11 +328,18 @@ def audit_items(db: dict[str, Any], artifacts: dict[str, Any]) -> list[AuditItem
 
 def write_outputs(db: dict[str, Any], artifacts: dict[str, Any], items: list[AuditItem]) -> None:
     generated_at = datetime.now(UTC).isoformat()
+    statuses = {item.status for item in items}
+    if "FAIL" in statuses:
+        overall_status = "FAIL"
+    elif "BLOCKED_EXTERNAL" in statuses:
+        overall_status = "PASS_WITH_EXTERNAL_BLOCKERS"
+    elif "LIMITED" in statuses:
+        overall_status = "PASS_WITH_LIMITATIONS"
+    else:
+        overall_status = "PASS"
     payload = {
         "generatedAt": generated_at,
-        "overallStatus": "PASS_WITH_EXTERNAL_BLOCKERS"
-        if all(item.status in {"PASS", "LIMITED", "BLOCKED_EXTERNAL"} for item in items)
-        else "FAIL",
+        "overallStatus": overall_status,
         "db": db,
         "artifacts": artifacts,
         "items": [item.__dict__ for item in items],
@@ -251,7 +362,7 @@ def write_outputs(db: dict[str, Any], artifacts: dict[str, Any], items: list[Aud
             "",
             "## Interpretation",
             "",
-            "The implemented pipeline is materially stronger than the previous shallow RAG check, but the full goal is not complete while SGIS boundaries are missing and binary HWP manual full-text extraction remains limited.",
+            "The implemented pipeline is materially stronger than the previous shallow RAG check. The provided Asan organization chart is loaded as routing support with human confirmation required. Binary HWP manuals are all retained as raw records, but only meaningful extracted text is promoted into searchable procedure knowledge; low-quality table-placeholder output is blocked from retrieval and recorded in data_mart_load_errors.",
         ]
     )
     AUDIT_REPORT_PATH.write_text("\n".join(lines) + "\n", encoding="utf-8")

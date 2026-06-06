@@ -13,6 +13,8 @@ import hashlib
 import json
 import os
 import re
+import shlex
+import subprocess
 import uuid
 import zipfile
 from dataclasses import dataclass
@@ -29,6 +31,7 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent
 MAX_TEXT_CHARS = int(os.getenv("LOCAL_FILE_NORMALIZED_MAX_CHARS", "12000"))
+MIN_HWP_MEANINGFUL_CHARS = int(os.getenv("LOCAL_FILE_HWP_MIN_MEANINGFUL_CHARS", "100"))
 SUPPORTED_TEXT_SUFFIXES = {".txt", ".csv", ".json", ".md"}
 ZIP_TEXT_SUFFIXES = {".hwpx", ".xlsx"}
 
@@ -41,6 +44,12 @@ class LocalSource:
     purpose: str
     document_type: str
     jurisdiction_code: str | None = None
+
+
+class LowQualityHwpText(RuntimeError):
+    def __init__(self, meaningful_chars: int) -> None:
+        super().__init__(f"HWP extracted text has only {meaningful_chars} meaningful chars")
+        self.meaningful_chars = meaningful_chars
 
 
 SOURCES = (
@@ -152,6 +161,11 @@ def normalize_space(text: str) -> str:
     return re.sub(r"\s+", " ", text.replace("\x00", " ")).strip()
 
 
+def meaningful_text_length(text: str) -> int:
+    stripped = re.sub(r"<표>|\s+", "", text)
+    return len(stripped)
+
+
 def xml_text_from_zip(path: Path) -> str:
     parts: list[str] = []
     with zipfile.ZipFile(path) as archive:
@@ -169,6 +183,24 @@ def xml_text_from_zip(path: Path) -> str:
             if sum(len(part) for part in parts) >= MAX_TEXT_CHARS:
                 break
     return "\n".join(parts)[:MAX_TEXT_CHARS]
+
+
+def run_text_command(command_template: str, path: Path, label: str) -> str:
+    command = shlex.split(command_template.format(input=str(path)), posix=False)
+    if "{input}" not in command_template:
+        command.append(str(path))
+    result = subprocess.run(
+        command,
+        capture_output=True,
+        timeout=int(os.getenv("WORKER_EXTERNAL_COMMAND_TIMEOUT_SECONDS", "60")),
+        check=False,
+    )
+    stdout = result.stdout.decode("utf-8", errors="replace")
+    stderr = result.stderr.decode("utf-8", errors="replace")
+    if result.returncode != 0:
+        reason = (stderr or stdout or "unknown failure").strip()
+        raise RuntimeError(f"{label} failed with exit {result.returncode}: {reason[:500]}")
+    return stdout
 
 
 def zip_manifest(path: Path) -> dict[str, object]:
@@ -220,6 +252,20 @@ def iter_files(source: LocalSource) -> Iterable[Path]:
     )
 
 
+def selected_source_types() -> set[str] | None:
+    value = os.getenv("LOCAL_FILE_SOURCE_TYPES", "").strip()
+    if not value:
+        return None
+    return {item.strip() for item in value.split(",") if item.strip()}
+
+
+def selected_suffixes() -> set[str] | None:
+    value = os.getenv("LOCAL_FILE_SUFFIXES", "").strip()
+    if not value:
+        return None
+    return {item.strip().lower() for item in value.split(",") if item.strip()}
+
+
 def extract_normalized_text(path: Path, source: LocalSource) -> tuple[str, dict[str, object]] | None:
     suffix = path.suffix.lower()
     metadata: dict[str, object] = {"extractor": "metadata-only"}
@@ -229,6 +275,13 @@ def extract_normalized_text(path: Path, source: LocalSource) -> tuple[str, dict[
     elif suffix in ZIP_TEXT_SUFFIXES:
         text = xml_text_from_zip(path)
         metadata["extractor"] = "zip-xml-text"
+    elif suffix == ".hwp":
+        command = os.getenv("WORKER_HWP_TEXT_COMMAND", "").strip()
+        if not command:
+            return None
+        text = run_text_command(command, path, "WORKER_HWP_TEXT_COMMAND")
+        metadata["extractor"] = "worker-hwp-text-command"
+        metadata["hwpMeaningfulChars"] = meaningful_text_length(text)
     elif suffix == ".zip":
         manifest = zip_manifest(path)
         text = json.dumps(manifest, ensure_ascii=False, indent=2)
@@ -240,6 +293,11 @@ def extract_normalized_text(path: Path, source: LocalSource) -> tuple[str, dict[
     if not clean:
         return None
     metadata["piiFindings"] = findings
+    if suffix == ".hwp":
+        metadata["hwpMeaningfulChars"] = meaningful_text_length(clean)
+        if metadata["hwpMeaningfulChars"] < MIN_HWP_MEANINGFUL_CHARS:
+            metadata["skipReason"] = "LOW_QUALITY_HWP_TEXT"
+            raise LowQualityHwpText(int(metadata["hwpMeaningfulChars"]))
     return clean, metadata
 
 
@@ -290,6 +348,58 @@ def finish_run(cursor, run_id: str, count: int, status: str = "COMPLETED", failu
         """,
         (status, now, count, failure, now, run_id),
     )
+
+
+def log_load_error(
+    cursor,
+    run_id: str,
+    raw_id: str | None,
+    source: LocalSource,
+    stage: str,
+    code: str,
+    message: str,
+    retryable: bool,
+) -> None:
+    cursor.execute(
+        """
+        insert into data_mart_load_errors (
+            id, ingestion_run_id, raw_record_id, source_type, error_stage,
+            error_code, error_message, retryable, created_at
+        ) values (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """,
+        (
+            str(uuid.uuid4()),
+            run_id,
+            raw_id,
+            source.source_type,
+            stage,
+            code,
+            message[:2000],
+            retryable,
+            utc_now(),
+        ),
+    )
+
+
+def remove_low_quality_hwp_promotions(cursor, source_id: int) -> int:
+    cursor.execute(
+        """
+        select kd.id
+        from knowledge_documents kd
+        where kd.source_registry_id = %s
+          and lower(kd.source_url) like '%%.hwp'
+          and lower(kd.source_url) not like '%%.hwpx'
+          and length(regexp_replace(kd.content, '<표>|\\s+', '', 'g')) < %s
+        """,
+        (source_id, MIN_HWP_MEANINGFUL_CHARS),
+    )
+    ids = [int(row[0]) for row in cursor.fetchall()]
+    if not ids:
+        return 0
+    cursor.execute("delete from data_mart_normalized_records where knowledge_document_id = any(%s)", (ids,))
+    cursor.execute("delete from knowledge_purpose where knowledge_document_id = any(%s)", (ids,))
+    cursor.execute("delete from knowledge_documents where id = any(%s)", (ids,))
+    return len(ids)
 
 
 def upsert_raw_record(cursor, run_id: str, source_id: int, source: LocalSource, path: Path, payload: dict[str, object]) -> str:
@@ -440,17 +550,49 @@ def upsert_normalized(
 
 def sync() -> dict[str, int]:
     counts: dict[str, int] = {}
+    source_filter = selected_source_types()
+    suffix_filter = selected_suffixes()
     with psycopg2.connect(**connection_kwargs()) as connection:
         with connection.cursor() as cursor:
             for source in SOURCES:
+                if source_filter is not None and source.source_type not in source_filter:
+                    continue
                 source_id = source_registry_id(cursor, source)
                 run_id = start_run(cursor, source_id, source)
                 count = 0
                 try:
+                    if source.source_type == "MINWON_MANUAL_FILES":
+                        removed = remove_low_quality_hwp_promotions(cursor, source_id)
+                        if removed:
+                            log_load_error(
+                                cursor,
+                                run_id,
+                                None,
+                                source,
+                                "CLEANUP",
+                                "REMOVED_LOW_QUALITY_HWP_PROMOTIONS",
+                                f"Removed {removed} previously promoted low-quality HWP knowledge records",
+                                False,
+                            )
                     for path in iter_files(source):
+                        if suffix_filter is not None and path.suffix.lower() not in suffix_filter:
+                            continue
                         payload = file_metadata(path, source)
                         raw_id = upsert_raw_record(cursor, run_id, source_id, source, path, payload)
-                        extracted = extract_normalized_text(path, source)
+                        try:
+                            extracted = extract_normalized_text(path, source)
+                        except LowQualityHwpText as exc:
+                            log_load_error(
+                                cursor,
+                                run_id,
+                                raw_id,
+                                source,
+                                "NORMALIZE",
+                                "LOW_QUALITY_HWP_TEXT",
+                                f"Skipped searchable promotion; meaningfulChars={exc.meaningful_chars}, minimum={MIN_HWP_MEANINGFUL_CHARS}",
+                                False,
+                            )
+                            extracted = None
                         if extracted:
                             content, metadata = extracted
                             metadata = {**payload, **metadata}

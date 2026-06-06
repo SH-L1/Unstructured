@@ -307,6 +307,7 @@ This section is authoritative when terminal rendering of Korean text is broken.
 | 2018-2026 Asan civil complaint manuals | `sync_local_file_data_mart.py` | Included in local file data mart | Procedure reference only |
 | Current Asan ordinance list | `sync_local_file_data_mart.py` | 1 reference record | Reference/department confirmation only |
 | Saeol public complaints from 2021 onward | `sync_local_file_data_mart.py` | 1 source file record | Historical/style/routing support only |
+| Asan city organization chart | `sync_organization_chart.py` | 110 parsed rows, 34 units, 110 assignment rules | Routing support with human confirmation only |
 | AIHub document visual dataset | `sync_local_file_data_mart.py` | 42 file records | Evaluation/training candidate only |
 | AIHub public complaint LLM dataset | `sync_local_file_data_mart.py` | 24 file records | Style/training candidate only |
 | AIHub administrative law LLM dataset | `sync_local_file_data_mart.py` | 22 file records | Evaluation/training candidate only |
@@ -316,17 +317,19 @@ This section is authoritative when terminal rendering of Korean text is broken.
 | Table or group | Rows |
 | --- | ---: |
 | `source_registry` | 11 |
-| `knowledge_documents` | 797 |
+| `knowledge_documents` | 842 |
 | `legal_document_versions` | 236 |
 | `legal_provisions` | 11,330 |
-| `data_mart_raw_records` | 657 |
-| `data_mart_normalized_records` | 514 |
+| `data_mart_raw_records` | 658 |
+| `data_mart_normalized_records` | 559 |
+| Actual Asan `organization_units` | 34 |
+| Actual Asan `assignment_rules` | 110 |
 | `spatial_address_points` | 70,533 |
 | `spatial_facilities` CCTV | 500 |
 | `spatial_facilities` PARK | 121 |
 | `spatial_facilities` PARKING_LOT | 43 |
 | `spatial_parking_restrictions` | 249 |
-| `spatial_admin_boundaries` | 0 |
+| `spatial_admin_boundaries` | 17 |
 
 ### Current Judge Metrics
 
@@ -339,7 +342,7 @@ This section is authoritative when terminal rendering of Korean text is broken.
 | Evidence title relevance | 1.0000 |
 | Template completeness | 1.0000 |
 | Safety failures | 0 |
-| Data readiness score | 0.8333 |
+| Data readiness score | 1.0000 |
 
 The evidence check now verifies expected official law-title relevance, not only
 the existence of a citation ID.
@@ -349,13 +352,13 @@ Completion audit outputs:
 - `ai-rag-engine/data/evaluation/completion_audit.latest.json`
 - `ai-rag-engine/data/evaluation/completion_audit.latest.md`
 
-Current audit status is `PASS_WITH_EXTERNAL_BLOCKERS`: loaded data, worker DB
-authentication, and safety gates pass, but SGIS boundaries and binary HWP
-full-text extraction remain unresolved or limited.
+Current completion audit status is `PASS`: loaded data, SGIS boundaries, worker
+DB authentication, HWP raw retention, HWP searchable quality gate, and safety
+gates pass.
 
 ### Remaining External Inputs
 
-- SGIS administrative boundary data is not loaded yet. Configure a concrete SGIS boundary API URL/credentials or provide `ai-rag-engine/data/spatial/asan_admin_boundaries.geojson`.
+- SGIS administrative boundary data is loaded from `ai-rag-engine/data/spatial/asan_admin_boundaries.geojson` after SGIS API retrieval and coordinate conversion to WGS84.
 - `WORKER_DB_USER` and `WORKER_DB_PASSWORD` now authenticate successfully against the local DB.
-- Binary `.hwp` manuals are loaded as raw file metadata unless a trusted extractor is configured with `WORKER_HWP_TEXT_COMMAND`.
-- Asan organization/work assignment data is intentionally deferred by the user and is not part of the current loaded dataset.
+- Binary `.hwp` manuals are extracted with `WORKER_HWP_TEXT_COMMAND`; all 142 files remain in raw records, 44 meaningful extractions are searchable, and 98 low-quality table-placeholder extractions are blocked from retrieval and logged in `data_mart_load_errors`.
+- `asan_city_organization.docx` is loaded as routing support: 110 parsed duty/contact rows, 34 actual Asan organization units, and 110 assignment rules. It is not legal evidence and does not authorize automatic final assignment.

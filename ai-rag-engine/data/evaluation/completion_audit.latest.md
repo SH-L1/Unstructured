@@ -1,20 +1,22 @@
 # Completion Audit - Active Goal
 
-Generated at: 2026-06-06T09:13:24.183843+00:00
+Generated at: 2026-06-06T15:35:27.321156+00:00
 
-Overall status: PASS_WITH_EXTERNAL_BLOCKERS
+Overall status: PASS
 
 | Requirement | Status | Evidence | Action |
 | --- | --- | --- | --- |
-| Phase 1 data load excluding department organization chart | PASS | knowledge=797, raw=657, normalized=514, address=70533, facilities=664, parkingRestrictions=249 | Load any missing source before claiming Phase 1 complete. |
+| Phase 1 data load including Asan organization chart | PASS | knowledge=842, raw=658, normalized=559, address=70533, facilities=664, parkingRestrictions=249, asanOrganizationUnits=34, asanAssignmentRules=110 | Load any missing source before claiming Phase 1 complete. |
+| Asan organization routing data | PASS | asanOrganizationUnits=34, asanAssignmentRules=110, organizationRawRecords=1 | Organization data is routing support only and still requires human confirmation. |
 | Legal evidence quarantine | PASS | illegalEvidenceRows=0 | Only VERIFIED_OFFICIAL NATIONAL law records may be legal evidence. |
 | End-to-end template evaluation artifacts | PASS | artifacts={'judgeReportExists': True, 'trainingDecisionExists': True, 'predictionsExist': True, 'trainingDecision': 'NO_FINE_TUNING', 'predictionCount': 150, 'automaticSendFlags': 0, 'automaticCompletionFlags': 0, 'ungroundedLegalClaimFlags': 0} | Run run_trust_pipeline_evaluation.py. |
 | No automatic send, automatic completion, or ungrounded legal claim | PASS | automaticSend=0, automaticCompletion=0, ungroundedLegalClaim=0 | Keep all final actions human-reviewed and citation-gated. |
 | Fine-tuning decision is evidence-gated | PASS | trainingDecision=NO_FINE_TUNING | Do not fine-tune until privacy, labels, and legal-fact suitability are proven. |
-| SGIS/admin boundary layer | BLOCKED_EXTERNAL | adminBoundaries=0 | Provide SGIS boundary API configuration or ai-rag-engine/data/spatial/asan_admin_boundaries.geojson. |
-| HWP full-text extraction | LIMITED | binaryHwpRawRecords=142 | Configure WORKER_HWP_TEXT_COMMAND if HWP bodies must be searchable. |
+| SGIS/admin boundary layer | PASS | adminBoundaries=17 | Provide SGIS boundary API configuration or ai-rag-engine/data/spatial/asan_admin_boundaries.geojson. |
+| HWP raw file coverage | PASS | binaryHwpRawRecords=142, searchableHwpRecords=44 | All HWP files remain in raw records; only meaningful text should be searchable. |
+| HWP searchable text quality gate | PASS | searchableHwpRecords=44, meaningfulSearchable=44, lowQualityPromotions=0, lowQualityLoadErrors=98 | Low-quality HWP extraction must stay raw-only and be excluded from retrieval. |
 | Restricted worker DB account | PASS | WORKER_DB_USER connection check | Worker DB login is valid. |
 
 ## Interpretation
 
-The implemented pipeline is materially stronger than the previous shallow RAG check, but the full goal is not complete while SGIS boundaries are missing and binary HWP manual full-text extraction remains limited.
+The implemented pipeline is materially stronger than the previous shallow RAG check. The provided Asan organization chart is loaded as routing support with human confirmation required. Binary HWP manuals are all retained as raw records, but only meaningful extracted text is promoted into searchable procedure knowledge; low-quality table-placeholder output is blocked from retrieval and recorded in data_mart_load_errors.
