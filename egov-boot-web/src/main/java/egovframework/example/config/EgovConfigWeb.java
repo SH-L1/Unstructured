@@ -77,6 +77,7 @@ public class EgovConfigWeb implements WebMvcConfigurer, ApplicationContextAware 
         registry.addResourceHandler("/images/**").addResourceLocations("classpath:/static/images/");
         registry.addResourceHandler("/img/**").addResourceLocations("classpath:/static/img/");
         registry.addResourceHandler("/js/**").addResourceLocations("classpath:/static/js/");
+        registry.addResourceHandler("/dashboard/**").addResourceLocations("classpath:/static/dashboard/");
 
         // favicon.ico 처리를 위한 빈 핸들러 (404 오류 방지)
         registry.addResourceHandler("/favicon.ico")

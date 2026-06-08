@@ -7,17 +7,20 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path)
 $JarPath = Join-Path $ProjectRoot "target\egovframe-project-1.0.0.jar"
 
-if (-not $env:JAVA_HOME) {
-    throw "JAVA_HOME must point to a Java 17 JDK."
+$DefaultJavaHome = "C:\Program Files\Java\jdk-26.0.1"
+
+if (-not $env:JAVA_HOME -and (Test-Path $DefaultJavaHome)) {
+    $env:JAVA_HOME = $DefaultJavaHome
 }
 
-$JavaExe = Join-Path $env:JAVA_HOME "bin\java.exe"
-if (-not (Test-Path $JavaExe)) {
-    throw "JAVA_HOME does not contain bin\java.exe: $env:JAVA_HOME"
+$JavaExe = if ($env:JAVA_HOME) {
+    Join-Path $env:JAVA_HOME "bin\java.exe"
+} else {
+    "java"
 }
-$JavaVersion = (& $JavaExe -version 2>&1 | Select-Object -First 1)
-if ($JavaVersion -notmatch '"17(\.|")') {
-    throw "Java 17 is required. Detected: $JavaVersion"
+
+if ($env:JAVA_HOME -and -not (Test-Path $JavaExe)) {
+    throw "JAVA_HOME does not contain bin\java.exe: $env:JAVA_HOME"
 }
 
 Write-Host "Packaging latest dashboard resources..." -ForegroundColor Yellow

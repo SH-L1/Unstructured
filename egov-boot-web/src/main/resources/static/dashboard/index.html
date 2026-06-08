@@ -4,13 +4,13 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>민원 근거 검토 작업 공간</title>
-    <link rel="stylesheet" href="./styles.css" />
-    <script src="./app.js" defer></script>
+    <link rel="stylesheet" href="/dashboard/styles.css" />
+    <script src="/dashboard/app.js" defer></script>
   </head>
   <body>
     <header>
       <div>
-        <p class="eyebrow">SYNTHETIC_DEMO · eGovFrame</p>
+        <p class="eyebrow">민원 처리 지원 · eGovFrame</p>
         <h1>민원 근거 검토 작업 공간</h1>
         <p class="lede">AI 결과는 제안입니다. 근거 확인, 검토, 분리된 승인을 거쳐야 수동 완료로 기록할 수 있습니다.</p>
       </div>
@@ -77,6 +77,11 @@
             <button id="draftButton" type="button">근거 기반 초안 요청</button>
             <button id="completeButton" type="button">승인 후 수동 완료 기록</button>
           </div>
+          <p id="actionHint" class="action-hint">민원을 접수하면 다음 처리 단계가 표시됩니다.</p>
+          <div class="workflow-board" aria-label="민원 처리 단계">
+            <div id="workflowSteps" class="workflow-steps"></div>
+            <div id="nextAction" class="next-action">대기 중</div>
+          </div>
         </section>
 
         <section class="grid">
@@ -95,21 +100,21 @@
         </section>
 
         <section class="panel">
-          <p class="eyebrow">불변 근거 스냅샷</p>
-          <h2>출처·검증·시행 상태</h2>
-          <p class="hint">검색 순위 값은 승인 근거로 표시하지 않습니다. 미검증 레거시·과거 사례·문체 자료는 법적 근거로 사용할 수 없습니다.</p>
+          <p class="eyebrow">근거 자료</p>
+          <h2>출처와 적용 기간</h2>
+          <p class="hint">민원 답변에 사용할 수 있는 공식 자료만 보여줍니다. 참고 사례나 문체 자료는 법적 근거로 표시하지 않습니다.</p>
           <div id="evidence" class="evidence-grid empty">연결된 근거가 없습니다.</div>
         </section>
 
         <section class="grid">
           <article class="panel">
-            <p class="eyebrow">결정론 검증</p>
-            <h2>하드 게이트 결과</h2>
-            <div id="verificationResults" class="stack empty">검증 결과가 없습니다.</div>
+            <p class="eyebrow">필수 확인</p>
+            <h2>답변 전 확인 결과</h2>
+            <div id="verificationResults" class="stack empty">확인 결과가 없습니다.</div>
           </article>
           <article class="panel">
-            <p class="eyebrow">AI 실행 감사</p>
-            <h2>모델·버전·비용·지연</h2>
+            <p class="eyebrow">AI 처리 기록</p>
+            <h2>처리 시간과 재시도</h2>
             <div id="aiRuns" class="stack empty">AI 실행 기록이 없습니다.</div>
           </article>
         </section>
@@ -120,7 +125,7 @@
             <h2>검토·승인 분리</h2>
             <strong id="draftStatus">초안 없음</strong>
           </div>
-          <pre id="draftText" class="draft-text">검증된 공식 근거가 있어야 초안이 생성됩니다.</pre>
+          <pre id="draftText" class="draft-text">확인된 공식 근거가 있어야 초안이 생성됩니다.</pre>
           <div id="draftClaims" class="stack empty">구조화 주장이 없습니다.</div>
           <label>검토 또는 승인 메모
             <textarea id="reviewNotes" class="notes" placeholder="결정 사유를 기록합니다."></textarea>

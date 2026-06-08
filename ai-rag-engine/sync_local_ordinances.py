@@ -15,7 +15,10 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
-import psycopg2
+try:
+    import psycopg2
+except ImportError:  # pragma: no cover - exercised in dependency-light unit tests
+    psycopg2 = None
 from dotenv import load_dotenv
 
 from data.API.law_api_client import LAW_SITE_BASE_URL, format_detail_link, request_law_detail, search_ordinances
@@ -277,7 +280,7 @@ def upsert_document(cursor, source_id: int, document: LocalOrdinanceDocument) ->
         "content": document.content,
         "keywords": document.title[:500],
         "legal_basis": document.title[:500],
-        "purpose": "OFFICIAL_LAW",
+        "purpose": "LOCAL_ORDINANCE_REFERENCE",
         "verification_status": "VERIFIED_INTERNAL",
         "jurisdiction_code": document.jurisdiction_code,
         "effective_from": document.effective_from,
@@ -309,6 +312,7 @@ def upsert_document(cursor, source_id: int, document: LocalOrdinanceDocument) ->
                 effective_from = %(effective_from)s,
                 effective_to = null,
                 content_hash = %(content_hash)s,
+                source_version = %(source_version)s,
                 updated_at = %(updated_at)s
             where id = %(id)s
             returning id
@@ -337,7 +341,7 @@ def upsert_document(cursor, source_id: int, document: LocalOrdinanceDocument) ->
         """
         insert into knowledge_purpose (
             knowledge_document_id, purpose, legal_evidence_allowed, created_at, updated_at
-        ) values (%s, 'OFFICIAL_LAW', false, %s, %s)
+        ) values (%s, 'LOCAL_ORDINANCE_REFERENCE', false, %s, %s)
         on conflict (knowledge_document_id, purpose) do update set
             legal_evidence_allowed = false,
             updated_at = excluded.updated_at
@@ -379,6 +383,8 @@ def mark_sync_success(cursor, source_id: int, documents: list[LocalOrdinanceDocu
 def sync() -> int:
     if os.getenv("ASAN_ORDINANCE_SYNC_ENABLED", "false").lower() != "true":
         raise RuntimeError("Set ASAN_ORDINANCE_SYNC_ENABLED=true to run Asan ordinance synchronization")
+    if psycopg2 is None:
+        raise RuntimeError("Install psycopg2 before synchronizing Asan ordinances")
     interval_minutes = int(os.getenv("ASAN_ORDINANCE_INTERVAL_MINUTES", "1440"))
     jurisdiction_code = os.getenv("ASAN_ORDINANCE_JURISDICTION_CODE", DEFAULT_JURISDICTION_CODE).strip()
     documents = collect_documents()

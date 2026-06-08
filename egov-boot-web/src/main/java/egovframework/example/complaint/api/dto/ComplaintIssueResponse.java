@@ -15,11 +15,12 @@ public record ComplaintIssueResponse(
 		String processability,
 		String status,
 		List<String> departmentCandidates,
+		List<DepartmentCandidateResponse> departmentCandidateDetails,
 		List<String> locationCandidates
 ) {
 	public static ComplaintIssueResponse from(
 			ComplaintIssue issue,
-			List<String> departmentCandidates,
+			List<DepartmentCandidateResponse> departmentCandidates,
 			List<String> locationCandidates
 	) {
 		return new ComplaintIssueResponse(
@@ -32,6 +33,7 @@ public record ComplaintIssueResponse(
 				issue.getExpressionRisk(),
 				issue.getProcessability(),
 				issue.getStatus(),
+				departmentCandidates.stream().map(DepartmentCandidateResponse::code).toList(),
 				departmentCandidates,
 				locationCandidates
 		);

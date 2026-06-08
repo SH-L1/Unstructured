@@ -5,6 +5,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import re
 from pathlib import Path
 
@@ -84,6 +85,29 @@ def recall_at_k(expected: list[str], actual: list[str], k: int = 10) -> float:
     return len(expected_set.intersection(actual[:k])) / len(expected_set)
 
 
+def reciprocal_rank_at_k(expected: list[str], actual: list[str], k: int = 10) -> float:
+    expected_set = set(expected)
+    if not expected_set:
+        return 1.0
+    for index, evidence_id in enumerate(actual[:k], start=1):
+        if evidence_id in expected_set:
+            return 1.0 / index
+    return 0.0
+
+
+def ndcg_at_k(expected: list[str], actual: list[str], k: int = 10) -> float:
+    expected_set = set(expected)
+    if not expected_set:
+        return 1.0
+    dcg = 0.0
+    for index, evidence_id in enumerate(actual[:k], start=1):
+        if evidence_id in expected_set:
+            dcg += 1.0 / math.log2(index + 1)
+    ideal_hits = min(len(expected_set), k)
+    ideal_dcg = sum(1.0 / math.log2(index + 1) for index in range(1, ideal_hits + 1))
+    return dcg / ideal_dcg if ideal_dcg else 1.0
+
+
 def evaluate(golden: list[dict], predictions: list[dict]) -> dict[str, float]:
     predicted_by_id = {item["caseId"]: item for item in predictions}
     if set(predicted_by_id) != {item["caseId"] for item in golden}:
@@ -92,6 +116,8 @@ def evaluate(golden: list[dict], predictions: list[dict]) -> dict[str, float]:
     type_hits = 0
     department_hits = 0
     retrieval_recall = 0.0
+    retrieval_mrr = 0.0
+    retrieval_ndcg = 0.0
     evidence_coverage = 0.0
     blocker_hits = 0
     safety_failures = 0
@@ -100,7 +126,11 @@ def evaluate(golden: list[dict], predictions: list[dict]) -> dict[str, float]:
         actual = predicted_by_id[expected["caseId"]]
         type_hits += actual.get("complaintType") == expected["complaintType"]
         department_hits += expected["departmentCode"] in actual.get("departmentTop3", [])[:3]
-        retrieval_recall += recall_at_k(expected.get("requiredEvidenceIds", []), actual.get("retrievedEvidenceIds", []))
+        required_evidence_ids = expected.get("requiredEvidenceIds", [])
+        retrieved_evidence_ids = actual.get("retrievedEvidenceIds", [])
+        retrieval_recall += recall_at_k(required_evidence_ids, retrieved_evidence_ids)
+        retrieval_mrr += reciprocal_rank_at_k(required_evidence_ids, retrieved_evidence_ids)
+        retrieval_ndcg += ndcg_at_k(required_evidence_ids, retrieved_evidence_ids)
         claims = actual.get("claims", [])
         covered = sum(bool(claim.get("evidenceIds")) for claim in claims)
         evidence_coverage += 1.0 if not claims else covered / len(claims)
@@ -112,6 +142,8 @@ def evaluate(golden: list[dict], predictions: list[dict]) -> dict[str, float]:
         "classificationAccuracy": type_hits / count,
         "departmentTop3": department_hits / count,
         "recallAt10": retrieval_recall / count,
+        "mrrAt10": retrieval_mrr / count,
+        "ndcgAt10": retrieval_ndcg / count,
         "claimEvidenceCoverage": evidence_coverage / count,
         "blockerAccuracy": blocker_hits / count,
         "safetyFailures": float(safety_failures),
@@ -133,6 +165,8 @@ def main() -> None:
     failed = (
         metrics["classificationAccuracy"] < 0.95
         or metrics["recallAt10"] < 0.95
+        or metrics["mrrAt10"] < 0.90
+        or metrics["ndcgAt10"] < 0.90
         or metrics["claimEvidenceCoverage"] < 1.0
         or metrics["departmentTop3"] < 0.95
         or metrics["blockerAccuracy"] < 0.95

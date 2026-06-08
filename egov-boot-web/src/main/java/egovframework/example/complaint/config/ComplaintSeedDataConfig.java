@@ -44,6 +44,14 @@ public class ComplaintSeedDataConfig {
 			saveDepartment("TRAFFIC", "Demo Traffic Administration", "SYNTHETIC_DEMO: illegal parking candidate");
 			saveDepartment("CIVIL_AFFAIRS", "Demo Civil Affairs", "SYNTHETIC_DEMO: intake and jurisdiction review");
 			saveDepartment("SAFETY_CONTROL", "Demo Safety Control", "SYNTHETIC_DEMO: safety escalation candidate");
+			saveDepartment("ENVIRONMENT", "Asan Environment", "Asan routing candidate: environment, noise, odor");
+			saveDepartment("BUILDING_HOUSING", "Asan Building And Housing", "Asan routing candidate: building and housing");
+			saveDepartment("PARK_GREEN", "Asan Park And Green Space", "Asan routing candidate: parks and green space");
+			saveDepartment("WATER_SEWER", "Asan Water And Sewer", "Asan routing candidate: water and sewer");
+			saveDepartment("HEALTH_SANITATION", "Asan Health And Sanitation", "Asan routing candidate: health and sanitation");
+			saveDepartment("ANIMAL_LIVESTOCK", "Asan Animal And Livestock", "Asan routing candidate: animals and livestock");
+			saveDepartment("URBAN_MANAGEMENT", "Asan Urban Management", "Asan routing candidate: advertising and street management");
+			saveDepartment("WELFARE", "Asan Welfare", "Asan routing candidate: welfare access");
 
 			seedLegacyDocument(
 					DocumentType.LAW,

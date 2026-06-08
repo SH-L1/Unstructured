@@ -116,6 +116,17 @@ class ComplaintApiSmokeTest {
 		assertThat(detail.path("analysis").path("analysisJson").asText())
 				.contains("\"schemaVersion\":\"complaint-support-v1\"");
 
+		ResponseEntity<JsonNode> unconfirmedDraft = post(
+				"/api/v1/complaints/" + complaintId + "/draft-runs",
+				null,
+				detail.path("complaint").path("version").asLong(),
+				key()
+		);
+		assertThat(unconfirmedDraft.getStatusCode()).isEqualTo(HttpStatus.CONFLICT);
+		assertThat(unconfirmedDraft.getBody().path("error").path("message").asText())
+				.contains("human-selected and verified department");
+
+		detail = confirmFirstDepartment(complaintId);
 		JsonNode draftJob = startRun(
 				complaintId,
 				"draft-runs",
@@ -181,7 +192,7 @@ class ComplaintApiSmokeTest {
 		JsonNode analysisJob = startRun(complaintId, "analysis-runs", first.path("data").path("version").asLong(), key());
 		assertThat(waitForJob(analysisJob.path("data").path("id").asText()).path("status").asText()).isEqualTo("SUCCEEDED");
 
-		JsonNode triageDetail = getOk("/api/v1/complaints/" + complaintId).path("data");
+		JsonNode triageDetail = confirmFirstDepartment(complaintId);
 		String draftRunKey = key();
 		JsonNode draftJob = startRun(
 				complaintId,
@@ -447,7 +458,7 @@ class ComplaintApiSmokeTest {
 		String complaintId = created.path("data").path("id").asText();
 		JsonNode analysisJob = startRun(complaintId, "analysis-runs", created.path("data").path("version").asLong(), key());
 		assertThat(waitForJob(analysisJob.path("data").path("id").asText()).path("status").asText()).isEqualTo("SUCCEEDED");
-		JsonNode detail = getOk("/api/v1/complaints/" + complaintId).path("data");
+		JsonNode detail = confirmFirstDepartment(complaintId);
 		JsonNode draftJob = startRun(
 				complaintId,
 				"draft-runs",
@@ -478,7 +489,7 @@ class ComplaintApiSmokeTest {
 		String complaintId = created.path("data").path("id").asText();
 		JsonNode analysisJob = startRun(complaintId, "analysis-runs", created.path("data").path("version").asLong(), key());
 		assertThat(waitForJob(analysisJob.path("data").path("id").asText()).path("status").asText()).isEqualTo("SUCCEEDED");
-		JsonNode detail = getOk("/api/v1/complaints/" + complaintId).path("data");
+		JsonNode detail = confirmFirstDepartment(complaintId);
 		JsonNode draftJob = startRun(
 				complaintId,
 				"draft-runs",
@@ -519,7 +530,7 @@ class ComplaintApiSmokeTest {
 		String complaintId = created.path("data").path("id").asText();
 		JsonNode analysisJob = startRun(complaintId, "analysis-runs", created.path("data").path("version").asLong(), key());
 		assertThat(waitForJob(analysisJob.path("data").path("id").asText()).path("status").asText()).isEqualTo("SUCCEEDED");
-		JsonNode triage = getOk("/api/v1/complaints/" + complaintId).path("data");
+		JsonNode triage = confirmFirstDepartment(complaintId);
 		JsonNode draftJob = startRun(
 				complaintId,
 				"draft-runs",
@@ -542,7 +553,7 @@ class ComplaintApiSmokeTest {
 		JsonNode analysisJob = startRun(complaintId, "analysis-runs", created.path("data").path("version").asLong(), key());
 		assertThat(waitForJob(analysisJob.path("data").path("id").asText()).path("status").asText()).isEqualTo("SUCCEEDED");
 
-		JsonNode triage = getOk("/api/v1/complaints/" + complaintId).path("data");
+		JsonNode triage = confirmFirstDepartment(complaintId);
 		JsonNode firstDraftJob = startRun(
 				complaintId,
 				"draft-runs",
@@ -601,6 +612,26 @@ class ComplaintApiSmokeTest {
 		);
 		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
 		return response.getBody();
+	}
+
+	private JsonNode confirmFirstDepartment(String complaintId) {
+		JsonNode detail = getOk("/api/v1/complaints/" + complaintId).path("data");
+		JsonNode issue = detail.path("issues").get(0);
+		String issueId = issue.path("id").asText();
+		String departmentCode = issue.path("departmentCandidates").get(0).asText();
+		ResponseEntity<JsonNode> response = post(
+				"/api/v1/issues/" + issueId + "/department-confirmations",
+				Map.of("departmentCode", departmentCode),
+				detail.path("complaint").path("version").asLong(),
+				key()
+		);
+		assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
+		JsonNode confirmed = response.getBody().path("data");
+		assertThat(confirmed.path("issues").get(0).path("departmentCandidateDetails").get(0).path("verified").asBoolean())
+				.isTrue();
+		assertThat(confirmed.path("verificationResults").findValuesAsText("ruleCode"))
+				.contains("DEPARTMENT_SELECTION");
+		return confirmed;
 	}
 
 	private JsonNode decide(String path, long version, boolean approved, String idempotencyKey) {

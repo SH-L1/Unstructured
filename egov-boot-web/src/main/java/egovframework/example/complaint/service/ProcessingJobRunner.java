@@ -330,15 +330,21 @@ public class ProcessingJobRunner {
 						departmentTaskRepository.save(new DepartmentTask(
 								issue,
 								assignmentDepartment,
-								"SYNTHETIC_DEMO assignment rule; human review required"
+								"SYNTHETIC_DEMO assignment rule; human review required; score=100"
 						));
 					}
-					proposal.departmentCandidates().stream().distinct()
+					List<String> candidateCodes = proposal.departmentCandidates().stream().distinct()
 							.filter(ProcessingJobRunner::allowedDepartment)
 							.filter(code -> !code.equals(assignmentDepartment))
-							.forEach(code -> departmentTaskRepository.save(new DepartmentTask(
-									issue, code, "AI candidate; staff confirmation required"
-							)));
+							.limit(3)
+							.toList();
+					for (int candidateIndex = 0; candidateIndex < candidateCodes.size(); candidateIndex++) {
+						String code = candidateCodes.get(candidateIndex);
+						int score = Math.max(10, 80 - (candidateIndex * 20));
+						departmentTaskRepository.save(new DepartmentTask(
+								issue, code, "AI Top-3 candidate; staff confirmation required; score=" + score
+						));
+					}
 					proposal.locationCandidates().stream().distinct()
 							.filter(value -> value != null && !value.isBlank())
 							.forEach(value -> locationCandidateRepository.save(new LocationCandidate(issue, value, "AI_EXTRACTED")));
@@ -427,11 +433,15 @@ public class ProcessingJobRunner {
 
 	private static boolean allowedDepartment(String code) {
 		return code != null && (code.startsWith("SYNTHETIC_DEMO_")
-				|| Set.of("SAFETY_CONTROL", "RESOURCE_RECYCLING", "ROAD", "TRAFFIC", "CIVIL_AFFAIRS").contains(code));
+				|| Set.of(
+						"SAFETY_CONTROL", "RESOURCE_RECYCLING", "ROAD", "TRAFFIC", "CIVIL_AFFAIRS",
+						"ENVIRONMENT", "BUILDING_HOUSING", "PARK_GREEN", "WATER_SEWER",
+						"HEALTH_SANITATION", "ANIMAL_LIVESTOCK", "URBAN_MANAGEMENT", "WELFARE"
+				).contains(code));
 	}
 
 	private String findSyntheticAssignmentDepartment(ComplaintType complaintType) {
-		return jdbcTemplate.query("""
+		String organizationCode = jdbcTemplate.query("""
 				select u.code
 				from assignment_rules r
 				join organization_units u on u.id = r.organization_unit_id
@@ -451,6 +461,19 @@ public class ProcessingJobRunner {
 				resultSet -> resultSet.next() ? resultSet.getString(1) : null,
 				complaintType.name()
 		);
+		return departmentCodeFromOrganizationCode(organizationCode);
+	}
+
+	private String departmentCodeFromOrganizationCode(String value) {
+		if (value == null || value.isBlank()) {
+			return null;
+		}
+		return switch (value) {
+			case "SYNTHETIC_DEMO_RESOURCE_RECYCLING" -> "RESOURCE_RECYCLING";
+			case "SYNTHETIC_DEMO_ROAD" -> "ROAD";
+			case "SYNTHETIC_DEMO_TRAFFIC" -> "TRAFFIC";
+			default -> value;
+		};
 	}
 
 	private record IssueProposal(

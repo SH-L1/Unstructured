@@ -59,4 +59,40 @@ public class DepartmentTask extends BaseTimeEntity {
 	public String getDepartmentCode() {
 		return departmentCode;
 	}
+
+	public String getRecommendationReason() {
+		return recommendationReason;
+	}
+
+	public String getStatus() {
+		return status;
+	}
+
+	public String getConfirmedBy() {
+		return confirmedBy;
+	}
+
+	public long getVersion() {
+		return version;
+	}
+
+	public void markCandidate() {
+		this.status = "CANDIDATE";
+		this.confirmedBy = null;
+	}
+
+	public void select(String actorName) {
+		this.status = "HUMAN_SELECTED";
+		this.confirmedBy = actorName;
+	}
+
+	public void verify(String actorName) {
+		this.status = "VERIFIED";
+		this.confirmedBy = actorName;
+	}
+
+	public void reject(String actorName) {
+		this.status = "REJECTED";
+		this.confirmedBy = actorName;
+	}
 }

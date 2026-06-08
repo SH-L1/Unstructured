@@ -1,6 +1,6 @@
 # Judge Report - Trust Template Pipeline
 
-Generated at: 2026-06-06T15:35:27.396944+00:00
+Generated at: 2026-06-07T16:09:46.970388+00:00
 
 ## Verdict
 
@@ -26,8 +26,8 @@ expected complaint type.
 
 - Illegal legal-evidence rows: 0
 - Legal provisions loaded: 11330
-- Raw data-mart records: 658
-- Normalized data-mart records: 559
+- Raw data-mart records: 2221
+- Normalized data-mart records: 1622
 - Address points loaded: 70533
 - CCTV facilities loaded: 500
 - Parking restrictions loaded: 249
@@ -36,7 +36,7 @@ expected complaint type.
 - Asan assignment rules loaded: 110
 - Data readiness score: 1.0000
 - Data readiness checks: `{"addressPointsLoaded": true, "asanOrganizationLoaded": true, "dataMartLoaded": true, "nonEvidenceSourcesQuarantined": true, "officialLawPresent": true, "sgisBoundariesLoaded": true, "spatialFacilitiesLoaded": true}`
-- Knowledge by purpose: `{"EVALUATION_TRAINING": 64, "HISTORICAL_CASE": 34, "LOCAL_ORDINANCE_REFERENCE": 1, "OFFICIAL_LAW": 236, "ORGANIZATION_ROUTING": 1, "PROCEDURE": 469, "STYLE_REFERENCE": 24, "UNVERIFIED_LEGACY": 13}`
+- Knowledge by purpose: `{"EVALUATION_TRAINING": 564, "HISTORICAL_CASE": 36, "LOCAL_ORDINANCE_REFERENCE": 106, "OFFICIAL_LAW": 131, "ORGANIZATION_ROUTING": 1, "PROCEDURE": 492, "STYLE_REFERENCE": 524, "UNVERIFIED_LEGACY": 13}`
 
 ## Critical Assessment
 

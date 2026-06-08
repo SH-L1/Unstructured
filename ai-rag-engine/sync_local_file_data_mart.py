@@ -23,7 +23,10 @@ from pathlib import Path
 from typing import Iterable
 from xml.etree import ElementTree as ET
 
-import psycopg2
+try:
+    import psycopg2
+except ImportError:  # pragma: no cover - exercised in dependency-light unit tests
+    psycopg2 = None
 from dotenv import load_dotenv
 
 
@@ -34,6 +37,9 @@ MAX_TEXT_CHARS = int(os.getenv("LOCAL_FILE_NORMALIZED_MAX_CHARS", "12000"))
 MIN_HWP_MEANINGFUL_CHARS = int(os.getenv("LOCAL_FILE_HWP_MIN_MEANINGFUL_CHARS", "100"))
 SUPPORTED_TEXT_SUFFIXES = {".txt", ".csv", ".json", ".md"}
 ZIP_TEXT_SUFFIXES = {".hwpx", ".xlsx"}
+ZIP_PAYLOAD_TEXT_SUFFIXES = {".json", ".jsonl", ".txt", ".csv", ".md", ".xml"}
+MAX_ZIP_TEXT_ENTRIES = int(os.getenv("LOCAL_FILE_ZIP_TEXT_MAX_ENTRIES", "120"))
+MAX_ZIP_MEMBER_BYTES = int(os.getenv("LOCAL_FILE_ZIP_MEMBER_MAX_BYTES", "1048576"))
 
 
 @dataclass(frozen=True)
@@ -141,6 +147,32 @@ def read_text_file(path: Path) -> str:
     raise RuntimeError(f"Could not decode {path}") from last_error
 
 
+def decode_text_bytes(data: bytes) -> str:
+    last_error: Exception | None = None
+    for encoding in ("utf-8-sig", "utf-8", "cp949", "euc-kr"):
+        try:
+            return data.decode(encoding)
+        except UnicodeDecodeError as exc:
+            last_error = exc
+    raise RuntimeError("Could not decode zip member text") from last_error
+
+
+def compact_json_text(value: object) -> str:
+    if isinstance(value, dict):
+        parts: list[str] = []
+        for key, item in value.items():
+            if isinstance(item, (dict, list)):
+                nested = compact_json_text(item)
+                if nested:
+                    parts.append(f"{key}: {nested}")
+            elif item is not None:
+                parts.append(f"{key}: {item}")
+        return " ".join(parts)
+    if isinstance(value, list):
+        return " ".join(compact_json_text(item) for item in value)
+    return "" if value is None else str(value)
+
+
 def redact_pii(text: str) -> tuple[str, list[dict[str, int | str]]]:
     patterns = {
         "resident_registration_number": r"\b\d{6}-?[1-4]\d{6}\b",
@@ -185,8 +217,59 @@ def xml_text_from_zip(path: Path) -> str:
     return "\n".join(parts)[:MAX_TEXT_CHARS]
 
 
+def payload_text_from_zip(path: Path) -> tuple[str, dict[str, object]]:
+    parts: list[str] = []
+    scanned = 0
+    skipped_large = 0
+    suffix_counts: dict[str, int] = {}
+    with zipfile.ZipFile(path) as archive:
+        for info in sorted(archive.infolist(), key=lambda item: item.filename):
+            if info.is_dir():
+                continue
+            suffix = Path(info.filename).suffix.lower()
+            if suffix not in ZIP_PAYLOAD_TEXT_SUFFIXES:
+                continue
+            suffix_counts[suffix] = suffix_counts.get(suffix, 0) + 1
+            if info.file_size > MAX_ZIP_MEMBER_BYTES:
+                skipped_large += 1
+                continue
+            try:
+                text = decode_text_bytes(archive.read(info))
+                if suffix in {".json", ".jsonl"}:
+                    json_parts = []
+                    for line in text.splitlines() if suffix == ".jsonl" else [text]:
+                        line = line.strip()
+                        if not line:
+                            continue
+                        try:
+                            json_parts.append(compact_json_text(json.loads(line)))
+                        except json.JSONDecodeError:
+                            json_parts.append(line)
+                    text = "\n".join(json_parts)
+                elif suffix == ".xml":
+                    root = ET.fromstring(text.encode("utf-8"))
+                    text = " ".join(value.strip() for value in root.itertext() if value.strip())
+            except (RuntimeError, UnicodeDecodeError, ET.ParseError, KeyError, zipfile.BadZipFile):
+                continue
+            text = normalize_space(text)
+            if text:
+                parts.append(f"[{info.filename}]\n{text}")
+                scanned += 1
+            if scanned >= MAX_ZIP_TEXT_ENTRIES or sum(len(part) for part in parts) >= MAX_TEXT_CHARS:
+                break
+    metadata = {
+        "zipPayloadTextEntries": scanned,
+        "zipPayloadSkippedLargeEntries": skipped_large,
+        "zipPayloadSuffixCounts": suffix_counts,
+    }
+    return "\n\n".join(parts)[:MAX_TEXT_CHARS], metadata
+
+
 def run_text_command(command_template: str, path: Path, label: str) -> str:
-    command = shlex.split(command_template.format(input=str(path)), posix=False)
+    command = [
+        part.replace("{input}", str(path))
+        for part in shlex.split(command_template, posix=False)
+    ]
     if "{input}" not in command_template:
         command.append(str(path))
     result = subprocess.run(
@@ -243,13 +326,16 @@ def iter_files(source: LocalSource) -> Iterable[Path]:
         return ()
     if source.root.is_file():
         return (source.root,)
-    return (
-        path
-        for path in source.root.rglob("*")
+    max_files = int(os.getenv(f"{source.source_type}_MAX_FILES", os.getenv("LOCAL_FILE_MAX_FILES_PER_SOURCE", "0")))
+    files = (
+        path for path in source.root.rglob("*")
         if path.is_file()
-        and path.name != ".gitkeep"
-        and "__pycache__" not in path.parts
+           and path.name != ".gitkeep"
+           and "__pycache__" not in path.parts
     )
+    if max_files <= 0:
+        return files
+    return (path for index, path in enumerate(files) if index < max_files)
 
 
 def selected_source_types() -> set[str] | None:
@@ -283,9 +369,18 @@ def extract_normalized_text(path: Path, source: LocalSource) -> tuple[str, dict[
         metadata["extractor"] = "worker-hwp-text-command"
         metadata["hwpMeaningfulChars"] = meaningful_text_length(text)
     elif suffix == ".zip":
-        manifest = zip_manifest(path)
-        text = json.dumps(manifest, ensure_ascii=False, indent=2)
-        metadata["extractor"] = "zip-manifest"
+        if source.source_type.startswith("AIHUB_"):
+            text, zip_metadata = payload_text_from_zip(path)
+            metadata.update(zip_metadata)
+            metadata["extractor"] = "zip-payload-text"
+            if not text:
+                manifest = zip_manifest(path)
+                text = json.dumps(manifest, ensure_ascii=False, indent=2)
+                metadata["extractor"] = "zip-manifest"
+        else:
+            manifest = zip_manifest(path)
+            text = json.dumps(manifest, ensure_ascii=False, indent=2)
+            metadata["extractor"] = "zip-manifest"
     else:
         return None
     redacted, findings = redact_pii(text)
@@ -549,6 +644,8 @@ def upsert_normalized(
 
 
 def sync() -> dict[str, int]:
+    if psycopg2 is None:
+        raise RuntimeError("Install psycopg2 before synchronizing local file data mart sources")
     counts: dict[str, int] = {}
     source_filter = selected_source_types()
     suffix_filter = selected_suffixes()
@@ -600,11 +697,15 @@ def sync() -> dict[str, int]:
                             upsert_normalized(cursor, raw_id, knowledge_id, source, path, content, metadata)
                         count += 1
                     finish_run(cursor, run_id, count)
+                    connection.commit()
                 except Exception as exc:
+                    connection.rollback()
+                    source_id = source_registry_id(cursor, source)
+                    run_id = start_run(cursor, source_id, source)
                     finish_run(cursor, run_id, count, "FAILED", str(exc)[:2000])
+                    connection.commit()
                     raise
                 counts[source.source_type] = count
-        connection.commit()
     return counts
 
 

@@ -1,14 +1,14 @@
 {
-  "generatedAt": "2026-06-06T15:35:27.321156+00:00",
+  "generatedAt": "2026-06-07T16:09:46.940890+00:00",
   "overallStatus": "PASS",
   "db": {
     "sourceRegistry": 12,
-    "knowledgeDocuments": 842,
-    "knowledgePurpose": 829,
+    "knowledgeDocuments": 1867,
+    "knowledgePurpose": 1959,
     "legalDocumentVersions": 236,
     "legalProvisions": 11330,
-    "rawRecords": 658,
-    "normalizedRecords": 559,
+    "rawRecords": 2221,
+    "normalizedRecords": 1622,
     "adminBoundaries": 17,
     "addressPoints": 70533,
     "spatialFacilities": 664,
@@ -23,21 +23,21 @@
     "lowQualityHwpPromotions": 0,
     "lowQualityHwpLoadErrors": 98,
     "purposeDistribution": {
-      "EVALUATION_TRAINING": 64,
-      "HISTORICAL_CASE": 34,
-      "LOCAL_ORDINANCE_REFERENCE": 1,
+      "EVALUATION_TRAINING": 564,
+      "HISTORICAL_CASE": 36,
+      "LOCAL_ORDINANCE_REFERENCE": 106,
       "OFFICIAL_LAW": 236,
       "ORGANIZATION_ROUTING": 1,
-      "PROCEDURE": 469,
-      "STYLE_REFERENCE": 24
+      "PROCEDURE": 492,
+      "STYLE_REFERENCE": 524
     },
     "rawBySourceType": {
-      "AIHUB_ADMINISTRATIVE_LAW_LLM_FILES": 22,
-      "AIHUB_DOCUMENT_VISUAL_FILES": 42,
-      "AIHUB_PUBLIC_COMPLAINT_LLM_FILES": 24,
+      "AIHUB_ADMINISTRATIVE_LAW_LLM_FILES": 522,
+      "AIHUB_DOCUMENT_VISUAL_FILES": 542,
+      "AIHUB_PUBLIC_COMPLAINT_LLM_FILES": 524,
       "ASAN_ORDINANCE_LIST_FILE": 1,
       "ASAN_ORGANIZATION_FILE": 1,
-      "MINWON_FORM_API": 360,
+      "MINWON_FORM_API": 423,
       "MINWON_MANUAL_FILES": 207,
       "SAEOL_PUBLIC_COMPLAINTS_FILE": 1
     }
@@ -56,7 +56,7 @@
     {
       "requirement": "Phase 1 data load including Asan organization chart",
       "status": "PASS",
-      "evidence": "knowledge=842, raw=658, normalized=559, address=70533, facilities=664, parkingRestrictions=249, asanOrganizationUnits=34, asanAssignmentRules=110",
+      "evidence": "knowledge=1867, raw=2221, normalized=1622, address=70533, facilities=664, parkingRestrictions=249, asanOrganizationUnits=34, asanAssignmentRules=110",
       "action": "Load any missing source before claiming Phase 1 complete."
     },
     {

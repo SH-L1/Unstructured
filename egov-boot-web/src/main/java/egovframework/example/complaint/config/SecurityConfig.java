@@ -46,6 +46,7 @@ public class SecurityConfig {
 							.requestMatchers(HttpMethod.POST, "/api/v1/complaints/*/attachments").hasAnyRole("INTAKE", "REVIEWER", "ADMIN")
 							.requestMatchers(HttpMethod.DELETE, "/api/v1/complaints/*/attachments/*").hasAnyRole("INTAKE", "REVIEWER", "ADMIN")
 							.requestMatchers(HttpMethod.POST, "/api/v1/issues/*/location-confirmations").hasAnyRole("REVIEWER", "ADMIN")
+							.requestMatchers(HttpMethod.POST, "/api/v1/issues/*/department-confirmations").hasAnyRole("REVIEWER", "ADMIN")
 							.requestMatchers(HttpMethod.POST, "/api/v1/drafts/*/reviews").hasAnyRole("REVIEWER", "ADMIN")
 							.requestMatchers(HttpMethod.POST, "/api/v1/drafts/*/approvals").hasAnyRole("APPROVER", "ADMIN")
 							.requestMatchers(HttpMethod.POST, "/api/v1/complaints/*/complete").hasAnyRole("APPROVER", "ADMIN")

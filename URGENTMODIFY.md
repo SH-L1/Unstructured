@@ -168,3 +168,61 @@ API 키 사용 데이터:
 - `아산시청 조직도`
 
 법적 근거는 국가법령정보 API에서 가져온 국가법령 조항만 허용한다. 아산시 자치법규는 국가법령정보 API로 수집하지만 현재는 참고용 또는 부서 확인용으로만 사용한다. 아직 확보하지 않은 내부 GIS, 고시공고, 별도 축산/공동주택/상하수도/도로관리 대장 데이터는 현재 개발 범위에서 제외한다.
+
+## 2026-06-07 감사 보강 반영
+
+이 섹션은 현재 코드 기준 최신 반영 상태다.
+
+- AIHub ZIP 처리는 더 이상 manifest 적재에 그치지 않는다. `sync_local_file_data_mart.py`가 AIHub ZIP 내부의 JSON, JSONL, TXT, CSV, MD, XML 텍스트를 제한적으로 추출해 `STYLE_REFERENCE` 또는 `EVALUATION_TRAINING` 파생 자료로 적재한다. 단, AIHub 자료는 계속 법적 근거로 사용할 수 없다.
+- 실제 민원 골든 평가기는 `allowedUses`, `forbiddenUses`, 승인된 익명화 검토, 승인된 라벨 검토, 익명화 입력 기준 재계산 `inputHash`를 모두 강제한다.
+- 담당부서 추천은 승인된 부서 히스토리 XLSX, 2021년 이후 비식별 새올 공개민원, 아산시 민원편람 파일명을 보조 근거로 사용하는 결정론 라우터로 보강했다. 이 자료들은 담당부서 추천 보조용이며 법적 근거가 아니다.
+- 초안 worker는 검증 실패 시 이미 제공된 공식 근거 후보 안에서만 1회 제한 재작성한다. 공식 근거 부재, PII, 관할/시행일 등 hard fail은 계속 차단한다.
+- 검색 재순위와 OpenSearch 목적별 인덱싱은 `STYLE_REFERENCE`, `LOCAL_ORDINANCE_REFERENCE`, `EVALUATION_TRAINING`을 인식한다.
+- 회귀 테스트는 실제 골든 안전 게이트, AIHub ZIP payload 추출, 담당부서 보조 라우팅, reranker 목적 가중치, worker 재작성, OpenSearch 목적명을 포함한다.
+
+검증 명령:
+
+```powershell
+C:\Users\user\miniconda3\python.exe -m unittest discover -s . -p "test*.py"
+mvn test
+```
+
+최근 확인 결과:
+
+- Python: 40 tests passed.
+- Java/Maven: BUILD SUCCESS, 49 tests run, 1 skipped. Docker/Testcontainers PostgreSQL 환경이 없어 PostgreSQL 전용 Flyway 테스트 1건은 skip되었다.
+## 2026-06-08 Department Top-3 Human Selection
+
+Frontend is handled separately, but the backend contract now supports the
+planned interactive department selection step.
+
+- `POST /api/v1/issues/{issueId}/department-confirmations` was added.
+- Request body: `{"departmentCode":"ROAD"}`.
+- Required headers: `Idempotency-Key`, `If-Match`.
+- Allowed roles in session mode: `REVIEWER`, `ADMIN`.
+- Complaint detail responses now include:
+  - `issue.departmentCandidates`: legacy string list for simple UI rendering.
+  - `issue.departmentCandidateDetails[]`: structured candidates with `code`,
+    `status`, `recommendationReason`, `confirmedBy`, `score`, `selected`,
+    `verified`.
+- Draft generation is blocked until every issue has one human-selected and
+  server-verified department candidate.
+- Server verification checks that the selected department is within the issue
+  Top-3 candidates, exists as an active department code, and does not conflict
+  with deterministic pilot assignment rules.
+- Failed selection is persisted as a `DEPARTMENT_SELECTION` verification failure,
+  marks the candidate `REJECTED`, and leaves the complaint blocked for
+  jurisdiction review instead of attempting draft rewriting.
+- Python worker department routing now limits candidates to Top-3 and uses up
+  to two validation rewrite attempts by default for draft schema/evidence-link
+  repair only.
+
+Frontend handoff:
+
+- Render candidate cards from `departmentCandidateDetails`.
+- Show score as diagnostic routing support, not as legal confidence.
+- Let reviewer pick one candidate, then call the confirmation API.
+- Disable `draft-runs` until all issues have `verified=true`.
+- If the confirmation response has `workflowBlocker=NEEDS_JURISDICTION` or a
+  `DEPARTMENT_SELECTION` failure, show the rejection reason and require a new
+  selection or jurisdiction escalation.

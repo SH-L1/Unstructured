@@ -205,7 +205,10 @@ def run_external_command(
     label: str,
     allow_exit_one: bool = False,
 ) -> subprocess.CompletedProcess[str]:
-    command = shlex.split(command_template.format(input=str(path)))
+    command = [
+        part.replace("{input}", str(path))
+        for part in shlex.split(command_template)
+    ]
     if "{input}" not in command_template:
         command.append(str(path))
     timeout_seconds = int(os.getenv("WORKER_EXTERNAL_COMMAND_TIMEOUT_SECONDS", "60"))
@@ -484,6 +487,19 @@ def execute_ai_job(job: dict[str, object]) -> tuple[dict[str, object], list[int]
     estimated_cost = 0 if provider == "mock" else (1200 if payload.get("jobType") == "DRAFT" else 900)
     execution = execute_provider_call(provider, estimated_cost, providers[provider])
     output, evidence_ids, model_name = execution.value
+    rewrite_count = 0
+    validation_errors: list[str] = []
+    max_rewrites = int(os.getenv("WORKER_VALIDATION_REWRITE_ATTEMPTS", "2"))
+    while True:
+        try:
+            validate_ai_output(str(job["jobType"]), payload, output, evidence_ids)
+            break
+        except RuntimeError as exc:
+            validation_errors.append(str(exc))
+            if rewrite_count >= max_rewrites:
+                raise
+            output, evidence_ids = rewrite_ai_output(str(job["jobType"]), payload, output, str(exc))
+            rewrite_count += 1
     metadata = {
         "provider": provider,
         "modelName": model_name,
@@ -492,8 +508,169 @@ def execute_ai_job(job: dict[str, object]) -> tuple[dict[str, object], list[int]
         "costUnits": execution.cost_units,
         "durationMs": execution.duration_ms,
         "retryCount": execution.retries,
+        "validationRewriteCount": rewrite_count,
+        "validationErrors": validation_errors,
     }
     return output, evidence_ids, metadata
+
+
+ANALYSIS_ROOT_FIELDS = {
+    "schemaVersion",
+    "intent",
+    "urgency",
+    "sentiment",
+    "departmentCode",
+    "locationText",
+    "keywords",
+    "requiredAction",
+    "issues",
+}
+ANALYSIS_ISSUE_FIELDS = {
+    "summary",
+    "complaintType",
+    "jurisdictionStatus",
+    "safetyRisk",
+    "expressionRisk",
+    "processability",
+    "departmentCandidates",
+    "locationCandidates",
+    "evidenceIds",
+}
+DRAFT_ROOT_FIELDS = {"schemaVersion", "claims"}
+DRAFT_CLAIM_FIELDS = {"text", "claimType", "evidenceIds"}
+ALLOWED_DEPARTMENT_CODES = {
+    "SAFETY_CONTROL",
+    "RESOURCE_RECYCLING",
+    "ROAD",
+    "TRAFFIC",
+    "CIVIL_AFFAIRS",
+    "WATER_SEWER",
+    "BUILDING_HOUSING",
+    "PARK_GREEN",
+    "HEALTH_SANITATION",
+    "ANIMAL_LIVESTOCK",
+    "URBAN_MANAGEMENT",
+    "WELFARE",
+    "ENVIRONMENT",
+}
+
+
+def rewrite_ai_output(
+    job_type: str,
+    payload: dict[str, object],
+    output: dict[str, object],
+    reason: str,
+) -> tuple[dict[str, object], list[int]]:
+    max_rewrites = int(os.getenv("WORKER_VALIDATION_REWRITE_ATTEMPTS", "2"))
+    if max_rewrites < 1 or job_type != "DRAFT":
+        raise RuntimeError(reason)
+    candidates = [
+        candidate
+        for candidate in payload.get("knowledgeCandidates", [])
+        if isinstance(candidate, dict) and isinstance(candidate.get("id"), int)
+    ]
+    if not candidates:
+        raise RuntimeError(reason)
+    evidence_ids = [int(candidate["id"]) for candidate in candidates[:3]]
+    evidence_strings = [str(value) for value in evidence_ids]
+    claims = []
+    for claim in output.get("claims", []) if isinstance(output.get("claims"), list) else []:
+        if isinstance(claim, dict) and isinstance(claim.get("text"), str) and claim["text"].strip():
+            claims.append({
+                "text": claim["text"].strip(),
+                "claimType": str(claim.get("claimType") or "REWRITTEN_REVIEW_NOTICE")[:80],
+                "evidenceIds": evidence_strings,
+            })
+    if not claims:
+        claims = [
+            {
+                "text": "민원 내용은 접수되었으며 담당자가 사실관계와 현장 확인 필요성을 검토합니다.",
+                "claimType": "ACKNOWLEDGEMENT",
+                "evidenceIds": evidence_strings,
+            },
+            {
+                "text": "처리 방향은 첨부된 공식 근거를 기준으로 검토 후 사람이 최종 확정합니다.",
+                "claimType": "REVIEW_NOTICE",
+                "evidenceIds": evidence_strings,
+            },
+        ]
+    return {"schemaVersion": "draft-claims-v1", "claims": claims[:50]}, evidence_ids
+
+
+def validate_ai_output(
+    job_type: str,
+    payload: dict[str, object],
+    output: dict[str, object],
+    evidence_ids: list[int],
+) -> None:
+    if job_type == "CLASSIFY_ISSUES":
+        require_keys(output, ANALYSIS_ROOT_FIELDS, "analysis")
+        if output.get("schemaVersion") != "complaint-support-v1":
+            raise RuntimeError("Analysis output schemaVersion must be complaint-support-v1")
+        if output.get("departmentCode") not in ALLOWED_DEPARTMENT_CODES:
+            raise RuntimeError("Analysis output departmentCode is not an allowed routing candidate")
+        issues = output.get("issues")
+        if not isinstance(issues, list) or not 1 <= len(issues) <= 10:
+            raise RuntimeError("Analysis output issues must contain between 1 and 10 items")
+        for issue in issues:
+            if not isinstance(issue, dict):
+                raise RuntimeError("Analysis output issue must be an object")
+            require_keys(issue, ANALYSIS_ISSUE_FIELDS, "analysis issue")
+            require_string_list(issue.get("departmentCandidates"), "departmentCandidates", max_items=10)
+            if any(code not in ALLOWED_DEPARTMENT_CODES for code in issue["departmentCandidates"]):
+                raise RuntimeError("Analysis issue contains an unsupported department candidate")
+            require_string_list(issue.get("locationCandidates"), "locationCandidates", max_items=10)
+            require_string_list(issue.get("evidenceIds"), "evidenceIds", max_items=50)
+        if evidence_ids:
+            raise RuntimeError("Analysis output must not select draft evidence IDs")
+        return
+    if job_type == "DRAFT":
+        require_keys(output, DRAFT_ROOT_FIELDS, "draft")
+        if output.get("schemaVersion") != "draft-claims-v1":
+            raise RuntimeError("Draft output schemaVersion must be draft-claims-v1")
+        allowed = {
+            int(candidate["id"])
+            for candidate in payload.get("knowledgeCandidates", [])
+            if isinstance(candidate, dict) and isinstance(candidate.get("id"), int)
+        }
+        claims = output.get("claims")
+        if not isinstance(claims, list) or not 1 <= len(claims) <= 50:
+            raise RuntimeError("Draft output claims must contain between 1 and 50 items")
+        claimed: set[int] = set()
+        for claim in claims:
+            if not isinstance(claim, dict):
+                raise RuntimeError("Draft claim must be an object")
+            require_keys(claim, DRAFT_CLAIM_FIELDS, "draft claim")
+            require_string_list(claim.get("evidenceIds"), "evidenceIds", max_items=20, allow_empty=False)
+            for evidence_id in claim["evidenceIds"]:
+                if not str(evidence_id).isdigit():
+                    raise RuntimeError("Draft evidenceIds must be numeric strings")
+                claimed.add(int(evidence_id))
+        if set(evidence_ids) != claimed:
+            raise RuntimeError("Draft selected evidence IDs must match claim evidence IDs")
+        if not claimed or not claimed.issubset(allowed):
+            raise RuntimeError("Draft evidence IDs must come from governed official candidates")
+        return
+    raise RuntimeError(f"Unsupported AI job type for schema validation: {job_type}")
+
+
+def require_keys(value: dict[str, object], expected: set[str], label: str) -> None:
+    actual = set(value)
+    if actual != expected:
+        raise RuntimeError(f"{label} fields do not match the governed schema")
+
+
+def require_string_list(
+    value: object,
+    label: str,
+    *,
+    max_items: int,
+    allow_empty: bool = True,
+) -> None:
+    if not isinstance(value, list) or len(value) > max_items or (not allow_empty and not value):
+        raise RuntimeError(f"{label} must be a bounded list")
+    if any(not isinstance(item, str) or not item.strip() for item in value):
+        raise RuntimeError(f"{label} must contain only non-empty strings")
 
 
 def mock_ai_result(payload: dict[str, object]) -> tuple[dict[str, object], list[int], str]:
@@ -507,7 +684,7 @@ def mock_ai_result(payload: dict[str, object]) -> tuple[dict[str, object], list[
 
 
 def mock_analysis(payload: dict[str, object]) -> dict[str, object]:
-    text = str(payload.get("redactedText") or "").lower()
+    text = governed_analysis_text(payload).lower()
     location = payload.get("locationText")
     rules = (
         (("dump", "waste", "garbage", "trash", "투기", "쓰레기"), "ILLEGAL_DUMPING", "RESOURCE_RECYCLING", "불법 투기 신고"),
@@ -533,6 +710,16 @@ def mock_analysis(payload: dict[str, object]) -> dict[str, object]:
     emergency = complaint_type == "HAZARDOUS_MATERIAL"
     urgency = "EMERGENCY" if emergency else "NORMAL"
     processability = "PROCESSABLE" if isinstance(location, str) and location.strip() else "NEEDS_LOCATION"
+    routed = auxiliary_department_route(text)
+    department_candidates = [department]
+    for code in routed.get("departmentCodes", []):
+        if isinstance(code, str) and code in ALLOWED_DEPARTMENT_CODES and code not in department_candidates:
+            department_candidates.append(code)
+    if routed.get("departmentCode") and routed["departmentCode"] not in department_candidates:
+        department_candidates.insert(0, str(routed["departmentCode"]))
+    department_candidates = department_candidates[:3]
+    if routed.get("departmentCode"):
+        department = str(routed["departmentCode"])
     issue = {
         "summary": intent,
         "complaintType": complaint_type,
@@ -540,7 +727,7 @@ def mock_analysis(payload: dict[str, object]) -> dict[str, object]:
         "safetyRisk": "EMERGENCY" if emergency else "NORMAL",
         "expressionRisk": "NORMAL",
         "processability": processability,
-        "departmentCandidates": [department],
+        "departmentCandidates": department_candidates,
         "locationCandidates": [location] if isinstance(location, str) and location.strip() else [],
         "evidenceIds": [],
     }
@@ -551,10 +738,71 @@ def mock_analysis(payload: dict[str, object]) -> dict[str, object]:
         "sentiment": "NEUTRAL",
         "departmentCode": department,
         "locationText": location if isinstance(location, str) and location.strip() else None,
-        "keywords": [complaint_type, department],
+        "keywords": [value for value in [complaint_type, department, str(routed.get("source") or "")] if value],
         "requiredAction": "현장 확인과 담당 부서 검토가 필요합니다.",
         "issues": [issue],
     }
+
+
+def auxiliary_department_route(text: str) -> dict[str, object]:
+    try:
+        from department_router import recommend_department
+    except Exception:
+        return {}
+    try:
+        recommendation = recommend_department(text, top_k=5)
+    except Exception:
+        return {}
+    department_name = str(recommendation.get("recommended_department") or "")
+    department_code = department_name_to_code(department_name)
+    if not department_code:
+        return {}
+    department_codes = []
+    for match in recommendation.get("top_matches", []):
+        if not isinstance(match, dict):
+            continue
+        code = department_name_to_code(str(match.get("department") or ""))
+        if code and code not in department_codes:
+            department_codes.append(code)
+    return {
+        "departmentCode": department_code,
+        "departmentCodes": [department_code, *[code for code in department_codes if code != department_code]][:3],
+        "departmentName": department_name,
+        "source": str(recommendation.get("recommendation_source") or "auxiliary_department_router"),
+    }
+
+
+def department_name_to_code(value: str) -> str:
+    normalized = value.casefold()
+    mapping = (
+        (("교통", "주차", "주정차", "차량", "parking", "traffic"), "TRAFFIC"),
+        (("도로", "보도", "포트홀", "포장", "road", "pothole"), "ROAD"),
+        (("청소", "자원", "폐기물", "쓰레기", "재활용", "waste", "dump"), "RESOURCE_RECYCLING"),
+        (("환경", "소음", "악취", "대기", "수질", "noise", "odor"), "ENVIRONMENT"),
+        (("안전", "재난", "위험", "hazard", "chemical"), "SAFETY_CONTROL"),
+        (("건축", "주택", "공동주택", "building", "housing"), "BUILDING_HOUSING"),
+        (("공원", "녹지", "가로수", "park", "green"), "PARK_GREEN"),
+        (("상수", "하수", "수도", "water", "sewer"), "WATER_SEWER"),
+        (("보건", "위생", "방역", "health", "sanitation"), "HEALTH_SANITATION"),
+        (("동물", "축산", "반려", "animal", "livestock"), "ANIMAL_LIVESTOCK"),
+        (("광고", "옥외", "도시", "urban", "advertising"), "URBAN_MANAGEMENT"),
+        (("복지", "장애", "노인", "welfare"), "WELFARE"),
+        (("민원", "감사", "civil"), "CIVIL_AFFAIRS"),
+    )
+    for keywords, code in mapping:
+        if any(keyword in normalized for keyword in keywords):
+            return code
+    return ""
+
+
+def governed_analysis_text(payload: dict[str, object]) -> str:
+    parts = [str(payload.get("redactedText") or "")]
+    attachment_texts = payload.get("approvedAttachmentTexts")
+    if isinstance(attachment_texts, list):
+        for item in attachment_texts:
+            if isinstance(item, str) and item.strip():
+                parts.append(item)
+    return "\n".join(parts)
 
 
 def mock_draft(payload: dict[str, object]) -> tuple[dict[str, object], list[int]]:

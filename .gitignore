@@ -62,3 +62,17 @@ coverage/
 # Generated document render artifacts
 rendered_*/
 *_render_copy.docx
+
+# Specific Data Folder Exclusions
+ai-rag-engine/data/**/*.csv
+ai-rag-engine/data/**/*.json
+ai-rag-engine/data/**/*.jpg
+ai-rag-engine/data/**/*.jpeg
+ai-rag-engine/data/**/*.png
+ai-rag-engine/data/**/*.hwp
+ai-rag-engine/data/**/*.hwpx
+ai-rag-engine/data/**/*.pdf
+ai-rag-engine/data/**/*.xlsx
+ai-rag-engine/data/**/*.docx
+ai-rag-engine/data/**/*.pptx
+ai-rag-engine/data/**/*.txt

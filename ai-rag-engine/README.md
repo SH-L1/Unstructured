@@ -220,8 +220,52 @@ coverage, official law-title relevance, template completeness, and safety checks
 The completion audit status is `PASS`. This is still not a production-quality
 claim. SGIS boundaries are loaded, and the provided `asan_city_organization.docx`
 is loaded as routing support with 34 organization units and 110 assignment
-rules. Binary HWP manuals are all retained as raw records. Only 44 HWP files with
-meaningful extracted text are promoted into searchable procedure knowledge; 98
-low-quality table-placeholder extractions are blocked from retrieval and logged
-in `data_mart_load_errors`. AIHub/local historical data remains blocked from
-legal-evidence or fine-tuning use until privacy and label quality are proven.
+rules. Binary HWP manuals are all retained as raw records. Only HWP/HWPX/PDF/text
+files with meaningful extracted text are promoted into searchable procedure
+knowledge; low-quality table-placeholder extractions are blocked from retrieval
+and logged in `data_mart_load_errors`.
+
+AIHub ZIP files are now parsed beyond ZIP manifests. For AIHub sources, the local
+file data-mart loader extracts bounded text from internal JSON, JSONL, TXT, CSV,
+MD, and XML members and stores those derivatives as `STYLE_REFERENCE` or
+`EVALUATION_TRAINING` knowledge. AIHub and local historical data remain blocked
+from legal-evidence and fine-tuning use until privacy, label quality, and dataset
+split controls are proven. The real-golden evaluator enforces approved
+anonymization review, approved label review, allowed/forbidden use gates, and a
+stable hash over the anonymized input fields.
+
+Department routing is deterministic and auxiliary-data based. The router can use
+approved department-history workbooks, 2021+ de-identified Saeol public complaint
+records, and Asan complaint-manual file names as routing support. These sources
+are used only for department recommendation and style/procedure support, never as
+legal authority. Analysis now exposes issue-level Top-3 department candidates
+through Spring detail responses as both the legacy `departmentCandidates` string
+list and `departmentCandidateDetails[]` objects. Reviewers must select one
+candidate with `POST /api/v1/issues/{issueId}/department-confirmations` before
+draft generation. Spring verifies that the selected department is inside the
+Top-3 candidate set, is an active known department, and does not conflict with
+deterministic pilot assignment rules. A failed selection is recorded as a
+`DEPARTMENT_SELECTION` verification failure and keeps the complaint blocked for
+jurisdiction review instead of silently rewriting a draft.
+
+Draft generation uses a bounded validation-rewrite loop, defaulting to at most
+two attempts, only to repair schema or evidence-link shape against already
+supplied governed official evidence candidates; hard evidence absence and
+department/jurisdiction failures still fail closed.
+
+Frontend handoff for department selection:
+
+- Show `issue.departmentCandidateDetails` when present. Fall back to
+  `issue.departmentCandidates` for older responses.
+- Display `code`, `score`, `recommendationReason`, `status`, and `verified`.
+  The score is diagnostic routing support, not an approval confidence score.
+- Disable draft generation until every issue has one candidate with
+  `verified=true`.
+- On selection, call:
+  `POST /api/v1/issues/{issueId}/department-confirmations`
+  with headers `Idempotency-Key` and `If-Match`, body
+  `{"departmentCode":"ROAD"}`.
+- The response is the refreshed complaint detail. If the selected department
+  fails verification, inspect `complaint.workflowBlocker`,
+  `verificationResults`, and the candidate `status=REJECTED`; prompt the
+  reviewer to select another Top-3 candidate or escalate jurisdiction review.

@@ -4,6 +4,7 @@ import egovframework.example.complaint.api.dto.ApiResponse;
 import egovframework.example.complaint.api.dto.AttachmentResponse;
 import egovframework.example.complaint.api.dto.ComplaintResponse;
 import egovframework.example.complaint.api.dto.CreateComplaintRequest;
+import egovframework.example.complaint.api.dto.DepartmentConfirmationRequest;
 import egovframework.example.complaint.api.dto.LocationConfirmationRequest;
 import egovframework.example.complaint.api.dto.ProcessingJobResponse;
 import egovframework.example.complaint.api.dto.ReviewDecisionRequest;
@@ -123,6 +124,21 @@ public class TrustWorkflowController {
 	) {
 		ComplaintResponse response = workflowService.confirmLocation(id, request.locationText(), idempotencyKey, parseVersion(ifMatch));
 		return ResponseEntity.ok().eTag(String.valueOf(response.version())).body(ApiResponse.ok(response));
+	}
+
+	@PostMapping("/issues/{id}/department-confirmations")
+	public ResponseEntity<ApiResponse<TrustComplaintDetailResponse>> confirmDepartment(
+			@PathVariable UUID id,
+			@Valid @RequestBody DepartmentConfirmationRequest request,
+			@RequestHeader("Idempotency-Key") String idempotencyKey,
+			@RequestHeader(HttpHeaders.IF_MATCH) String ifMatch
+	) {
+		TrustComplaintDetailResponse response = workflowService.confirmDepartment(
+				id, request.departmentCode(), idempotencyKey, parseVersion(ifMatch)
+		);
+		return ResponseEntity.ok()
+				.eTag(String.valueOf(response.complaint().version()))
+				.body(ApiResponse.ok(response));
 	}
 
 	@PostMapping("/drafts/{id}/reviews")

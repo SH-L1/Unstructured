@@ -10,6 +10,8 @@ class OpenSearchIndexSyncTest(unittest.TestCase):
     def test_builds_purpose_specific_index_name(self):
         os.environ["OPENSEARCH_INDEX_PREFIX"] = "pilot"
         self.assertEqual("pilot-official-law", purpose_index_name("OFFICIAL_LAW"))
+        self.assertEqual("pilot-style-reference", purpose_index_name("STYLE_REFERENCE"))
+        self.assertEqual("pilot-local-ordinance-reference", purpose_index_name("LOCAL_ORDINANCE_REFERENCE"))
         with self.assertRaises(ValueError):
             purpose_index_name("UNVERIFIED_LEGACY")
 

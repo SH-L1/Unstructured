@@ -16,18 +16,21 @@ import egovframework.example.complaint.api.dto.VerificationResultResponse;
 import egovframework.example.complaint.domain.Complaint;
 import egovframework.example.complaint.domain.ComplaintIssue;
 import egovframework.example.complaint.domain.ComplaintStatus;
+import egovframework.example.complaint.domain.DepartmentTask;
 import egovframework.example.complaint.domain.HumanReview;
 import egovframework.example.complaint.domain.IdempotencyRecord;
 import egovframework.example.complaint.domain.LocationCandidate;
 import egovframework.example.complaint.domain.OfficialDraft;
 import egovframework.example.complaint.domain.ProcessingJob;
 import egovframework.example.complaint.domain.ProcessingJobType;
+import egovframework.example.complaint.domain.VerificationResult;
 import egovframework.example.complaint.domain.WorkflowAuditEvent;
 import egovframework.example.complaint.domain.WorkflowBlocker;
 import egovframework.example.complaint.repository.ComplaintIssueRepository;
 import egovframework.example.complaint.repository.ComplaintRepository;
 import egovframework.example.complaint.repository.AiRunRepository;
 import egovframework.example.complaint.repository.AttachmentAnalysisRepository;
+import egovframework.example.complaint.repository.DepartmentRepository;
 import egovframework.example.complaint.repository.DepartmentTaskRepository;
 import egovframework.example.complaint.repository.DraftClaimRepository;
 import egovframework.example.complaint.repository.EvidenceSnapshotRepository;
@@ -56,6 +59,7 @@ public class TrustWorkflowService {
 	private final ComplaintService complaintService;
 	private final ComplaintRepository complaintRepository;
 	private final ComplaintIssueRepository complaintIssueRepository;
+	private final DepartmentRepository departmentRepository;
 	private final DepartmentTaskRepository departmentTaskRepository;
 	private final DraftClaimRepository draftClaimRepository;
 	private final LocationCandidateRepository locationCandidateRepository;
@@ -78,6 +82,7 @@ public class TrustWorkflowService {
 			ComplaintService complaintService,
 			ComplaintRepository complaintRepository,
 			ComplaintIssueRepository complaintIssueRepository,
+			DepartmentRepository departmentRepository,
 			DepartmentTaskRepository departmentTaskRepository,
 			DraftClaimRepository draftClaimRepository,
 			LocationCandidateRepository locationCandidateRepository,
@@ -99,6 +104,7 @@ public class TrustWorkflowService {
 		this.complaintService = complaintService;
 		this.complaintRepository = complaintRepository;
 		this.complaintIssueRepository = complaintIssueRepository;
+		this.departmentRepository = departmentRepository;
 		this.departmentTaskRepository = departmentTaskRepository;
 		this.draftClaimRepository = draftClaimRepository;
 		this.locationCandidateRepository = locationCandidateRepository;
@@ -270,6 +276,7 @@ public class TrustWorkflowService {
 				|| complaint.getWorkflowBlocker() == WorkflowBlocker.NEEDS_JURISDICTION) {
 			throw new IllegalStateException("Complaint is blocked: " + complaint.getWorkflowBlocker());
 		}
+		requireVerifiedDepartmentSelection(complaintId);
 		requireApprovedAttachmentDerivatives(complaintId);
 		return enqueue(complaintId, ProcessingJobType.DRAFT, key, expectedVersion);
 	}
@@ -308,7 +315,8 @@ public class TrustWorkflowService {
 				.map(issue -> ComplaintIssueResponse.from(
 						issue,
 						departmentTaskRepository.findByIssue_IdOrderByCreatedAtAsc(issue.getId()).stream()
-								.map(egovframework.example.complaint.domain.DepartmentTask::getDepartmentCode)
+								.limit(3)
+								.map(egovframework.example.complaint.api.dto.DepartmentCandidateResponse::from)
 								.toList(),
 						locationCandidateRepository.findByIssue_IdOrderByCreatedAtAsc(issue.getId()).stream()
 								.map(egovframework.example.complaint.domain.LocationCandidate::getLocationText)
@@ -383,6 +391,105 @@ public class TrustWorkflowService {
 		idempotencyRecordRepository.saveAndFlush(reservation);
 		ComplaintResponse response = complaintService.findById(complaint.getId());
 		audit("COMPLAINT", complaint.getId().toString(), "CONFIRM_LOCATION", actor, before, complaintState(response), key);
+		return response;
+	}
+
+	@Transactional
+	public TrustComplaintDetailResponse confirmDepartment(
+			UUID issueId,
+			String departmentCode,
+			String idempotencyKey,
+			long expectedVersion
+	) {
+		String key = requireIdempotencyKey(idempotencyKey);
+		String selectedCode = requireDepartmentCode(departmentCode);
+		ComplaintIssue issue = complaintIssueRepository.findById(issueId)
+				.orElseThrow(() -> new EntityNotFoundException("Complaint issue not found: " + issueId));
+		Complaint complaint = getComplaint(issue.getComplaintId());
+		IdempotencyRecord existing = idempotencyRecordRepository
+				.findByOperationAndIdempotencyKey("CONFIRM_DEPARTMENT", key)
+				.orElse(null);
+		if (existing != null) {
+			requireCompleted(existing);
+			if (!existing.getResourceId().equals(issueId + ":" + selectedCode)) {
+				throw new IllegalStateException("Idempotency-Key was already used for another department confirmation");
+			}
+			return detail(complaint.getId());
+		}
+		requireVersion(expectedVersion, complaint.getVersion());
+		if (complaint.getStatus() != ComplaintStatus.TRIAGE_REVIEW) {
+			throw new IllegalStateException("Department confirmation is only allowed during TRIAGE_REVIEW");
+		}
+		IdempotencyRecord reservation = idempotencyRecordRepository.saveAndFlush(
+				IdempotencyRecord.pending("CONFIRM_DEPARTMENT", key, issueId + ":" + selectedCode)
+		);
+		CurrentActorService.Actor actor = currentActorService.current("REVIEWER");
+		String before = complaintState(ComplaintResponse.from(complaint));
+		List<DepartmentTask> topCandidates = departmentTaskRepository.findByIssue_IdOrderByCreatedAtAsc(issueId).stream()
+				.limit(3)
+				.toList();
+		DepartmentTask selected = topCandidates.stream()
+				.filter(task -> selectedCode.equals(task.getDepartmentCode()))
+				.findFirst()
+				.orElseThrow(() -> new IllegalStateException("Selected department must be one of the Top-3 candidates"));
+		if (departmentRepository.findByCode(selectedCode).isEmpty()) {
+			selected.reject(actor.name());
+			complaint.block(WorkflowBlocker.NEEDS_JURISDICTION);
+			departmentTaskRepository.save(selected);
+			complaintRepository.saveAndFlush(complaint);
+			recordDepartmentVerification(complaint.getId(), selectedCode, "FAILED", "Selected department is not active");
+			reservation.complete(issueId + ":" + selectedCode);
+			idempotencyRecordRepository.saveAndFlush(reservation);
+			TrustComplaintDetailResponse response = detail(complaint.getId());
+			audit("COMPLAINT", complaint.getId().toString(), "REJECT_DEPARTMENT", actor, before,
+					complaintState(response.complaint()), key);
+			return response;
+		}
+		String expectedDepartment = expectedPilotDepartment(issue);
+		if (expectedDepartment != null && !expectedDepartment.equals(selectedCode)) {
+			selected.reject(actor.name());
+			complaint.block(WorkflowBlocker.NEEDS_JURISDICTION);
+			departmentTaskRepository.save(selected);
+			complaintRepository.saveAndFlush(complaint);
+			recordDepartmentVerification(
+					complaint.getId(),
+					selectedCode,
+					"FAILED",
+					"Selected department conflicts with deterministic assignment rule: expected " + expectedDepartment
+			);
+			reservation.complete(issueId + ":" + selectedCode);
+			idempotencyRecordRepository.saveAndFlush(reservation);
+			TrustComplaintDetailResponse response = detail(complaint.getId());
+			audit("COMPLAINT", complaint.getId().toString(), "REJECT_DEPARTMENT", actor, before,
+					complaintState(response.complaint()), key);
+			return response;
+		}
+		topCandidates.forEach(task -> {
+			if (task == selected) {
+				task.verify(actor.name());
+			}
+			else if ("HUMAN_SELECTED".equals(task.getStatus()) || "VERIFIED".equals(task.getStatus())) {
+				task.markCandidate();
+			}
+			departmentTaskRepository.save(task);
+		});
+		if (complaint.getWorkflowBlocker() == WorkflowBlocker.NEEDS_JURISDICTION) {
+			boolean unresolved = complaintIssueRepository.findByComplaint_IdOrderByIssueIndexAsc(complaint.getId()).stream()
+					.anyMatch(candidateIssue -> "NEEDS_JURISDICTION".equals(candidateIssue.getJurisdictionStatus())
+							|| departmentTaskRepository.findByIssue_IdOrderByCreatedAtAsc(candidateIssue.getId())
+									.stream()
+									.noneMatch(task -> "VERIFIED".equals(task.getStatus())));
+			if (!unresolved) {
+				complaint.clearBlocker();
+			}
+		}
+		complaintRepository.saveAndFlush(complaint);
+		recordDepartmentVerification(complaint.getId(), selectedCode, "PASSED", "Human-selected department verified");
+		reservation.complete(issueId + ":" + selectedCode);
+		idempotencyRecordRepository.saveAndFlush(reservation);
+		TrustComplaintDetailResponse response = detail(complaint.getId());
+		audit("COMPLAINT", complaint.getId().toString(), "CONFIRM_DEPARTMENT", actor, before,
+				complaintState(response.complaint()), key);
 		return response;
 	}
 
@@ -574,5 +681,46 @@ public class TrustWorkflowService {
 					"All attachments must pass malware scanning, extraction, and redaction before AI processing"
 			);
 		}
+	}
+
+	private void requireVerifiedDepartmentSelection(UUID complaintId) {
+		List<ComplaintIssue> issues = complaintIssueRepository.findByComplaint_IdOrderByIssueIndexAsc(complaintId);
+		if (issues.isEmpty()) {
+			throw new IllegalStateException("A validated analysis issue is required before draft generation");
+		}
+		boolean missingVerifiedSelection = issues.stream()
+				.anyMatch(issue -> departmentTaskRepository.findByIssue_IdOrderByCreatedAtAsc(issue.getId()).stream()
+						.noneMatch(task -> "VERIFIED".equals(task.getStatus())));
+		if (missingVerifiedSelection) {
+			throw new IllegalStateException("A human-selected and verified department is required before draft generation");
+		}
+	}
+
+	private String requireDepartmentCode(String value) {
+		if (value == null || value.isBlank() || value.length() > 80) {
+			throw new IllegalArgumentException("departmentCode is required and must be at most 80 characters");
+		}
+		return value.trim().toUpperCase(java.util.Locale.ROOT);
+	}
+
+	private String expectedPilotDepartment(ComplaintIssue issue) {
+		return switch (issue.getComplaintType()) {
+			case ILLEGAL_DUMPING -> "RESOURCE_RECYCLING";
+			case ROAD_DAMAGE -> "ROAD";
+			case ILLEGAL_PARKING, TRAFFIC_SIGN -> "TRAFFIC";
+			case HAZARDOUS_MATERIAL -> "SAFETY_CONTROL";
+			default -> null;
+		};
+	}
+
+	private void recordDepartmentVerification(UUID complaintId, String departmentCode, String status, String reason) {
+		verificationResultRepository.save(new VerificationResult(
+				complaintId,
+				null,
+				"DEPARTMENT_SELECTION",
+				status,
+				departmentCode + ": " + reason,
+				"FAILED".equals(status)
+		));
 	}
 }

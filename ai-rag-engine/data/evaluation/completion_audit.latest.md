@@ -1,12 +1,12 @@
 # Completion Audit - Active Goal
 
-Generated at: 2026-06-06T15:35:27.321156+00:00
+Generated at: 2026-06-07T16:09:46.940890+00:00
 
 Overall status: PASS
 
 | Requirement | Status | Evidence | Action |
 | --- | --- | --- | --- |
-| Phase 1 data load including Asan organization chart | PASS | knowledge=842, raw=658, normalized=559, address=70533, facilities=664, parkingRestrictions=249, asanOrganizationUnits=34, asanAssignmentRules=110 | Load any missing source before claiming Phase 1 complete. |
+| Phase 1 data load including Asan organization chart | PASS | knowledge=1867, raw=2221, normalized=1622, address=70533, facilities=664, parkingRestrictions=249, asanOrganizationUnits=34, asanAssignmentRules=110 | Load any missing source before claiming Phase 1 complete. |
 | Asan organization routing data | PASS | asanOrganizationUnits=34, asanAssignmentRules=110, organizationRawRecords=1 | Organization data is routing support only and still requires human confirmation. |
 | Legal evidence quarantine | PASS | illegalEvidenceRows=0 | Only VERIFIED_OFFICIAL NATIONAL law records may be legal evidence. |
 | End-to-end template evaluation artifacts | PASS | artifacts={'judgeReportExists': True, 'trainingDecisionExists': True, 'predictionsExist': True, 'trainingDecision': 'NO_FINE_TUNING', 'predictionCount': 150, 'automaticSendFlags': 0, 'automaticCompletionFlags': 0, 'ungroundedLegalClaimFlags': 0} | Run run_trust_pipeline_evaluation.py. |

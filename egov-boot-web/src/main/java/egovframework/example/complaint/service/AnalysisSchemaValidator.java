@@ -24,7 +24,9 @@ public class AnalysisSchemaValidator {
 	private static final Set<String> URGENCIES = Set.of("LOW", "NORMAL", "HIGH", "EMERGENCY");
 	private static final Set<String> SENTIMENTS = Set.of("NEUTRAL", "DISCOMFORT", "ANGER", "ANXIETY");
 	private static final Set<String> DEPARTMENTS = Set.of(
-			"SAFETY_CONTROL", "RESOURCE_RECYCLING", "ROAD", "TRAFFIC", "CIVIL_AFFAIRS"
+			"SAFETY_CONTROL", "RESOURCE_RECYCLING", "ROAD", "TRAFFIC", "CIVIL_AFFAIRS",
+			"ENVIRONMENT", "BUILDING_HOUSING", "PARK_GREEN", "WATER_SEWER",
+			"HEALTH_SANITATION", "ANIMAL_LIVESTOCK", "URBAN_MANAGEMENT", "WELFARE"
 	);
 	private static final Set<String> COMPLAINT_TYPES = Set.of(
 			"ILLEGAL_DUMPING", "ROAD_DAMAGE", "ILLEGAL_PARKING", "TRAFFIC_SIGN",

@@ -13,7 +13,10 @@ import xml.etree.ElementTree as ET
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 
-import psycopg2
+try:
+    import psycopg2
+except ImportError:  # pragma: no cover - exercised in dependency-light unit tests
+    psycopg2 = None
 from dotenv import load_dotenv
 
 from data.API.law_api_client import LAW_SITE_BASE_URL, format_detail_link, request_law_detail, search_laws
@@ -434,6 +437,8 @@ def expire_documents_not_seen(cursor, source_id: int, documents: list[OfficialDo
 
 
 def mark_sync_failure(reason: str) -> None:
+    if psycopg2 is None:
+        raise RuntimeError("Install psycopg2 before synchronizing official sources")
     with psycopg2.connect(**connection_kwargs()) as connection:
         with connection.cursor() as cursor:
             now = datetime.now()
@@ -489,6 +494,8 @@ def expire_stale_documents(cursor) -> None:
 def sync() -> int:
     if os.getenv("OFFICIAL_SOURCE_SYNC_ENABLED", "false").lower() != "true":
         raise RuntimeError("Set OFFICIAL_SOURCE_SYNC_ENABLED=true to run official source synchronization")
+    if psycopg2 is None:
+        raise RuntimeError("Install psycopg2 before synchronizing official sources")
     interval_minutes = int(os.getenv("OFFICIAL_SOURCE_INTERVAL_MINUTES", "1440"))
     try:
         documents = collect_documents()
