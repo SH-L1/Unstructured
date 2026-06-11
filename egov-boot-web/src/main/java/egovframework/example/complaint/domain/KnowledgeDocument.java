@@ -166,7 +166,7 @@ public class KnowledgeDocument extends BaseTimeEntity {
 		this.jurisdictionCode = jurisdictionCode;
 		this.effectiveFrom = effectiveFrom;
 		this.effectiveTo = effectiveTo;
-		this.sourceVersion = "SYNTHETIC_TEST_V1";
+		this.sourceVersion = "TEST_FIXTURE_V1";
 		this.contentHash = egovframework.example.complaint.service.ContentHashService.calculateSha256(content);
 	}
 }

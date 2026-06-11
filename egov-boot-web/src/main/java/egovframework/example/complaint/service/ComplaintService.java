@@ -553,10 +553,7 @@ public class ComplaintService {
 		Map<String, Object> issue = new LinkedHashMap<>();
 		issue.put("summary", intent);
 		issue.put("complaintType", complaintType.name());
-		boolean isPilotType = complaintType == ComplaintType.ILLEGAL_DUMPING
-				|| complaintType == ComplaintType.ROAD_DAMAGE
-				|| complaintType == ComplaintType.ILLEGAL_PARKING;
-		String jurisdictionStatus = isPilotType ? "PILOT_CANDIDATE" : "NEEDS_JURISDICTION";
+		String jurisdictionStatus = "ASAN_CANDIDATE";
 		issue.put("jurisdictionStatus", jurisdictionStatus);
 		issue.put("safetyRisk", urgency == Urgency.EMERGENCY ? "EMERGENCY" : urgency == Urgency.HIGH ? "HIGH" : "NORMAL");
 		issue.put("expressionRisk", "NORMAL");

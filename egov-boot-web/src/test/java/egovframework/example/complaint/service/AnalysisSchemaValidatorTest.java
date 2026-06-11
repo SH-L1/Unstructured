@@ -95,7 +95,7 @@ class AnalysisSchemaValidatorTest {
 				  "issues":[{
 				    "summary":"Pothole",
 				    "complaintType":"ROAD_DAMAGE",
-				    "jurisdictionStatus":"PILOT_CANDIDATE",
+				    "jurisdictionStatus":"ASAN_CANDIDATE",
 				    "safetyRisk":"HIGH",
 				    "expressionRisk":"NORMAL",
 				    "processability":"PROCESSABLE",

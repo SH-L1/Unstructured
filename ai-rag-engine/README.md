@@ -53,7 +53,7 @@ WORKER_DB_PASSWORD
 ## AI 공급자
 
 ```text
-AI_PROVIDER=mock
+AI_PROVIDER=openai
 OPENAI_API_KEY=
 OPENAI_MODEL=gpt-4o-mini
 OPENAI_BASE_URL=https://api.openai.com/v1

@@ -234,7 +234,7 @@ class WorkerJobApiTest {
 		Map<String, Object> issue = new LinkedHashMap<>();
 		issue.put("summary", "Road damage");
 		issue.put("complaintType", "ROAD_DAMAGE");
-		issue.put("jurisdictionStatus", "PILOT_CANDIDATE");
+		issue.put("jurisdictionStatus", "ASAN_CANDIDATE");
 		issue.put("safetyRisk", "HIGH");
 		issue.put("expressionRisk", "NORMAL");
 		issue.put("processability", "PROCESSABLE");

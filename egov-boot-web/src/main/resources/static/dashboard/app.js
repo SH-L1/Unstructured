@@ -255,7 +255,8 @@ async function pollRun(id) {
   for (let attempt = 0; attempt < 150; attempt += 1) {
     state.run = await api(`/api/v1/runs/${id}`);
     renderRun();
-    if (["SUCCEEDED", "FAILED", "BLOCKED"].includes(state.run.status)) return;
+    const retryExhausted = state.run.status === "FAILED" && state.run.attempts >= state.run.maxAttempts;
+    if (["SUCCEEDED", "BLOCKED"].includes(state.run.status) || retryExhausted) return;
     await new Promise((resolve) => window.setTimeout(resolve, 700));
   }
   showMessage("작업 대기 시간이 초과되었습니다. 새로고침으로 상태를 확인하세요.", true);

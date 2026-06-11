@@ -38,6 +38,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.dao.PessimisticLockingFailureException;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -128,7 +129,13 @@ public class WorkerJobService {
 			if (!requested.contains(candidate.getJobType())) {
 				continue;
 			}
-			ProcessingJob job = processingJobRepository.findByIdForUpdate(candidate.getId()).orElse(null);
+			ProcessingJob job;
+			try {
+				job = processingJobRepository.findByIdForUpdate(candidate.getId()).orElse(null);
+			}
+			catch (PessimisticLockingFailureException exception) {
+				continue;
+			}
 			if (job == null || !requested.contains(job.getJobType())
 					|| (job.getStatus() != ProcessingJobStatus.PENDING && job.getStatus() != ProcessingJobStatus.FAILED)
 					|| (job.getStatus() == ProcessingJobStatus.FAILED && job.getLeaseUntil() != null

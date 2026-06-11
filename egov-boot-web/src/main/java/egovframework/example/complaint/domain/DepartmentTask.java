@@ -29,6 +29,12 @@ public class DepartmentTask extends BaseTimeEntity {
 	@Column(nullable = false, columnDefinition = "text")
 	private String recommendationReason;
 
+	@Column(nullable = false)
+	private int recommendationScore;
+
+	@Column(nullable = false, length = 60)
+	private String recommendationSource;
+
 	@Column(nullable = false, length = 40)
 	private String status;
 
@@ -46,6 +52,23 @@ public class DepartmentTask extends BaseTimeEntity {
 		this.issue = issue;
 		this.departmentCode = departmentCode;
 		this.recommendationReason = recommendationReason;
+		this.recommendationScore = inferScore(recommendationReason);
+		this.recommendationSource = inferSource(recommendationReason);
+		this.status = "CANDIDATE";
+	}
+
+	public DepartmentTask(
+			ComplaintIssue issue,
+			String departmentCode,
+			String recommendationReason,
+			int recommendationScore,
+			String recommendationSource
+	) {
+		this.issue = issue;
+		this.departmentCode = departmentCode;
+		this.recommendationReason = recommendationReason;
+		this.recommendationScore = Math.max(0, Math.min(100, recommendationScore));
+		this.recommendationSource = recommendationSource;
 		this.status = "CANDIDATE";
 	}
 
@@ -62,6 +85,14 @@ public class DepartmentTask extends BaseTimeEntity {
 
 	public String getRecommendationReason() {
 		return recommendationReason;
+	}
+
+	public int getRecommendationScore() {
+		return recommendationScore;
+	}
+
+	public String getRecommendationSource() {
+		return recommendationSource;
 	}
 
 	public String getStatus() {
@@ -94,5 +125,53 @@ public class DepartmentTask extends BaseTimeEntity {
 	public void reject(String actorName) {
 		this.status = "REJECTED";
 		this.confirmedBy = actorName;
+	}
+
+	private static int inferScore(String reason) {
+		if (reason == null) {
+			return 0;
+		}
+		int marker = reason.indexOf("score=");
+		if (marker >= 0) {
+			int start = marker + "score=".length();
+			int end = start;
+			while (end < reason.length() && Character.isDigit(reason.charAt(end))) {
+				end++;
+			}
+			if (end > start) {
+				try {
+					return Math.max(0, Math.min(100, Integer.parseInt(reason.substring(start, end))));
+				}
+				catch (NumberFormatException ignored) {
+					return 0;
+				}
+			}
+		}
+		if (reason.startsWith("RULE_BASED:")) {
+			return 100;
+		}
+		if (reason.startsWith("FALLBACK:")) {
+			return 70;
+		}
+		if (reason.startsWith("AI_MODEL:")) {
+			return 60;
+		}
+		return 0;
+	}
+
+	private static String inferSource(String reason) {
+		if (reason == null) {
+			return "UNSPECIFIED";
+		}
+		if (reason.startsWith("RULE_BASED:")) {
+			return "ASSIGNMENT_RULE";
+		}
+		if (reason.startsWith("FALLBACK:")) {
+			return "DEFAULT_ROUTING";
+		}
+		if (reason.startsWith("AI_MODEL:")) {
+			return "AI_MODEL";
+		}
+		return "UNSPECIFIED";
 	}
 }

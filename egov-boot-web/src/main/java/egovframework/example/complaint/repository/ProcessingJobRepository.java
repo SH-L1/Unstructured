@@ -4,6 +4,7 @@ import egovframework.example.complaint.domain.ProcessingJob;
 import egovframework.example.complaint.domain.ProcessingJobType;
 import egovframework.example.complaint.domain.ProcessingJobStatus;
 import java.time.LocalDateTime;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
@@ -16,6 +17,18 @@ import org.springframework.data.repository.query.Param;
 public interface ProcessingJobRepository extends JpaRepository<ProcessingJob, UUID> {
 
 	Optional<ProcessingJob> findByJobTypeAndIdempotencyKey(ProcessingJobType jobType, String idempotencyKey);
+
+	Optional<ProcessingJob> findFirstByComplaint_IdAndJobTypeAndStatusOrderByCreatedAtDesc(
+			UUID complaintId,
+			ProcessingJobType jobType,
+			ProcessingJobStatus status
+	);
+
+	List<ProcessingJob> findByComplaint_IdAndJobTypeAndStatusInOrderByCreatedAtDesc(
+			UUID complaintId,
+			ProcessingJobType jobType,
+			Collection<ProcessingJobStatus> statuses
+	);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
 	@org.springframework.data.jpa.repository.QueryHints({

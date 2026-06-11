@@ -32,7 +32,7 @@ public class AnalysisSchemaValidator {
 			"ILLEGAL_DUMPING", "ROAD_DAMAGE", "ILLEGAL_PARKING", "TRAFFIC_SIGN",
 			"NOISE", "ENVIRONMENT", "HAZARDOUS_MATERIAL", "GENERAL"
 	);
-	private static final Set<String> JURISDICTIONS = Set.of("PILOT_CANDIDATE", "NEEDS_JURISDICTION");
+	private static final Set<String> JURISDICTIONS = Set.of("ASAN_CANDIDATE", "NEEDS_JURISDICTION");
 	private static final Set<String> SAFETY_RISKS = Set.of("NORMAL", "HIGH", "EMERGENCY");
 	private static final Set<String> EXPRESSION_RISKS = Set.of("NORMAL", "HIGH");
 	private static final Set<String> PROCESSABILITY = Set.of(

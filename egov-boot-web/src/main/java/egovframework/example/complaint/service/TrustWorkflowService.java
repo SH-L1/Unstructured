@@ -22,6 +22,7 @@ import egovframework.example.complaint.domain.IdempotencyRecord;
 import egovframework.example.complaint.domain.LocationCandidate;
 import egovframework.example.complaint.domain.OfficialDraft;
 import egovframework.example.complaint.domain.ProcessingJob;
+import egovframework.example.complaint.domain.ProcessingJobStatus;
 import egovframework.example.complaint.domain.ProcessingJobType;
 import egovframework.example.complaint.domain.VerificationResult;
 import egovframework.example.complaint.domain.WorkflowAuditEvent;
@@ -242,6 +243,20 @@ public class TrustWorkflowService {
 				&& complaint.getStatus() != ComplaintStatus.TRIAGE_REVIEW) {
 			throw new IllegalStateException("Analysis can only be requested before draft review begins");
 		}
+		ProcessingJobResponse existingRun = existingActiveRun(complaintId, ProcessingJobType.CLASSIFY_ISSUES);
+		if (existingRun != null) {
+			return existingRun;
+		}
+		if (complaintService.findAnalysis(complaintId) != null) {
+			return processingJobRepository
+					.findFirstByComplaint_IdAndJobTypeAndStatusOrderByCreatedAtDesc(
+							complaintId,
+							ProcessingJobType.CLASSIFY_ISSUES,
+							ProcessingJobStatus.SUCCEEDED
+					)
+					.map(ProcessingJobResponse::from)
+					.orElseThrow(() -> new IllegalStateException("Analysis already exists without a completed processing job"));
+		}
 		requireApprovedAttachmentDerivatives(complaintId);
 		return enqueue(complaintId, ProcessingJobType.CLASSIFY_ISSUES, key, expectedVersion);
 	}
@@ -260,6 +275,10 @@ public class TrustWorkflowService {
 		}
 		Complaint complaint = getComplaint(complaintId);
 		requireVersion(expectedVersion, complaint.getVersion());
+		ProcessingJobResponse existingRun = existingActiveRun(complaintId, ProcessingJobType.DRAFT);
+		if (existingRun != null) {
+			return existingRun;
+		}
 		if (complaint.getStatus() != ComplaintStatus.TRIAGE_REVIEW
 				&& complaint.getStatus() != ComplaintStatus.DRAFT_REVIEW) {
 			throw new IllegalStateException("Complaint must be in TRIAGE_REVIEW or rejected DRAFT_REVIEW before draft generation");
@@ -279,6 +298,19 @@ public class TrustWorkflowService {
 		requireVerifiedDepartmentSelection(complaintId);
 		requireApprovedAttachmentDerivatives(complaintId);
 		return enqueue(complaintId, ProcessingJobType.DRAFT, key, expectedVersion);
+	}
+
+	private ProcessingJobResponse existingActiveRun(UUID complaintId, ProcessingJobType type) {
+		return processingJobRepository
+				.findByComplaint_IdAndJobTypeAndStatusInOrderByCreatedAtDesc(
+						complaintId,
+						type,
+						List.of(ProcessingJobStatus.PENDING, ProcessingJobStatus.RUNNING, ProcessingJobStatus.FAILED)
+				)
+				.stream()
+				.findFirst()
+				.map(ProcessingJobResponse::from)
+				.orElse(null);
 	}
 
 	private ProcessingJobResponse enqueue(UUID complaintId, ProcessingJobType type, String idempotencyKey, long expectedVersion) {
@@ -382,7 +414,7 @@ public class TrustWorkflowService {
 		complaint.confirmLocation(redactedLocation);
 		// NEEDS_JURISDICTION blocker: AI 분석 시 jurisdictionStatus가 NEEDS_JURISDICTION으로
 		// 설정된 이슈가 낙아 있는 경우에만 재-block한다.
-		// PILOT_CANDIDATE(폴백 부서 배정)는 담당자가 부서를 VERIFIED한 이후 해소되므로
+		// ASAN_CANDIDATE(아산시 후보 부서 배정)는 담당자가 부서를 VERIFIED한 이후 해소되므로
 		// 여기서는 위치 확인만으로 다시 block하지 않는다.
 		boolean jurisdictionUnresolved = complaintIssueRepository
 				.findByComplaint_IdOrderByIssueIndexAsc(complaint.getId()).stream()
@@ -703,7 +735,7 @@ public class TrustWorkflowService {
 	private String expectedPilotDepartment(ComplaintIssue issue) {
 		// ProcessingJobRunner.defaultDepartmentForType()과 동일한 기준.
 		// 모든 민원 유형에 대한 명시적 매핑을 유지해야
-		// PILOT_CANDIDATE 이슈도 쪸어진 부서를 선택하면 confirmDepartment()에서
+		// ASAN_CANDIDATE 이슈도 추천된 부서를 선택하면 confirmDepartment()에서
 		// 정상적으로 확인되어 blocker가 해소될 수 있다.
 		return switch (issue.getComplaintType()) {
 			case ILLEGAL_DUMPING -> "RESOURCE_RECYCLING";

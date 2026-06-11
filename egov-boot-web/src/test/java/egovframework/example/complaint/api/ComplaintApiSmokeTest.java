@@ -5,14 +5,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import egovframework.example.EgovBootApplication;
+import egovframework.example.complaint.domain.Complaint;
 import egovframework.example.complaint.domain.KnowledgePurpose;
 import egovframework.example.complaint.domain.KnowledgeVerificationStatus;
 import egovframework.example.complaint.domain.KnowledgeDocument;
+import egovframework.example.complaint.domain.KnowledgeDocumentChunk;
 import egovframework.example.complaint.domain.DocumentType;
+import egovframework.example.complaint.domain.ProcessingJob;
+import egovframework.example.complaint.domain.ProcessingJobType;
+import egovframework.example.complaint.domain.SourceChannel;
 import egovframework.example.complaint.repository.ComplaintRepository;
 import egovframework.example.complaint.repository.ComplaintSensitivePayloadRepository;
 import egovframework.example.complaint.repository.DraftClaimRepository;
 import egovframework.example.complaint.repository.KnowledgeDocumentRepository;
+import egovframework.example.complaint.repository.KnowledgeDocumentChunkRepository;
 import egovframework.example.complaint.repository.AuditLogRepository;
 import egovframework.example.complaint.repository.ProcessingJobRepository;
 import egovframework.example.complaint.repository.WorkflowAuditEventRepository;
@@ -54,6 +60,9 @@ class ComplaintApiSmokeTest {
 
 	@Autowired
 	private KnowledgeDocumentRepository knowledgeDocumentRepository;
+
+	@Autowired
+	private KnowledgeDocumentChunkRepository knowledgeDocumentChunkRepository;
 
 	@Autowired
 	private ComplaintRepository complaintRepository;
@@ -347,6 +356,30 @@ class ComplaintApiSmokeTest {
 	}
 
 	@Test
+	void analysisRequestReusesActiveJobForSameComplaint() {
+		Complaint complaint = complaintRepository.saveAndFlush(new Complaint(
+				SourceChannel.WEB,
+				"Road hazard complaint.",
+				"Road hazard complaint.",
+				"Pilot road"
+		));
+		ProcessingJob existing = processingJobRepository.saveAndFlush(new ProcessingJob(
+				complaint,
+				ProcessingJobType.CLASSIFY_ISSUES,
+				key(),
+				3
+		));
+
+		var response = workflowService.enqueueAnalysis(complaint.getId(), key(), complaint.getVersion());
+
+		assertThat(response.id()).isEqualTo(existing.getId());
+		assertThat(processingJobRepository.findAll().stream()
+				.filter(job -> job.getComplaintId().equals(complaint.getId()))
+				.filter(job -> job.getJobType() == ProcessingJobType.CLASSIFY_ISSUES))
+				.hasSize(1);
+	}
+
+	@Test
 	void concurrentCreateWithSameIdempotencyKeyDoesNotCreateDuplicates() throws Exception {
 		long before = complaintRepository.count();
 		String idempotencyKey = key();
@@ -390,19 +423,19 @@ class ComplaintApiSmokeTest {
 	}
 
 	@Test
-	void complaintOutsideSyntheticPilotTypesRequiresJurisdictionReview() {
+	void generalAsanComplaintDoesNotUseSyntheticPilotGate() {
 		JsonNode created = createComplaint("Please review this general request.", "Pilot office", key());
 		String complaintId = created.path("data").path("id").asText();
 		JsonNode analysisJob = startRun(complaintId, "analysis-runs", created.path("data").path("version").asLong(), key());
 		assertThat(waitForJob(analysisJob.path("data").path("id").asText()).path("status").asText()).isEqualTo("SUCCEEDED");
 
 		JsonNode detail = getOk("/api/v1/complaints/" + complaintId).path("data");
-		assertThat(detail.path("complaint").path("workflowBlocker").asText()).isEqualTo("NEEDS_JURISDICTION");
-		assertThat(detail.path("issues").get(0).path("jurisdictionStatus").asText()).isEqualTo("NEEDS_JURISDICTION");
+		assertThat(detail.path("complaint").path("workflowBlocker").isNull()).isTrue();
+		assertThat(detail.path("issues").get(0).path("jurisdictionStatus").asText()).isEqualTo("ASAN_CANDIDATE");
 	}
 
 	@Test
-	void locationConfirmationDoesNotClearUnresolvedJurisdiction() {
+	void locationConfirmationClearsLocationBlockerForAsanCandidate() {
 		JsonNode created = createComplaint("Please review this unsupported general request.", null, key());
 		String complaintId = created.path("data").path("id").asText();
 		JsonNode analysisJob = startRun(complaintId, "analysis-runs", created.path("data").path("version").asLong(), key());
@@ -419,7 +452,7 @@ class ComplaintApiSmokeTest {
 		);
 
 		assertThat(confirmed.getStatusCode()).isEqualTo(HttpStatus.OK);
-		assertThat(confirmed.getBody().path("data").path("workflowBlocker").asText()).isEqualTo("NEEDS_JURISDICTION");
+		assertThat(confirmed.getBody().path("data").path("workflowBlocker").isNull()).isTrue();
 	}
 
 	@Test
@@ -443,7 +476,7 @@ class ComplaintApiSmokeTest {
 				"https://example.invalid/conflicting-official-test",
 				"Illegal dumping reports must not receive a field inspection.",
 				"waste,dumping,garbage",
-				"Waste handling reference"
+				"Waste Management Act"
 		);
 		conflicting.verifyForTest(
 				KnowledgePurpose.OFFICIAL_LAW,
@@ -452,7 +485,14 @@ class ComplaintApiSmokeTest {
 				LocalDate.now().minusYears(1),
 				null
 		);
-		knowledgeDocumentRepository.save(conflicting);
+		conflicting = knowledgeDocumentRepository.save(conflicting);
+		knowledgeDocumentChunkRepository.save(new KnowledgeDocumentChunk(
+				conflicting,
+				0,
+				"Illegal dumping reports must not receive a field inspection.",
+				"waste,dumping,garbage",
+				"Waste Management Act"
+		));
 
 		JsonNode created = createComplaint("Illegal dumping requires inspection.", "Pilot alley", key());
 		String complaintId = created.path("data").path("id").asText();

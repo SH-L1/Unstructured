@@ -311,7 +311,7 @@ public class ProcessingJobRunner {
 			if (complaintIssueRepository.findByComplaint_IdOrderByIssueIndexAsc(complaintId).isEmpty()) {
 				for (int index = 0; index < proposals.size(); index++) {
 					IssueProposal proposal = proposals.get(index);
-					AssignmentRuleInfo ruleInfo = findSyntheticAssignmentRule(proposal.complaintType());
+					AssignmentRuleInfo ruleInfo = findAssignmentRule(proposal.complaintType());
 					boolean hasExplicitRule = ruleInfo != null;
 					String assignmentDepartment = hasExplicitRule
 							? ruleInfo.departmentCode()
@@ -319,7 +319,7 @@ public class ProcessingJobRunner {
 					String processability = analysis.locationText() == null || analysis.locationText().isBlank()
 							? "NEEDS_LOCATION"
 							: proposal.processability();
-					String jurisdictionStatus = hasExplicitRule ? "PILOT_CANDIDATE" : proposal.jurisdictionStatus();
+					String jurisdictionStatus = hasExplicitRule ? "ASAN_CANDIDATE" : proposal.jurisdictionStatus();
 					ComplaintIssue issue = complaintIssueRepository.save(new ComplaintIssue(
 							complaint,
 							index,
@@ -336,11 +336,17 @@ public class ProcessingJobRunner {
 						}
 					}
 					String taskReason = hasExplicitRule
-							? "RULE_BASED: " + ruleInfo.ruleText() + "; department=" + ruleInfo.departmentCode() + "; type=" + proposal.complaintType().name() + "; score=100"
-							: "FALLBACK: default mapping; department=" + assignmentDepartment + "; type=" + proposal.complaintType().name() + "; score=70";
-					departmentTaskRepository.save(new DepartmentTask(issue, assignmentDepartment, taskReason));
+							? "ASSIGNMENT_RULE: " + ruleInfo.ruleText() + "; department=" + ruleInfo.departmentCode() + "; type=" + proposal.complaintType().name()
+							: "DEFAULT_ROUTING: active department directory fallback; department=" + assignmentDepartment + "; type=" + proposal.complaintType().name();
+					departmentTaskRepository.save(new DepartmentTask(
+							issue,
+							assignmentDepartment,
+							taskReason,
+							hasExplicitRule ? 100 : 65,
+							hasExplicitRule ? "ASSIGNMENT_RULE" : "DEFAULT_ROUTING"
+					));
 					List<String> candidateCodes = proposal.departmentCandidates().stream().distinct()
-							.filter(ProcessingJobRunner::allowedDepartment)
+							.filter(this::activeDepartment)
 							.filter(code -> !code.equals(assignmentDepartment))
 							.limit(3)
 							.toList();
@@ -348,9 +354,9 @@ public class ProcessingJobRunner {
 					for (int candidateIndex = 0; candidateIndex < candidateCodes.size(); candidateIndex++) {
 						String code = candidateCodes.get(candidateIndex);
 						int score = Math.max(10, 80 - (candidateIndex * 20));
-						String aiReason = "AI_MODEL: " + model + "; department=" + code + "; score=" + score + "; input_complaint=" + complaintId;
+						String aiReason = "AI_MODEL: " + model + "; department=" + code + "; input_complaint=" + complaintId;
 						departmentTaskRepository.save(new DepartmentTask(
-								issue, code, aiReason
+								issue, code, aiReason, score, "AI_MODEL"
 						));
 					}
 					proposal.locationCandidates().stream().distinct()
@@ -391,7 +397,7 @@ public class ProcessingJobRunner {
 			proposals.add(new IssueProposal(
 					analysis.intent(),
 					complaintType(analysis.complaintType()),
-					"PILOT_CANDIDATE",
+					"NEEDS_JURISDICTION",
 					safetyRisk(analysis),
 					"ANGER".equals(analysis.sentiment()) ? "HIGH" : "NORMAL",
 					"PROCESSABLE",
@@ -435,13 +441,16 @@ public class ProcessingJobRunner {
 		}
 	}
 
-	private static boolean allowedDepartment(String code) {
-		return code != null && (code.startsWith("SYNTHETIC_DEMO_")
-				|| Set.of(
-						"SAFETY_CONTROL", "RESOURCE_RECYCLING", "ROAD", "TRAFFIC", "CIVIL_AFFAIRS",
-						"ENVIRONMENT", "BUILDING_HOUSING", "PARK_GREEN", "WATER_SEWER",
-						"HEALTH_SANITATION", "ANIMAL_LIVESTOCK", "URBAN_MANAGEMENT", "WELFARE"
-				).contains(code));
+	private boolean activeDepartment(String code) {
+		if (code == null || code.isBlank()) {
+			return false;
+		}
+		Boolean exists = jdbcTemplate.queryForObject(
+				"select exists(select 1 from departments where code = ? and active = true)",
+				Boolean.class,
+				code
+		);
+		return Boolean.TRUE.equals(exists);
 	}
 
 	/**
@@ -461,16 +470,16 @@ public class ProcessingJobRunner {
 
 	private record AssignmentRuleInfo(String departmentCode, String ruleText) {}
 
-	private AssignmentRuleInfo findSyntheticAssignmentRule(ComplaintType complaintType) {
+	private AssignmentRuleInfo findAssignmentRule(ComplaintType complaintType) {
 		return jdbcTemplate.query("""
 				select u.code, r.rule_text
 				from assignment_rules r
 				join organization_units u on u.id = r.organization_unit_id
 				where r.complaint_type = ?
-				  and r.jurisdiction_code = 'SYNTHETIC_DEMO_PILOT'
-				  and r.synthetic_demo = true
+				  and r.jurisdiction_code = 'ASAN'
+				  and r.synthetic_demo = false
 				  and r.active = true
-				  and u.synthetic_demo = true
+				  and u.synthetic_demo = false
 				  and u.active = true
 				  and (r.valid_from is null or r.valid_from <= current_date)
 				  and (r.valid_to is null or r.valid_to >= current_date)
@@ -481,23 +490,11 @@ public class ProcessingJobRunner {
 				""",
 				resultSet -> resultSet.next()
 						? new AssignmentRuleInfo(
-								departmentCodeFromOrganizationCode(resultSet.getString(1)),
+								resultSet.getString(1),
 								resultSet.getString(2))
 						: null,
 				complaintType.name()
 		);
-	}
-
-	private String departmentCodeFromOrganizationCode(String value) {
-		if (value == null || value.isBlank()) {
-			return null;
-		}
-		return switch (value) {
-			case "SYNTHETIC_DEMO_RESOURCE_RECYCLING" -> "RESOURCE_RECYCLING";
-			case "SYNTHETIC_DEMO_ROAD" -> "ROAD";
-			case "SYNTHETIC_DEMO_TRAFFIC" -> "TRAFFIC";
-			default -> value;
-		};
 	}
 
 	private record IssueProposal(

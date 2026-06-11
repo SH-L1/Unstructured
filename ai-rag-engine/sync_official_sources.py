@@ -1,7 +1,8 @@
-"""Fail-closed synchronization of official national-law provisions.
+"""Synchronize official national-law provisions into the knowledge mart.
 
-External calls finish before a database transaction begins. Only complete,
-versioned national-law provisions can become VERIFIED_OFFICIAL knowledge.
+Only versioned documents from the National Law Information Center are promoted
+to OFFICIAL_LAW / VERIFIED_OFFICIAL / NATIONAL evidence. External API calls are
+completed before the database transaction starts.
 """
 
 from __future__ import annotations
@@ -15,9 +16,14 @@ from datetime import date, datetime, timedelta
 
 try:
     import psycopg2
-except ImportError:  # pragma: no cover - exercised in dependency-light unit tests
+except ImportError:  # pragma: no cover
     psycopg2 = None
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+except ImportError:  # pragma: no cover
+    def load_dotenv(*_args, **_kwargs):
+        return False
 
 from data.API.law_api_client import LAW_SITE_BASE_URL, format_detail_link, request_law_detail, search_laws
 
@@ -36,7 +42,7 @@ DEFAULT_QUERIES = (
     "도로법",
     "도로교통법",
     "주차장법",
-    "소음진동관리법",
+    "소음ㆍ진동관리법",
     "악취방지법",
     "대기환경보전법",
     "물환경보전법",
@@ -109,7 +115,9 @@ def strip_namespace(tag: str) -> str:
     return tag.rsplit("}", 1)[-1]
 
 
-def normalized_text(element: ET.Element) -> str:
+def normalized_text(element: ET.Element | None) -> str:
+    if element is None:
+        return ""
     return re.sub(r"\s+", " ", " ".join(value.strip() for value in element.itertext() if value.strip())).strip()
 
 
@@ -132,32 +140,28 @@ def parse_yyyymmdd(value: str) -> date:
 def parse_provisions(root: ET.Element) -> tuple[Provision, ...]:
     provisions: list[Provision] = []
     seen: set[str] = set()
-    def direct_value(direct: dict[str, ET.Element], *names: str) -> ET.Element | None:
-        for name in names:
-            if name in direct:
-                return direct[name]
-        return None
 
     for element in root.iter():
         direct = {strip_namespace(child.tag): child for child in list(element)}
-        number = direct_value(direct, "조문번호", "議곕Ц踰덊샇")
-        content = direct_value(direct, "조문내용", "조내용", "議곕Ц?댁슜")
-        if number is None or content is None:
+        number = normalized_text(direct.get("조문번호"))
+        content = normalized_text(direct.get("조문내용"))
+        if not number or not content:
             continue
-        number_text = re.sub(r"^제|조$", "", normalized_text(number)).strip()
-        branch = direct_value(direct, "조문가지번호", "議곕Ц媛吏踰덊샇")
-        branch_text = normalized_text(branch) if branch is not None else ""
-        branch_text = re.sub(r"^의", "", branch_text).strip()
+        number_text = re.sub(r"^제|조$", "", number).strip()
+        if not number_text:
+            continue
+        branch = normalized_text(direct.get("조문가지번호"))
+        branch_text = re.sub(r"^의", "", branch).strip()
         key = f"제{number_text}조" + (f"의{branch_text}" if branch_text and branch_text != "0" else "")
         if key in seen:
             continue
+        heading = normalized_text(direct.get("조문제목"))
         content_text = normalized_text(element)
         if not content_text:
             continue
-        heading_node = direct_value(direct, "조문제목", "조제목", "議곕Ц?쒕ぉ")
-        heading = normalized_text(heading_node) if heading_node is not None else ""
         provisions.append(Provision(key=key[:200], heading=heading[:500], content=content_text))
         seen.add(key)
+
     if not provisions:
         raise ValueError("Official document did not contain preserved provision nodes")
     return tuple(provisions)
@@ -168,7 +172,7 @@ def build_document(item: dict[str, str], root: ET.Element) -> OfficialDocument:
     title = str(item.get("title") or "").strip()
     if not external_id or not title:
         raise ValueError("Official document is missing an external id or title")
-    effective_from = parse_yyyymmdd(first_text(root, {"시행일자"}))
+    effective_from = parse_yyyymmdd(first_text(root, {"시행일자", "시행일", "공포일자"}))
     provisions = parse_provisions(root)
     content = "\n\n".join(f"{provision.key} {provision.heading}\n{provision.content}" for provision in provisions)
     content_hash = hashlib.sha256(content.encode("utf-8")).hexdigest()
@@ -193,7 +197,7 @@ def collect_documents() -> list[OfficialDocument]:
         for query in os.getenv("OFFICIAL_LAW_QUERIES", ",".join(DEFAULT_QUERIES)).split(",")
         if query.strip()
     )
-    max_documents = int(os.getenv("OFFICIAL_SOURCE_MAX_DOCUMENTS", "30"))
+    max_documents = int(os.getenv("OFFICIAL_SOURCE_MAX_DOCUMENTS", "80"))
     documents: dict[tuple[str, str], OfficialDocument] = {}
     for query in queries:
         items = search_laws(query, display=int(os.getenv("OFFICIAL_SOURCE_SEARCH_DISPLAY", "5")))
@@ -212,6 +216,7 @@ def collect_documents() -> list[OfficialDocument]:
 
 
 def source_registry_id(cursor, interval_minutes: int) -> int:
+    now = datetime.now()
     cursor.execute(
         """
         insert into source_registry (
@@ -227,18 +232,12 @@ def source_registry_id(cursor, interval_minutes: int) -> int:
             updated_at = excluded.updated_at
         returning id
         """,
-        (SOURCE_NAME, SOURCE_TYPE, LAW_SITE_BASE_URL, interval_minutes, datetime.now(), datetime.now()),
+        (SOURCE_NAME, SOURCE_TYPE, LAW_SITE_BASE_URL, interval_minutes, now, now),
     )
     return int(cursor.fetchone()[0])
 
 
-def _split_provisions_into_chunks(document: OfficialDocument, max_chunk_size: int = 1800) -> list[str]:
-    """Split provisions into chunks of roughly max_chunk_size characters.
-
-    Each provision is kept intact; adjacent provisions are merged until the
-    next one would exceed the limit.  This mirrors the chunking strategy of
-    ``insert_knowledge_documents.split_markdown_chunks``.
-    """
+def split_provisions_into_chunks(document: OfficialDocument, max_chunk_size: int = 1800) -> list[str]:
     chunks: list[str] = []
     current = ""
     for provision in document.provisions:
@@ -261,24 +260,14 @@ def upsert_document(cursor, source_id: int, document: OfficialDocument) -> None:
         """
         update legal_document_versions
         set status = 'SUPERSEDED',
-            effective_to = case
-                when effective_from < %s then %s
-                else effective_to
-            end,
+            effective_to = case when effective_from < %s then %s else effective_to end,
             updated_at = %s
         where source_registry_id = %s
           and external_id = %s
           and content_hash <> %s
           and status = 'ACTIVE'
         """,
-        (
-            document.effective_from,
-            document.effective_from - timedelta(days=1),
-            now,
-            source_id,
-            document.external_id,
-            document.content_hash,
-        ),
+        (document.effective_from, document.effective_from - timedelta(days=1), now, source_id, document.external_id, document.content_hash),
     )
     cursor.execute(
         """
@@ -295,15 +284,7 @@ def upsert_document(cursor, source_id: int, document: OfficialDocument) -> None:
             updated_at = excluded.updated_at
         returning id
         """,
-        (
-            source_id,
-            document.external_id,
-            document.title,
-            document.effective_from,
-            document.content_hash,
-            now,
-            now,
-        ),
+        (source_id, document.external_id, document.title, document.effective_from, document.content_hash, now, now),
     )
     version_id = int(cursor.fetchone()[0])
     for provision in document.provisions:
@@ -319,12 +300,9 @@ def upsert_document(cursor, source_id: int, document: OfficialDocument) -> None:
             """,
             (version_id, provision.key, provision.heading, provision.content, now, now),
         )
-    cursor.execute(
-        """
-        select id from knowledge_documents where title = %s order by id limit 1
-        """,
-        (document.title,),
-    )
+
+    source_version = f"{document.external_id}:{document.content_hash[:16]}"
+    cursor.execute("select id from knowledge_documents where source_version = %s order by id limit 1", (source_version,))
     existing = cursor.fetchone()
     values = {
         "document_type": "LAW",
@@ -339,7 +317,7 @@ def upsert_document(cursor, source_id: int, document: OfficialDocument) -> None:
         "jurisdiction_code": "NATIONAL",
         "effective_from": document.effective_from,
         "content_hash": document.content_hash,
-        "source_version": f"{document.external_id}:{document.content_hash[:16]}",
+        "source_version": source_version,
         "source_registry_id": source_id,
         "updated_at": now,
     }
@@ -349,6 +327,7 @@ def upsert_document(cursor, source_id: int, document: OfficialDocument) -> None:
             """
             update knowledge_documents set
                 document_type = %(document_type)s,
+                title = %(title)s,
                 source_name = %(source_name)s,
                 source_url = %(source_url)s,
                 content = %(content)s,
@@ -360,7 +339,6 @@ def upsert_document(cursor, source_id: int, document: OfficialDocument) -> None:
                 effective_from = %(effective_from)s,
                 effective_to = null,
                 content_hash = %(content_hash)s,
-                source_version = %(source_version)s,
                 source_registry_id = %(source_registry_id)s,
                 updated_at = %(updated_at)s
             where id = %(id)s
@@ -397,38 +375,26 @@ def upsert_document(cursor, source_id: int, document: OfficialDocument) -> None:
         """,
         (knowledge_id, now, now),
     )
-    # --- Create knowledge_document_chunks so RAG search can find this document ---
     cursor.execute(
-        "UPDATE knowledge_document_chunks SET active = false, updated_at = %s WHERE knowledge_document_id = %s",
+        "update knowledge_document_chunks set active = false, updated_at = %s where knowledge_document_id = %s",
         (now, knowledge_id),
     )
-    chunks = _split_provisions_into_chunks(document)
-    for chunk_index, chunk_content in enumerate(chunks):
+    for chunk_index, chunk_content in enumerate(split_provisions_into_chunks(document)):
         cursor.execute(
             """
-            INSERT INTO knowledge_document_chunks (
+            insert into knowledge_document_chunks (
                 knowledge_document_id, chunk_index, content, keywords, legal_basis,
                 token_count, active, created_at, updated_at
-            ) VALUES (%s, %s, %s, %s, %s, %s, true, %s, %s)
-            ON CONFLICT (knowledge_document_id, chunk_index)
-            DO UPDATE SET
-                content = EXCLUDED.content,
-                keywords = EXCLUDED.keywords,
-                legal_basis = EXCLUDED.legal_basis,
-                token_count = EXCLUDED.token_count,
+            ) values (%s, %s, %s, %s, %s, %s, true, %s, %s)
+            on conflict (knowledge_document_id, chunk_index) do update set
+                content = excluded.content,
+                keywords = excluded.keywords,
+                legal_basis = excluded.legal_basis,
+                token_count = excluded.token_count,
                 active = true,
-                updated_at = EXCLUDED.updated_at
+                updated_at = excluded.updated_at
             """,
-            (
-                knowledge_id,
-                chunk_index,
-                chunk_content,
-                document.title[:500],
-                document.title[:500],
-                len(chunk_content.split()),
-                now,
-                now,
-            ),
+            (knowledge_id, chunk_index, chunk_content, document.title[:500], document.title[:500], len(chunk_content.split()), now, now),
         )
 
 
@@ -450,23 +416,13 @@ def mark_sync_success(cursor, source_id: int, documents: list[OfficialDocument],
             updated_at = %s
         where id = %s
         """,
-        (
-            now,
-            now,
-            now + timedelta(minutes=interval_minutes),
-            now + timedelta(minutes=interval_minutes * 2),
-            aggregate_hash,
-            now,
-            source_id,
-        ),
+        (now, now, now + timedelta(minutes=interval_minutes), now + timedelta(minutes=interval_minutes * 2), aggregate_hash, now, source_id),
     )
 
 
 def expire_documents_not_seen(cursor, source_id: int, documents: list[OfficialDocument]) -> None:
     now = datetime.now()
-    current_versions = [
-        f"{document.external_id}:{document.content_hash[:16]}" for document in documents
-    ]
+    current_versions = [f"{document.external_id}:{document.content_hash[:16]}" for document in documents]
     current_hashes = [document.content_hash for document in documents]
     cursor.execute(
         """
@@ -493,12 +449,29 @@ def expire_documents_not_seen(cursor, source_id: int, documents: list[OfficialDo
     )
 
 
+def expire_stale_documents(cursor) -> None:
+    now = datetime.now()
+    cursor.execute(
+        """
+        update knowledge_documents k
+        set verification_status = 'STALE',
+            updated_at = %s
+        from source_registry s
+        where k.source_registry_id = s.id
+          and (s.status <> 'ACTIVE' or s.stale_after is null or s.stale_after <= %s)
+          and k.verification_status = 'VERIFIED_OFFICIAL'
+        """,
+        (now, now),
+    )
+
+
 def mark_sync_failure(reason: str) -> None:
     if psycopg2 is None:
         raise RuntimeError("Install psycopg2 before synchronizing official sources")
+    now = datetime.now()
+    interval_minutes = int(os.getenv("OFFICIAL_SOURCE_INTERVAL_MINUTES", "1440"))
     with psycopg2.connect(**connection_kwargs()) as connection:
         with connection.cursor() as cursor:
-            now = datetime.now()
             cursor.execute(
                 """
                 insert into source_registry (
@@ -514,38 +487,12 @@ def mark_sync_failure(reason: str) -> None:
                     updated_at = %s
                 """,
                 (
-                    SOURCE_NAME,
-                    SOURCE_TYPE,
-                    LAW_SITE_BASE_URL,
-                    int(os.getenv("OFFICIAL_SOURCE_INTERVAL_MINUTES", "1440")),
-                    now,
-                    reason[:2000],
-                    now,
-                    now,
-                    now,
-                    now,
-                    reason[:2000],
-                    now,
-                    now,
+                    SOURCE_NAME, SOURCE_TYPE, LAW_SITE_BASE_URL, interval_minutes, now, reason[:2000], now, now, now,
+                    now, reason[:2000], now, now,
                 ),
             )
             expire_stale_documents(cursor)
         connection.commit()
-
-
-def expire_stale_documents(cursor) -> None:
-    cursor.execute(
-        """
-        update knowledge_documents k
-        set verification_status = 'STALE',
-            updated_at = %s
-        from source_registry s
-        where k.source_registry_id = s.id
-          and (s.status <> 'ACTIVE' or s.stale_after is null or s.stale_after <= %s)
-          and k.verification_status = 'VERIFIED_OFFICIAL'
-        """,
-        (datetime.now(), datetime.now()),
-    )
 
 
 def sync() -> int:
@@ -557,7 +504,7 @@ def sync() -> int:
     try:
         documents = collect_documents()
         with psycopg2.connect(**connection_kwargs()) as connection:
-            connection.set_client_encoding('UTF8')
+            connection.set_client_encoding("UTF8")
             with connection.cursor() as cursor:
                 source_id = source_registry_id(cursor, interval_minutes)
                 for document in documents:

@@ -539,15 +539,14 @@ def execute_ai_job(job: dict[str, object]) -> tuple[dict[str, object], list[int]
                 if isinstance(candidate, dict) and isinstance(candidate.get("content"), str):
                     candidate["content"] = candidate["content"][:3500]
             payload["knowledgeCandidates"] = truncated_candidates
-    provider = os.getenv("AI_PROVIDER", "mock").strip().lower()
+    provider = os.getenv("AI_PROVIDER", "openai").strip().lower()
     providers = {
-        "mock": lambda: mock_ai_result(payload),
         "openai": lambda: openai_ai_result(payload),
         "bedrock": lambda: bedrock_ai_result(payload),
     }
     if provider not in providers:
         raise RuntimeError(f"Unsupported AI_PROVIDER: {provider}")
-    estimated_cost = 0 if provider == "mock" else (1200 if payload.get("jobType") == "DRAFT" else 900)
+    estimated_cost = 1200 if payload.get("jobType") == "DRAFT" else 900
     execution = execute_provider_call(provider, estimated_cost, providers[provider])
     output, evidence_ids, model_name = execution.value
     rewrite_count = 0
@@ -788,7 +787,7 @@ def mock_analysis(payload: dict[str, object]) -> dict[str, object]:
     issue = {
         "summary": intent,
         "complaintType": complaint_type,
-        "jurisdictionStatus": "PILOT_CANDIDATE",
+        "jurisdictionStatus": "ASAN_CANDIDATE",
         "safetyRisk": "EMERGENCY" if emergency else "NORMAL",
         "expressionRisk": "NORMAL",
         "processability": processability,
@@ -968,7 +967,7 @@ def provider_messages(payload: dict[str, object]) -> list[dict[str, str]]:
             "\n\nIssue field rules:"
             "\n- summary: short Korean issue summary string"
             "\n- complaintType: exactly one of ILLEGAL_DUMPING, ROAD_DAMAGE, ILLEGAL_PARKING, TRAFFIC_SIGN, NOISE, ENVIRONMENT, HAZARDOUS_MATERIAL, GENERAL"
-            "\n- jurisdictionStatus: exactly one of PILOT_CANDIDATE, NEEDS_JURISDICTION"
+            "\n- jurisdictionStatus: exactly one of ASAN_CANDIDATE, NEEDS_JURISDICTION"
             "\n- safetyRisk: exactly one of NORMAL, HIGH, EMERGENCY"
             "\n- expressionRisk: exactly one of NORMAL, HIGH"
             "\n- processability: exactly one of PROCESSABLE, NEEDS_LOCATION, NEEDS_JURISDICTION, NEEDS_REVIEW"

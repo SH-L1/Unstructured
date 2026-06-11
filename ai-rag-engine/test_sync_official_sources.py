@@ -10,11 +10,11 @@ SAMPLE_XML = """
   <조문단위>
     <조문번호>1</조문번호>
     <조문제목>목적</조문제목>
-    <조문내용>제1조 이 법은 안전한 처리를 목적으로 한다.</조문내용>
+    <조문내용>제1조 이 법은 민원의 공정한 처리를 목적으로 한다.</조문내용>
   </조문단위>
   <조문단위>
-    <조문번호>제2조</조문번호>
-    <조문내용>제2조 신고 내용을 검토한다.</조문내용>
+    <조문번호>2</조문번호>
+    <조문내용>제2조 신고 내용은 검토하여야 한다.</조문내용>
   </조문단위>
 </법령>
 """
@@ -28,9 +28,9 @@ class OfficialSourceSyncTest(unittest.TestCase):
 
         document = build_document(
             {
-                "law_id": "SYNTHETIC-LAW-1",
-                "title": "합성 시험 법령",
-                "detail_link": "/DRF/lawService.do?target=law&ID=SYNTHETIC-LAW-1",
+                "law_id": "TEST-LAW-1",
+                "title": "민원 처리에 관한 법률",
+                "detail_link": "/DRF/lawService.do?target=law&MST=TEST-LAW-1",
             },
             root,
         )

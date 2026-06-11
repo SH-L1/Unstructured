@@ -13,7 +13,7 @@ class RetrievalRerankerTest(unittest.TestCase):
             title="Road style example",
             content="road road road pothole",
             purpose="STYLE",
-            verification_status="SYNTHETIC_DEMO",
+            verification_status="UNVERIFIED_LEGACY",
             retriever_score=100.0,
         )
         governed = RetrievalCandidate(
