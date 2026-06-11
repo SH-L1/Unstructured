@@ -50,7 +50,8 @@ public class DraftSchemaValidator {
 				if (!CLAIM_TYPES.contains(claimType)) {
 					throw new IllegalStateException("Draft claimType contains an unsupported value");
 				}
-				List<String> evidenceIds = requireEvidenceIds(claimNode.path("evidenceIds"), allowedEvidenceIds);
+				boolean allowEmpty = "ACKNOWLEDGEMENT".equals(claimType) || "REVIEW_NOTICE".equals(claimType);
+				List<String> evidenceIds = requireEvidenceIds(claimNode.path("evidenceIds"), allowedEvidenceIds, allowEmpty);
 				claims.add(new ValidatedClaim(text, claimType, evidenceIds));
 			}
 			return new ValidatedDraft(
@@ -66,9 +67,16 @@ public class DraftSchemaValidator {
 		}
 	}
 
-	private List<String> requireEvidenceIds(JsonNode node, Set<String> allowedEvidenceIds) {
-		if (!node.isArray() || node.isEmpty() || node.size() > 20) {
+	private List<String> requireEvidenceIds(JsonNode node, Set<String> allowedEvidenceIds, boolean allowEmpty) {
+		if (!node.isArray() || node.size() > 20) {
 			throw new IllegalStateException("Every draft claim must reference between 1 and 20 evidence IDs");
+		}
+		if (node.isEmpty()) {
+			if (allowEmpty) {
+				return List.of();
+			} else {
+				throw new IllegalStateException("Every draft claim must reference between 1 and 20 evidence IDs");
+			}
 		}
 		Set<String> result = new LinkedHashSet<>();
 		for (JsonNode item : node) {

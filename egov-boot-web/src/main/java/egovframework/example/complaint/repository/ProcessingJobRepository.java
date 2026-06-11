@@ -18,6 +18,9 @@ public interface ProcessingJobRepository extends JpaRepository<ProcessingJob, UU
 	Optional<ProcessingJob> findByJobTypeAndIdempotencyKey(ProcessingJobType jobType, String idempotencyKey);
 
 	@Lock(LockModeType.PESSIMISTIC_WRITE)
+	@org.springframework.data.jpa.repository.QueryHints({
+			@jakarta.persistence.QueryHint(name = "jakarta.persistence.lock.timeout", value = "-2")
+	})
 	@Query("select job from ProcessingJob job where job.id = :id")
 	Optional<ProcessingJob> findByIdForUpdate(@Param("id") UUID id);
 

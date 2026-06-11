@@ -1,0 +1,23 @@
+--- Search for '화장실' or 'toilet' in knowledge_documents ---
+ID: 93 | Title: 민원사무편람(농식품유통과) | Purpose: PROCEDURE | Status: VERIFIED_INTERNAL | Juris: ASAN | Keywords: 민원사무편람(농식품유통과).hwpx
+ID: 118 | Title: 민원편람(위생과) (1) | Purpose: PROCEDURE | Status: VERIFIED_INTERNAL | Juris: ASAN | Keywords: 민원편람(위생과) (1).hwpx
+ID: 120 | Title: 민원편람(위생과) | Purpose: PROCEDURE | Status: VERIFIED_INTERNAL | Juris: ASAN | Keywords: 민원편람(위생과).hwpx
+ID: 10760 | Title: 민원편람(위생과) | Purpose: PROCEDURE | Status: VERIFIED_INTERNAL | Juris: ASAN | Keywords: 민원편람(위생과).hwpx
+ID: 10733 | Title: 민원사무편람(농식품유통과) | Purpose: PROCEDURE | Status: VERIFIED_INTERNAL | Juris: ASAN | Keywords: 민원사무편람(농식품유통과).hwpx
+ID: 271 | Title: 주차장법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 주차장법 시행규칙
+ID: 10758 | Title: 민원편람(위생과) (1) | Purpose: PROCEDURE | Status: VERIFIED_INTERNAL | Juris: ASAN | Keywords: 민원편람(위생과) (1).hwpx
+ID: 281 | Title: 물환경보전법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 물환경보전법
+ID: 283 | Title: 물환경보전법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 물환경보전법 시행규칙
+ID: 284 | Title: 하수도법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 하수도법
+ID: 287 | Title: 수도법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 수도법
+ID: 296 | Title: 건축법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 건축법
+ID: 297 | Title: 건축법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 건축법 시행령
+ID: 298 | Title: 건축법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 건축법 시행규칙
+ID: 239 | Title: 개인정보 보호법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 개인정보 보호법
+ID: 264 | Title: 도로법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 도로법 시행규칙
+ID: 307 | Title: 민간임대주택에 관한 특별법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 민간임대주택에 관한 특별법 시행령
+ID: 311 | Title: 공동주택관리법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 공동주택관리법
+ID: 313 | Title: 공동주택관리법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 공동주택관리법 시행규칙
+ID: 317 | Title: 도시공원 및 녹지 등에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL | Keywords: 도시공원 및 녹지 등에 관한 법률
+
+--- Search matching '공중화장실' in chunks ---

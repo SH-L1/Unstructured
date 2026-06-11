@@ -14,7 +14,11 @@ class OpenSearchKnowledgeDocumentSearchServiceTest {
 						"pilot-knowledge-official-law",
 						"pilot-knowledge-procedure",
 						"pilot-knowledge-historical-case",
-						"pilot-knowledge-style"
+						"pilot-knowledge-style",
+						"pilot-knowledge-local-ordinance-reference",
+						"pilot-knowledge-style-reference",
+						"pilot-knowledge-organization-routing",
+						"pilot-knowledge-evaluation-training"
 				)
 				.doesNotContain("pilot-knowledge-unverified-legacy");
 	}

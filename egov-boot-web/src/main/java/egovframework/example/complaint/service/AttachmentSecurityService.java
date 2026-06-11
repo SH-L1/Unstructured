@@ -64,8 +64,12 @@ public class AttachmentSecurityService {
 		if (startsWith(bytes, new byte[] {0x50, 0x4b, 0x03, 0x04}) && isHwpx(bytes)) {
 			return "application/vnd.hancom.hwpx";
 		}
-		for (byte value : bytes) {
-			if (value == 0) {
+		if (startsWith(bytes, new byte[] {(byte) 0xfe, (byte) 0xff}) || startsWith(bytes, new byte[] {(byte) 0xff, (byte) 0xfe})) {
+			return "text/plain";
+		}
+		int scanLimit = Math.min(bytes.length, 1024);
+		for (int index = 0; index < scanLimit; index++) {
+			if (bytes[index] == 0) {
 				throw new IllegalArgumentException("Unknown binary attachment type");
 			}
 		}

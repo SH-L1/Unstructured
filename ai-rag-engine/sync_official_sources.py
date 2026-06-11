@@ -53,6 +53,7 @@ DEFAULT_QUERIES = (
     "옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률",
     "식품위생법",
     "공중위생관리법",
+    "공중화장실 등에 관한 법률",
     "감염병의 예방 및 관리에 관한 법률",
     "재난 및 안전관리 기본법",
     "시설물의 안전 및 유지관리에 관한 특별법",
@@ -231,6 +232,29 @@ def source_registry_id(cursor, interval_minutes: int) -> int:
     return int(cursor.fetchone()[0])
 
 
+def _split_provisions_into_chunks(document: OfficialDocument, max_chunk_size: int = 1800) -> list[str]:
+    """Split provisions into chunks of roughly max_chunk_size characters.
+
+    Each provision is kept intact; adjacent provisions are merged until the
+    next one would exceed the limit.  This mirrors the chunking strategy of
+    ``insert_knowledge_documents.split_markdown_chunks``.
+    """
+    chunks: list[str] = []
+    current = ""
+    for provision in document.provisions:
+        text = f"{provision.key} {provision.heading}\n{provision.content}".strip()
+        candidate = f"{current}\n\n{text}".strip() if current else text
+        if len(candidate) <= max_chunk_size:
+            current = candidate
+        else:
+            if current:
+                chunks.append(current)
+            current = text
+    if current:
+        chunks.append(current)
+    return chunks or [document.content]
+
+
 def upsert_document(cursor, source_id: int, document: OfficialDocument) -> None:
     now = datetime.now()
     cursor.execute(
@@ -373,6 +397,39 @@ def upsert_document(cursor, source_id: int, document: OfficialDocument) -> None:
         """,
         (knowledge_id, now, now),
     )
+    # --- Create knowledge_document_chunks so RAG search can find this document ---
+    cursor.execute(
+        "UPDATE knowledge_document_chunks SET active = false, updated_at = %s WHERE knowledge_document_id = %s",
+        (now, knowledge_id),
+    )
+    chunks = _split_provisions_into_chunks(document)
+    for chunk_index, chunk_content in enumerate(chunks):
+        cursor.execute(
+            """
+            INSERT INTO knowledge_document_chunks (
+                knowledge_document_id, chunk_index, content, keywords, legal_basis,
+                token_count, active, created_at, updated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, true, %s, %s)
+            ON CONFLICT (knowledge_document_id, chunk_index)
+            DO UPDATE SET
+                content = EXCLUDED.content,
+                keywords = EXCLUDED.keywords,
+                legal_basis = EXCLUDED.legal_basis,
+                token_count = EXCLUDED.token_count,
+                active = true,
+                updated_at = EXCLUDED.updated_at
+            """,
+            (
+                knowledge_id,
+                chunk_index,
+                chunk_content,
+                document.title[:500],
+                document.title[:500],
+                len(chunk_content.split()),
+                now,
+                now,
+            ),
+        )
 
 
 def mark_sync_success(cursor, source_id: int, documents: list[OfficialDocument], interval_minutes: int) -> None:
@@ -500,6 +557,7 @@ def sync() -> int:
     try:
         documents = collect_documents()
         with psycopg2.connect(**connection_kwargs()) as connection:
+            connection.set_client_encoding('UTF8')
             with connection.cursor() as cursor:
                 source_id = source_registry_id(cursor, interval_minutes)
                 for document in documents:

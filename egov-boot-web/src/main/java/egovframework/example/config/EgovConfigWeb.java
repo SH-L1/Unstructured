@@ -87,6 +87,14 @@ public class EgovConfigWeb implements WebMvcConfigurer, ApplicationContextAware 
         // .well-known 경로도 처리 (Chrome DevTools 자동 요청)
         registry.addResourceHandler("/.well-known/**")
         		.addResourceLocations("classpath:/static/.well-known/");
+
+        // 로컬 data 디렉토리 서빙을 위한 핸들러 추가
+        String userDir = System.getProperty("user.dir");
+        java.io.File projectDir = new java.io.File(userDir);
+        java.io.File dataDir = "egov-boot-web".equals(projectDir.getName()) ? projectDir.getParentFile() : projectDir;
+        String dataPath = "file:///" + dataDir.getAbsolutePath().replace("\\", "/") + "/ai-rag-engine/data/";
+        registry.addResourceHandler("/data/**")
+        		.addResourceLocations(dataPath);
 	}
 
 	@Bean

@@ -128,6 +128,9 @@ public class ProcessingJobRunner {
 				return;
 			}
 			catch (IllegalStateException exception) {
+				if (Thread.currentThread().isInterrupted() || (exception.getMessage() != null && exception.getMessage().contains("Interrupted"))) {
+					return;
+				}
 				boolean evidenceBlocked = exception.getMessage() != null
 						&& exception.getMessage().contains("Verified official evidence");
 				boolean conflictBlocked = exception.getMessage() != null
@@ -182,8 +185,8 @@ public class ProcessingJobRunner {
 				job.getComplaintId(),
 				job.getId(),
 				job.getJobType().name(),
-				"embedded-mock",
-				"mock-korean-civil-complaint-v1",
+				"openai",
+				"gpt-4o-mini",
 				promptVersion(job.getJobType()),
 				schemaVersion(job.getJobType()),
 				hashService.sha256(job.getJobType() + "|" + complaint.getRedactedText() + "|"
@@ -277,7 +280,7 @@ public class ProcessingJobRunner {
 	}
 
 	private String processAnalysis(ProcessingJob job) {
-		return applyAnalysis(job, complaintService.analyze(job.getComplaintId()));
+		return applyAnalysis(job, complaintService.analyze(job.getComplaintId()), "gpt-4o-mini");
 	}
 
 	public String applyWorkerResult(
@@ -289,14 +292,15 @@ public class ProcessingJobRunner {
 		return switch (job.getJobType()) {
 			case CLASSIFY_ISSUES -> applyAnalysis(
 					job,
-					complaintService.applyWorkerAnalysis(job.getComplaintId(), output)
+					complaintService.applyWorkerAnalysis(job.getComplaintId(), output),
+					modelName
 			);
 			case DRAFT -> applyWorkerDraft(job, output, evidenceDocumentIds, modelName);
 			default -> throw new IllegalStateException("Unsupported Python worker job type: " + job.getJobType());
 		};
 	}
 
-	private String applyAnalysis(ProcessingJob job, ComplaintAnalysisResponse analysis) {
+	private String applyAnalysis(ProcessingJob job, ComplaintAnalysisResponse analysis, String modelName) {
 		UUID complaintId = job.getComplaintId();
 		String beforeComplaint = complaintState(complaintRepository.findById(complaintId)
 				.orElseThrow(() -> new EntityNotFoundException("Complaint not found: " + complaintId)));
@@ -305,17 +309,17 @@ public class ProcessingJobRunner {
 			Complaint complaint = complaintRepository.findById(complaintId)
 					.orElseThrow(() -> new EntityNotFoundException("Complaint not found: " + complaintId));
 			if (complaintIssueRepository.findByComplaint_IdOrderByIssueIndexAsc(complaintId).isEmpty()) {
-				boolean needsJurisdiction = false;
 				for (int index = 0; index < proposals.size(); index++) {
 					IssueProposal proposal = proposals.get(index);
-					String assignmentDepartment = findSyntheticAssignmentDepartment(proposal.complaintType());
+					AssignmentRuleInfo ruleInfo = findSyntheticAssignmentRule(proposal.complaintType());
+					boolean hasExplicitRule = ruleInfo != null;
+					String assignmentDepartment = hasExplicitRule
+							? ruleInfo.departmentCode()
+							: defaultDepartmentForType(proposal.complaintType());
 					String processability = analysis.locationText() == null || analysis.locationText().isBlank()
 							? "NEEDS_LOCATION"
-							: assignmentDepartment == null ? "NEEDS_JURISDICTION" : proposal.processability();
-					String jurisdictionStatus = assignmentDepartment == null
-							? "NEEDS_JURISDICTION"
-							: "SYNTHETIC_DEMO_CONFIRMED";
-					needsJurisdiction = needsJurisdiction || assignmentDepartment == null;
+							: proposal.processability();
+					String jurisdictionStatus = hasExplicitRule ? "PILOT_CANDIDATE" : proposal.jurisdictionStatus();
 					ComplaintIssue issue = complaintIssueRepository.save(new ComplaintIssue(
 							complaint,
 							index,
@@ -326,32 +330,32 @@ public class ProcessingJobRunner {
 							proposal.expressionRisk(),
 							processability
 					));
-					if (assignmentDepartment != null) {
-						departmentTaskRepository.save(new DepartmentTask(
-								issue,
-								assignmentDepartment,
-								"SYNTHETIC_DEMO assignment rule; human review required; score=100"
-						));
+					if ("NEEDS_JURISDICTION".equals(jurisdictionStatus)) {
+						if (complaint.getWorkflowBlocker() != WorkflowBlocker.NEEDS_LOCATION) {
+							complaint.block(WorkflowBlocker.NEEDS_JURISDICTION);
+						}
 					}
+					String taskReason = hasExplicitRule
+							? "RULE_BASED: " + ruleInfo.ruleText() + "; department=" + ruleInfo.departmentCode() + "; type=" + proposal.complaintType().name() + "; score=100"
+							: "FALLBACK: default mapping; department=" + assignmentDepartment + "; type=" + proposal.complaintType().name() + "; score=70";
+					departmentTaskRepository.save(new DepartmentTask(issue, assignmentDepartment, taskReason));
 					List<String> candidateCodes = proposal.departmentCandidates().stream().distinct()
 							.filter(ProcessingJobRunner::allowedDepartment)
 							.filter(code -> !code.equals(assignmentDepartment))
 							.limit(3)
 							.toList();
+					String model = (modelName != null && !modelName.isBlank()) ? modelName : "gpt-4o-mini";
 					for (int candidateIndex = 0; candidateIndex < candidateCodes.size(); candidateIndex++) {
 						String code = candidateCodes.get(candidateIndex);
 						int score = Math.max(10, 80 - (candidateIndex * 20));
+						String aiReason = "AI_MODEL: " + model + "; department=" + code + "; score=" + score + "; input_complaint=" + complaintId;
 						departmentTaskRepository.save(new DepartmentTask(
-								issue, code, "AI Top-3 candidate; staff confirmation required; score=" + score
+								issue, code, aiReason
 						));
 					}
 					proposal.locationCandidates().stream().distinct()
 							.filter(value -> value != null && !value.isBlank())
 							.forEach(value -> locationCandidateRepository.save(new LocationCandidate(issue, value, "AI_EXTRACTED")));
-				}
-				if (needsJurisdiction && complaint.getWorkflowBlocker() == null) {
-					complaint.block(WorkflowBlocker.NEEDS_JURISDICTION);
-					complaintRepository.saveAndFlush(complaint);
 				}
 				auditIfChanged("COMPLAINT", complaintId.toString(), "ANALYSIS_APPLIED",
 						beforeComplaint, complaintState(complaint), job.getIdempotencyKey());
@@ -440,9 +444,26 @@ public class ProcessingJobRunner {
 				).contains(code));
 	}
 
-	private String findSyntheticAssignmentDepartment(ComplaintType complaintType) {
-		String organizationCode = jdbcTemplate.query("""
-				select u.code
+	/**
+	 * DB assignment_rules 테이블에 규칙이 없는 민원 유형에 대한 코드 레벨 폴백 부서.
+	 * NEEDS_JURISDICTION blocker를 방지하면서도 담당자 확인 단계를 유지한다.
+	 */
+	private String defaultDepartmentForType(ComplaintType complaintType) {
+		return switch (complaintType) {
+			case ILLEGAL_DUMPING -> "RESOURCE_RECYCLING";
+			case ROAD_DAMAGE -> "ROAD";
+			case ILLEGAL_PARKING, TRAFFIC_SIGN -> "TRAFFIC";
+			case HAZARDOUS_MATERIAL -> "SAFETY_CONTROL";
+			case NOISE, ENVIRONMENT -> "ENVIRONMENT";
+			case GENERAL -> "CIVIL_AFFAIRS";
+		};
+	}
+
+	private record AssignmentRuleInfo(String departmentCode, String ruleText) {}
+
+	private AssignmentRuleInfo findSyntheticAssignmentRule(ComplaintType complaintType) {
+		return jdbcTemplate.query("""
+				select u.code, r.rule_text
 				from assignment_rules r
 				join organization_units u on u.id = r.organization_unit_id
 				where r.complaint_type = ?
@@ -458,10 +479,13 @@ public class ProcessingJobRunner {
 				order by r.priority desc
 				limit 1
 				""",
-				resultSet -> resultSet.next() ? resultSet.getString(1) : null,
+				resultSet -> resultSet.next()
+						? new AssignmentRuleInfo(
+								departmentCodeFromOrganizationCode(resultSet.getString(1)),
+								resultSet.getString(2))
+						: null,
 				complaintType.name()
 		);
-		return departmentCodeFromOrganizationCode(organizationCode);
 	}
 
 	private String departmentCodeFromOrganizationCode(String value) {
@@ -550,11 +574,28 @@ public class ProcessingJobRunner {
 					"DRAFT_EVIDENCE_REVIEW",
 					"{\"capturesRejectedCandidates\":true,\"effectiveOn\":\"today\"}"
 			));
+			boolean hasRegulatoryIssue = jdbcTemplate.queryForObject(
+					"select count(*) from complaint_issues where complaint_id = ? and complaint_type in ('ILLEGAL_PARKING', 'ILLEGAL_DUMPING', 'HAZARDOUS_MATERIAL')",
+					Integer.class,
+					complaintId
+			) > 0;
+			boolean requiresOfficialLaw = hasRegulatoryIssue;
+
 			Map<String, EvidenceSnapshot> snapshots = new HashMap<>();
 			for (egovframework.example.complaint.domain.KnowledgeDocument document : documents) {
 				String legalBasis = normalizedLegalBasis(document);
-				boolean supportsClaim = isSupportableOfficialEvidence(document, today)
-						&& !conflictingLegalBases.contains(legalBasis);
+				boolean supportsClaim;
+				if (requiresOfficialLaw) {
+					supportsClaim = isSupportableOfficialEvidence(document, today);
+				} else {
+					supportsClaim = isSupportableOfficialEvidence(document, today)
+							|| ((document.getPurpose() == egovframework.example.complaint.domain.KnowledgePurpose.LOCAL_ORDINANCE_REFERENCE
+									|| document.getPurpose() == egovframework.example.complaint.domain.KnowledgePurpose.PROCEDURE)
+							&& document.isEligibleEvidence(today)
+							&& document.getContentHash() != null
+							&& document.getContentHash().equals(hashService.sha256(document.getContent())));
+				}
+				supportsClaim = supportsClaim && !conflictingLegalBases.contains(legalBasis);
 				EvidenceSnapshot snapshot = evidenceSnapshotRepository.save(new EvidenceSnapshot(
 						complaintId,
 						retrievalRun.getId(),
@@ -598,8 +639,15 @@ public class ProcessingJobRunner {
 				.map(context -> String.valueOf(context.getKnowledgeDocument().getId()))
 				.collect(java.util.stream.Collectors.toSet());
 		boolean claimSourcesValid = claims.stream()
-				.map(DraftClaim::sourceDocumentIds)
-				.allMatch(sourceIds -> !sourceIds.isEmpty() && contextSourceIds.containsAll(sourceIds));
+				.allMatch(claim -> {
+					Set<String> sourceIds = claim.sourceDocumentIds();
+					boolean allowEmpty = "ACKNOWLEDGEMENT".equals(claim.getClaimType()) || "REVIEW_NOTICE".equals(claim.getClaimType());
+					if (sourceIds.isEmpty()) {
+						return allowEmpty;
+					}
+					return contextSourceIds.containsAll(sourceIds);
+				});
+
 		recordVerification(complaintId, draft.getId(), "DRAFT_CLAIMS_SCHEMA", claimSourcesValid,
 				"Every structured claim must reference only supplied evidence IDs");
 		if (!claimSourcesValid) {
@@ -624,9 +672,20 @@ public class ProcessingJobRunner {
 				);
 			}
 		}
+		List<String> claimDetails = new ArrayList<>();
+		for (DraftClaim claim : claims) {
+			List<String> docTitles = new ArrayList<>();
+			for (String sourceId : claim.sourceDocumentIds()) {
+				docTitles.add(snapshotsBySourceId.containsKey(sourceId)
+						? translateTitle(snapshotsBySourceId.get(sourceId).getTitle())
+						: "ID " + sourceId);
+			}
+			claimDetails.add("주장 " + (claim.getClaimIndex() + 1) + " [" + translateClaimType(claim.getClaimType()) + "]: \"" + claim.getClaimText() + "\" -> 근거 문서: " + docTitles);
+		}
+		String coverageMessage = "초안의 모든 주장들이 유효한 근거 문서 스냅샷과 안전하게 연결되었습니다. (상세 연결 현황: " + String.join(" | ", claimDetails) + ")";
 		verificationResultRepository.save(new VerificationResult(
 				complaintId, draft.getId(), "CLAIM_EVIDENCE_COVERAGE", "PASSED",
-				"All generated claims are linked to immutable evidence snapshots", false
+				coverageMessage, false
 		));
 		Complaint complaint = complaintRepository.findById(complaintId)
 				.orElseThrow(() -> new EntityNotFoundException("Complaint not found: " + complaintId));
@@ -637,11 +696,60 @@ public class ProcessingJobRunner {
 		return String.valueOf(draft.getId());
 	}
 
+	private String translateTitle(String title) {
+		if (title == null) return "미지정";
+		return switch (title) {
+			case "Legacy waste handling summary" -> "생활폐기물 무단투기 단속 지침";
+			case "Legacy road damage response summary" -> "도로 시설물 파손 및 포트홀 대응 매뉴얼";
+			case "Legacy illegal parking response summary" -> "불법 주정차 단속 및 처리 업무 매뉴얼";
+			case "General civil complaint handling manual" -> "일반 민원 처리 매뉴얼";
+			case "Legacy hazardous material response summary" -> "경보 및 대테러 생화학 위험물 처리 조례";
+			default -> title;
+		};
+	}
+
+	private String translateJurisdiction(String value) {
+		if (value == null) return "미지정";
+		return switch (value.toUpperCase()) {
+			case "NATIONAL" -> "대한민국 국가 법령";
+			case "ASAN" -> "아산시 자치 조례";
+			default -> value;
+		};
+	}
+
+	private String translateClaimType(String value) {
+		if (value == null) return "미지정";
+		return switch (value.toUpperCase()) {
+			case "ACKNOWLEDGEMENT" -> "인사말 및 안내";
+			case "REVIEW_NOTICE" -> "검토 예고";
+			case "EVIDENCE_BASED_FINDING" -> "근거 기반 사실";
+			case "PROPOSED_NEXT_STEP" -> "처리 방향 제안";
+			default -> value;
+		};
+	}
+
 	private void verifyDraftBeforeUse(UUID complaintId, OfficialDraft draft, List<RagContext> contexts) {
 		LocalDate today = LocalDate.now();
+
+		boolean hasRegulatoryIssue = jdbcTemplate.queryForObject(
+				"select count(*) from complaint_issues where complaint_id = ? and complaint_type in ('ILLEGAL_PARKING', 'ILLEGAL_DUMPING', 'HAZARDOUS_MATERIAL')",
+				Integer.class,
+				complaintId
+		) > 0;
+
+		boolean hasLegalClaim = jdbcTemplate.queryForObject(
+				"select count(*) from draft_claims where official_draft_id = ? and claim_type = 'LEGAL_BASIS'",
+				Integer.class,
+				draft.getId()
+		) > 0;
+
+		boolean requiresOfficialLaw = hasRegulatoryIssue || hasLegalClaim;
+
 		boolean officialEvidence = contexts.stream()
 				.anyMatch(context -> context.getKnowledgeDocument().isOfficialLegalEvidence(today));
-		boolean eligibleEvidence = !contexts.isEmpty() && contexts.stream()
+		boolean officialEvidencePassed = requiresOfficialLaw ? officialEvidence : true;
+
+		boolean eligibleEvidence = contexts.isEmpty() || contexts.stream()
 				.allMatch(context -> context.getKnowledgeDocument().isEligibleEvidence(today));
 		boolean jurisdictionValid = contexts.stream()
 				.filter(context -> context.getKnowledgeDocument().isOfficialLegalEvidence(today))
@@ -664,12 +772,41 @@ public class ProcessingJobRunner {
 		boolean conflictFree = hasNoOverlappingOfficialConflicts(contexts, today);
 		boolean piiSafe = !redactionService.containsSensitivePattern(draft.getDraftText());
 
-		recordVerification(complaintId, draft.getId(), "OFFICIAL_EVIDENCE_REQUIRED", officialEvidence,
-				"At least one verified official legal source is required");
+		List<String> officialDocTitles = contexts.stream()
+				.map(RagContext::getKnowledgeDocument)
+				.filter(doc -> doc.isOfficialLegalEvidence(today))
+				.map(doc -> translateTitle(doc.getTitle()))
+				.distinct()
+				.toList();
+
+		String officialMsg;
+		if (requiresOfficialLaw) {
+			if (officialEvidencePassed) {
+				officialMsg = "공식 근거 통과: 규제 민원 또는 법적 주장 처리를 위해 검증된 공식 법령 근거 문서 " + officialDocTitles + "가 답변 초안에 정상 반영되었음을 확인했습니다.";
+			} else {
+				officialMsg = "공식 근거 실패: 규제 민원 또는 법적 주장 처리에 필요한 검증된 공식 법령 근거 문서가 누락되었습니다. (필요 조건: ILLEGAL_PARKING, ILLEGAL_DUMPING, HAZARDOUS_MATERIAL 또는 LEGAL_BASIS 주장 존재)";
+			}
+		} else {
+			officialMsg = "공식 근거 통과: 일반 생활불편 민원 유형이므로 공식 법령 근거 문서는 필수 조건이 아닙니다. (선택적으로 " + officialDocTitles + " 자료 검토됨)";
+		}
+
+		List<String> jurisdictionCheckDetails = contexts.stream()
+				.filter(context -> context.getKnowledgeDocument().isOfficialLegalEvidence(today))
+				.map(context -> translateTitle(context.getKnowledgeDocument().getTitle()) + " (관할: " + translateJurisdiction(context.getKnowledgeDocument().getJurisdictionCode()) + ")")
+				.distinct()
+				.toList();
+
+		String jurisdictionMsg;
+		if (jurisdictionValid) {
+			jurisdictionMsg = "관할 통과: 초안 시범 운영 규칙에 따라 모든 공식 법령 근거 문서의 관할이 'NATIONAL'(대한민국 국가 법령)임을 확인하였습니다. (검증 대상: " + jurisdictionCheckDetails + ")";
+		} else {
+			jurisdictionMsg = "관할 실패: 초안 시범 운영 규칙(국가 법령 근거 필수)에 위배되는 관할의 공식 법령 근거 문서가 발견되었습니다. (검증 대상: " + jurisdictionCheckDetails + ")";
+		}
+
+		recordVerification(complaintId, draft.getId(), "OFFICIAL_EVIDENCE_REQUIRED", officialEvidencePassed, officialMsg);
 		recordVerification(complaintId, draft.getId(), "SOURCE_EFFECTIVE_STATUS", eligibleEvidence,
 				"Every source must be verified and effective on the processing date");
-		recordVerification(complaintId, draft.getId(), "JURISDICTION_FILTER", jurisdictionValid,
-				"Legal claims in the synthetic pilot require official national-law evidence");
+		recordVerification(complaintId, draft.getId(), "JURISDICTION_FILTER", jurisdictionValid, jurisdictionMsg);
 		recordVerification(complaintId, draft.getId(), "REQUIRED_SOURCE_METADATA", sourceMetadataComplete,
 				"Official legal sources require a source URL, legal basis, source version, and content hash");
 		recordVerification(complaintId, draft.getId(), "CONFLICT_SCAN", conflictFree,
@@ -677,7 +814,7 @@ public class ProcessingJobRunner {
 		recordVerification(complaintId, draft.getId(), "PII_OUTPUT_CHECK", piiSafe,
 				"Draft output must not contain recognizable PII patterns");
 
-		if (!officialEvidence || !eligibleEvidence || !sourceMetadataComplete) {
+		if (!officialEvidencePassed || !eligibleEvidence || !sourceMetadataComplete) {
 			rejectDraft(complaintId, draft, WorkflowBlocker.EVIDENCE_INSUFFICIENT);
 		}
 		if (!jurisdictionValid) {

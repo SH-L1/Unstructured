@@ -257,8 +257,8 @@ class WorkerJobApiTest {
 	private Map<String, Object> resultRequest(String inputHash, Map<String, Object> output) throws Exception {
 		Map<String, Object> request = new LinkedHashMap<>();
 		request.put("workerId", "worker-test");
-		request.put("provider", "mock");
-		request.put("modelName", "mock-korean-civil-complaint-v1");
+		request.put("provider", "openai");
+		request.put("modelName", "gpt-4o-mini");
 		request.put("promptVersion", "issue-analysis-prompt-v1");
 		request.put("schemaVersion", "complaint-support-v1");
 		request.put("inputHash", inputHash);

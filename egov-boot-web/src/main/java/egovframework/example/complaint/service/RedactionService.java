@@ -8,7 +8,7 @@ public class RedactionService {
 
 	private static final Pattern EMAIL = Pattern.compile("(?i)\\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\\.[A-Z]{2,}\\b");
 	private static final Pattern PHONE = Pattern.compile("(?<!\\d)(?:01[016789]|02|0[3-6][1-5])-?\\d{3,4}-?\\d{4}(?!\\d)");
-	private static final Pattern RESIDENT_NUMBER = Pattern.compile("(?<!\\d)\\d{6}-?[1-4]\\d{6}(?!\\d)");
+	private static final Pattern RESIDENT_NUMBER = Pattern.compile("(?<!\\d)\\d{2}(?:0[1-9]|1[0-2])(?:0[1-9]|[12]\\d|3[01])-?[1-4]\\d{6}(?!\\d)");
 
 	public String redact(String value) {
 		return inspect(value).redactedText();

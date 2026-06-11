@@ -89,6 +89,9 @@ def source_path() -> Path:
     resolved = path if path.is_absolute() else BASE_DIR / path
     if resolved.exists():
         return resolved
+    txt_candidate = BASE_DIR / "data/organization/아산시_부처_이름_번호.txt"
+    if txt_candidate.exists():
+        return txt_candidate
     if resolved.suffix.lower() != ".docx":
         docx_candidate = resolved.with_suffix(".docx")
         if docx_candidate.exists():
@@ -127,6 +130,46 @@ def parse_records(paragraphs: list[str]) -> list[OrganizationRecord]:
             index += 6
             continue
         index += 1
+    return records
+
+
+def parse_txt_records(path: Path) -> list[OrganizationRecord]:
+    records: list[OrganizationRecord] = []
+    phone_pattern = re.compile(r"0\d{1,2}-\d{3,4}-\d{4}")
+    with open(path, "r", encoding="utf-8") as f:
+        lines = f.readlines()
+    current_record = None
+    seq = 1
+    for line_raw in lines:
+        line = line_raw.strip()
+        if not line:
+            continue
+        parts = [p.strip() for p in line_raw.split("\t")]
+        if len(parts) >= 4 and any(phone_pattern.search(p) for p in parts):
+            if current_record:
+                records.append(current_record)
+                seq += 1
+            unit_name = parts[0]
+            position = parts[2] if len(parts) > 2 else ""
+            phone = parts[3] if len(parts) > 3 else ""
+            duty = " ".join(parts[4:]) if len(parts) > 4 else ""
+            current_record = OrganizationRecord(
+                sequence=seq,
+                unit_name=unit_name,
+                position=position,
+                phone=phone,
+                duty=duty,
+            )
+        elif current_record and (line.startswith("-") or not any(phone_pattern.search(p) for p in parts)):
+            current_record = OrganizationRecord(
+                sequence=current_record.sequence,
+                unit_name=current_record.unit_name,
+                position=current_record.position,
+                phone=current_record.phone,
+                duty=f"{current_record.duty} {line}".strip(),
+            )
+    if current_record:
+        records.append(current_record)
     return records
 
 
@@ -409,11 +452,15 @@ def sync() -> dict[str, int]:
     path = source_path()
     if not path.exists():
         raise FileNotFoundError(f"Asan organization file does not exist: {path}")
-    paragraphs = extract_docx_paragraphs(path)
-    records = parse_records(paragraphs)
+    if path.suffix.lower() == ".txt":
+        records = parse_txt_records(path)
+    else:
+        paragraphs = extract_docx_paragraphs(path)
+        records = parse_records(paragraphs)
     if not records:
         raise RuntimeError(f"No organization records could be parsed from {path}")
     with psycopg2.connect(**connection_kwargs()) as connection:
+        connection.set_client_encoding('UTF8')
         with connection.cursor() as cursor:
             source_id = source_registry_id(cursor, path)
             run_id = start_run(cursor, source_id)

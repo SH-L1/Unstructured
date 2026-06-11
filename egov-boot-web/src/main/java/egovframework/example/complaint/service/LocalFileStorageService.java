@@ -31,7 +31,10 @@ public class LocalFileStorageService implements FileStorageService {
 		}
 		try {
 			Files.createDirectories(storageRoot);
-			Files.copy(inputStream, target, StandardCopyOption.REPLACE_EXISTING);
+			if (Files.exists(target)) {
+				throw new IllegalStateException("Attachment file already exists: " + storageKey);
+			}
+			Files.copy(inputStream, target);
 			return new StoredFile(storageKey, cleanFilename, contentType, size);
 		}
 		catch (IOException exception) {

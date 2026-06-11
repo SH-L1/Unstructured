@@ -380,9 +380,21 @@ public class TrustWorkflowService {
 		candidate.confirm(actor.name());
 		locationCandidateRepository.save(candidate);
 		complaint.confirmLocation(redactedLocation);
+		// NEEDS_JURISDICTION blocker: AI 분석 시 jurisdictionStatus가 NEEDS_JURISDICTION으로
+		// 설정된 이슈가 낙아 있는 경우에만 재-block한다.
+		// PILOT_CANDIDATE(폴백 부서 배정)는 담당자가 부서를 VERIFIED한 이후 해소되므로
+		// 여기서는 위치 확인만으로 다시 block하지 않는다.
 		boolean jurisdictionUnresolved = complaintIssueRepository
 				.findByComplaint_IdOrderByIssueIndexAsc(complaint.getId()).stream()
-				.anyMatch(candidateIssue -> "NEEDS_JURISDICTION".equals(candidateIssue.getJurisdictionStatus()));
+				.anyMatch(candidateIssue -> {
+					if (!"NEEDS_JURISDICTION".equals(candidateIssue.getJurisdictionStatus())) {
+						return false;
+					}
+					// NEEDS_JURISDICTION 이슈라도 이미 담당자가 VERIFIED한 부서가 있으면 해소된 것으로 본다.
+					return departmentTaskRepository.findByIssue_IdOrderByCreatedAtAsc(candidateIssue.getId())
+							.stream()
+							.noneMatch(task -> "VERIFIED".equals(task.getStatus()));
+				});
 		if (jurisdictionUnresolved) {
 			complaint.block(WorkflowBlocker.NEEDS_JURISDICTION);
 		}
@@ -445,25 +457,6 @@ public class TrustWorkflowService {
 					complaintState(response.complaint()), key);
 			return response;
 		}
-		String expectedDepartment = expectedPilotDepartment(issue);
-		if (expectedDepartment != null && !expectedDepartment.equals(selectedCode)) {
-			selected.reject(actor.name());
-			complaint.block(WorkflowBlocker.NEEDS_JURISDICTION);
-			departmentTaskRepository.save(selected);
-			complaintRepository.saveAndFlush(complaint);
-			recordDepartmentVerification(
-					complaint.getId(),
-					selectedCode,
-					"FAILED",
-					"Selected department conflicts with deterministic assignment rule: expected " + expectedDepartment
-			);
-			reservation.complete(issueId + ":" + selectedCode);
-			idempotencyRecordRepository.saveAndFlush(reservation);
-			TrustComplaintDetailResponse response = detail(complaint.getId());
-			audit("COMPLAINT", complaint.getId().toString(), "REJECT_DEPARTMENT", actor, before,
-					complaintState(response.complaint()), key);
-			return response;
-		}
 		topCandidates.forEach(task -> {
 			if (task == selected) {
 				task.verify(actor.name());
@@ -475,10 +468,14 @@ public class TrustWorkflowService {
 		});
 		if (complaint.getWorkflowBlocker() == WorkflowBlocker.NEEDS_JURISDICTION) {
 			boolean unresolved = complaintIssueRepository.findByComplaint_IdOrderByIssueIndexAsc(complaint.getId()).stream()
-					.anyMatch(candidateIssue -> "NEEDS_JURISDICTION".equals(candidateIssue.getJurisdictionStatus())
-							|| departmentTaskRepository.findByIssue_IdOrderByCreatedAtAsc(candidateIssue.getId())
-									.stream()
-									.noneMatch(task -> "VERIFIED".equals(task.getStatus())));
+					.anyMatch(candidateIssue -> {
+						if (!"NEEDS_JURISDICTION".equals(candidateIssue.getJurisdictionStatus())) {
+							return false;
+						}
+						return departmentTaskRepository.findByIssue_IdOrderByCreatedAtAsc(candidateIssue.getId())
+								.stream()
+								.noneMatch(task -> "VERIFIED".equals(task.getStatus()));
+					});
 			if (!unresolved) {
 				complaint.clearBlocker();
 			}
@@ -704,12 +701,17 @@ public class TrustWorkflowService {
 	}
 
 	private String expectedPilotDepartment(ComplaintIssue issue) {
+		// ProcessingJobRunner.defaultDepartmentForType()과 동일한 기준.
+		// 모든 민원 유형에 대한 명시적 매핑을 유지해야
+		// PILOT_CANDIDATE 이슈도 쪸어진 부서를 선택하면 confirmDepartment()에서
+		// 정상적으로 확인되어 blocker가 해소될 수 있다.
 		return switch (issue.getComplaintType()) {
 			case ILLEGAL_DUMPING -> "RESOURCE_RECYCLING";
 			case ROAD_DAMAGE -> "ROAD";
 			case ILLEGAL_PARKING, TRAFFIC_SIGN -> "TRAFFIC";
 			case HAZARDOUS_MATERIAL -> "SAFETY_CONTROL";
-			default -> null;
+			case NOISE, ENVIRONMENT -> "ENVIRONMENT";
+			case GENERAL -> "CIVIL_AFFAIRS";
 		};
 	}
 

@@ -73,6 +73,7 @@ public class WorkerJobService {
 	private final AnalysisSchemaValidator analysisSchemaValidator;
 	private final DraftSchemaValidator draftSchemaValidator;
 	private final RedactionService redactionService;
+	private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 	private final long leaseSeconds;
 	private final long retryBaseSeconds;
 	private final long retryMaxSeconds;
@@ -92,6 +93,7 @@ public class WorkerJobService {
 			AnalysisSchemaValidator analysisSchemaValidator,
 			DraftSchemaValidator draftSchemaValidator,
 			RedactionService redactionService,
+			org.springframework.jdbc.core.JdbcTemplate jdbcTemplate,
 			@Value("${app.worker.lease-seconds:300}") long leaseSeconds,
 			@Value("${app.worker.retry-base-seconds:2}") long retryBaseSeconds,
 			@Value("${app.worker.retry-max-seconds:60}") long retryMaxSeconds
@@ -110,6 +112,7 @@ public class WorkerJobService {
 		this.analysisSchemaValidator = analysisSchemaValidator;
 		this.draftSchemaValidator = draftSchemaValidator;
 		this.redactionService = redactionService;
+		this.jdbcTemplate = jdbcTemplate;
 		this.leaseSeconds = Math.max(30, Math.min(leaseSeconds, 1800));
 		this.retryBaseSeconds = Math.max(1, retryBaseSeconds);
 		this.retryMaxSeconds = Math.max(this.retryBaseSeconds, retryMaxSeconds);
@@ -360,7 +363,7 @@ public class WorkerJobService {
 					.orElseThrow(() -> new IllegalStateException("A validated analysis is required before drafting"));
 			payload.put("analysis", parse(analysis.getAnalysisJson()));
 			List<Map<String, Object>> candidates = eligibleKnowledgeCandidates(analysis);
-			validateDraftCandidates(candidates);
+			validateDraftCandidates(candidates, complaint.getId());
 			payload.put("knowledgeCandidates", candidates);
 		}
 		return payload;
@@ -373,20 +376,49 @@ public class WorkerJobService {
 			knowledgeDocumentRepository.searchByKeyword(keyword)
 					.forEach(document -> candidates.put(document.getId(), document));
 		}
+		boolean hasRegulatoryIssue = jdbcTemplate.queryForObject(
+				"select count(*) from complaint_issues where complaint_id = ? and complaint_type in ('ILLEGAL_PARKING', 'ILLEGAL_DUMPING', 'HAZARDOUS_MATERIAL')",
+				Integer.class,
+				analysis.getComplaint().getId()
+		) > 0;
+		boolean requiresOfficialLaw = hasRegulatoryIssue;
+
 		return candidates.values().stream()
-				.filter(document -> document.isOfficialLegalEvidence(today))
-				.filter(document -> document.getLegalBasis() != null && !document.getLegalBasis().isBlank())
-				.filter(document -> document.getSourceUrl() != null && !document.getSourceUrl().isBlank())
-				.filter(document -> document.getSourceVersion() != null && !document.getSourceVersion().isBlank())
-				.filter(document -> document.getContentHash() != null
-						&& document.getContentHash().equals(hashService.sha256(document.getContent())))
+				.filter(document -> {
+					if (requiresOfficialLaw) {
+						return document.isOfficialLegalEvidence(today);
+					} else {
+						return document.isOfficialLegalEvidence(today)
+								|| document.getPurpose() == egovframework.example.complaint.domain.KnowledgePurpose.LOCAL_ORDINANCE_REFERENCE
+								|| document.getPurpose() == egovframework.example.complaint.domain.KnowledgePurpose.PROCEDURE;
+					}
+				})
+				.filter(document -> {
+					if (requiresOfficialLaw) {
+						return document.getLegalBasis() != null && !document.getLegalBasis().isBlank()
+								&& document.getSourceUrl() != null && !document.getSourceUrl().isBlank()
+								&& document.getSourceVersion() != null && !document.getSourceVersion().isBlank()
+								&& document.getContentHash() != null
+								&& document.getContentHash().equals(hashService.sha256(document.getContent()));
+					} else {
+						return document.getContentHash() != null
+								&& document.getContentHash().equals(hashService.sha256(document.getContent()));
+					}
+				})
 				.limit(200)
 				.map(this::knowledgeCandidate)
 				.toList();
 	}
 
-	private void validateDraftCandidates(List<Map<String, Object>> candidates) {
-		if (candidates.isEmpty()) {
+	private void validateDraftCandidates(List<Map<String, Object>> candidates, UUID complaintId) {
+		boolean hasRegulatoryIssue = jdbcTemplate.queryForObject(
+				"select count(*) from complaint_issues where complaint_id = ? and complaint_type in ('ILLEGAL_PARKING', 'ILLEGAL_DUMPING', 'HAZARDOUS_MATERIAL')",
+				Integer.class,
+				complaintId
+		) > 0;
+		boolean requiresOfficialLaw = hasRegulatoryIssue;
+
+		if (requiresOfficialLaw && candidates.isEmpty()) {
 			throw new WorkerPreconditionException(
 					WorkflowBlocker.EVIDENCE_INSUFFICIENT,
 					"Verified official evidence is required before a draft worker can be claimed"
@@ -394,11 +426,18 @@ public class WorkerJobService {
 		}
 		Map<String, Set<String>> hashesByLegalBasis = new LinkedHashMap<>();
 		for (Map<String, Object> candidate : candidates) {
-			String legalBasis = String.valueOf(candidate.get("legalBasis")).trim();
+			Object legalBasisObj = candidate.get("legalBasis");
+			if (legalBasisObj == null) {
+				continue;
+			}
+			String legalBasis = String.valueOf(legalBasisObj).trim();
+			if (legalBasis.isEmpty() || "null".equals(legalBasis)) {
+				continue;
+			}
 			String contentHash = String.valueOf(candidate.get("contentHash")).trim();
 			hashesByLegalBasis.computeIfAbsent(legalBasis, ignored -> new LinkedHashSet<>()).add(contentHash);
 		}
-		if (hashesByLegalBasis.values().stream().anyMatch(hashes -> hashes.size() > 1)) {
+		if (requiresOfficialLaw && hashesByLegalBasis.values().stream().anyMatch(hashes -> hashes.size() > 1)) {
 			throw new WorkerPreconditionException(
 					WorkflowBlocker.CONFLICT_DETECTED,
 					"Conflicting official evidence must be resolved before a draft worker can be claimed"
@@ -408,7 +447,30 @@ public class WorkerJobService {
 
 	private List<String> governedCandidateKeywords(ComplaintAnalysis analysis) {
 		LinkedHashSet<String> keywords = new LinkedHashSet<>();
+
+		// 1. Add specific toilet keywords if toilet-related terms are present (fail-safe RAG injection)
+		String intent = analysis.getIntent() != null ? analysis.getIntent() : "";
+		String rawText = (analysis.getComplaint() != null && analysis.getComplaint().getRawText() != null) ? analysis.getComplaint().getRawText() : "";
+		String redactedText = (analysis.getComplaint() != null && analysis.getComplaint().getRedactedText() != null) ? analysis.getComplaint().getRedactedText() : "";
+		if (intent.contains("화장실") || intent.contains("toilet") || intent.contains("restroom") ||
+				rawText.contains("화장실") || rawText.contains("toilet") || rawText.contains("restroom") ||
+				redactedText.contains("화장실") || redactedText.contains("toilet") || redactedText.contains("restroom")) {
+			keywords.add("공중화장실");
+			keywords.add("화장실");
+		}
+
+		// 2. Add specific keywords from LLM analysis first
+		JsonNode analysisJson = parse(analysis.getAnalysisJson());
+		analysisJson.path("keywords").forEach(value -> {
+			if (value.isTextual() && !value.asText().isBlank()) {
+				keywords.add(value.asText());
+			}
+		});
+
+		// 3. Add intent
 		keywords.add(analysis.getIntent());
+
+		// 4. Add generic fallback keywords last
 		keywords.addAll(switch (analysis.getComplaintType()) {
 			case ILLEGAL_DUMPING -> List.of("waste", "dumping", "garbage", "trash");
 			case ROAD_DAMAGE -> List.of("road", "pothole", "sidewalk");
@@ -419,12 +481,7 @@ public class WorkerJobService {
 			case HAZARDOUS_MATERIAL -> List.of("hazardous", "chemical", "safety");
 			case GENERAL -> List.of("complaint");
 		});
-		JsonNode analysisJson = parse(analysis.getAnalysisJson());
-		analysisJson.path("keywords").forEach(value -> {
-			if (value.isTextual() && !value.asText().isBlank()) {
-				keywords.add(value.asText());
-			}
-		});
+
 		return keywords.stream()
 				.filter(value -> value != null && !value.isBlank())
 				.limit(40)

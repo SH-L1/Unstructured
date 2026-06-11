@@ -18,6 +18,13 @@ public interface KnowledgeDocumentRepository extends JpaRepository<KnowledgeDocu
 			from KnowledgeDocument k
 			where lower(k.keywords) like lower(concat('%', :keyword, '%'))
 			   or lower(k.content) like lower(concat('%', :keyword, '%'))
+			order by
+			  case when lower(k.title) = lower(:keyword) then 0
+			       when lower(k.title) like lower(concat('%', :keyword, '%')) then 1
+			       when lower(k.keywords) like lower(concat('%', :keyword, '%')) then 2
+			       else 3
+			  end,
+			  k.id
 			""")
 	List<KnowledgeDocument> searchByKeyword(@Param("keyword") String keyword);
 }

@@ -204,6 +204,24 @@ def source_registry_id(cursor, interval_minutes: int, jurisdiction_code: str) ->
     return int(cursor.fetchone()[0])
 
 
+def _split_ordinance_into_chunks(document: LocalOrdinanceDocument, max_chunk_size: int = 1800) -> list[str]:
+    """Split ordinance provisions into chunks of roughly max_chunk_size characters."""
+    chunks: list[str] = []
+    current = ""
+    for provision in document.provisions:
+        text = f"{provision.key} {provision.heading}\n{provision.content}".strip()
+        candidate = f"{current}\n\n{text}".strip() if current else text
+        if len(candidate) <= max_chunk_size:
+            current = candidate
+        else:
+            if current:
+                chunks.append(current)
+            current = text
+    if current:
+        chunks.append(current)
+    return chunks or [document.content]
+
+
 def upsert_document(cursor, source_id: int, document: LocalOrdinanceDocument) -> None:
     now = datetime.now()
     cursor.execute(
@@ -348,6 +366,39 @@ def upsert_document(cursor, source_id: int, document: LocalOrdinanceDocument) ->
         """,
         (knowledge_id, now, now),
     )
+    # --- Create knowledge_document_chunks so RAG search can find this document ---
+    cursor.execute(
+        "UPDATE knowledge_document_chunks SET active = false, updated_at = %s WHERE knowledge_document_id = %s",
+        (now, knowledge_id),
+    )
+    chunks = _split_ordinance_into_chunks(document)
+    for chunk_index, chunk_content in enumerate(chunks):
+        cursor.execute(
+            """
+            INSERT INTO knowledge_document_chunks (
+                knowledge_document_id, chunk_index, content, keywords, legal_basis,
+                token_count, active, created_at, updated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, true, %s, %s)
+            ON CONFLICT (knowledge_document_id, chunk_index)
+            DO UPDATE SET
+                content = EXCLUDED.content,
+                keywords = EXCLUDED.keywords,
+                legal_basis = EXCLUDED.legal_basis,
+                token_count = EXCLUDED.token_count,
+                active = true,
+                updated_at = EXCLUDED.updated_at
+            """,
+            (
+                knowledge_id,
+                chunk_index,
+                chunk_content,
+                document.title[:500],
+                document.title[:500],
+                len(chunk_content.split()),
+                now,
+                now,
+            ),
+        )
 
 
 def mark_sync_success(cursor, source_id: int, documents: list[LocalOrdinanceDocument], interval_minutes: int) -> None:
@@ -389,6 +440,7 @@ def sync() -> int:
     jurisdiction_code = os.getenv("ASAN_ORDINANCE_JURISDICTION_CODE", DEFAULT_JURISDICTION_CODE).strip()
     documents = collect_documents()
     with psycopg2.connect(**connection_kwargs()) as connection:
+        connection.set_client_encoding('UTF8')
         with connection.cursor() as cursor:
             source_id = source_registry_id(cursor, interval_minutes, jurisdiction_code)
             for document in documents:

@@ -1,0 +1,135 @@
+Total: 134
+ID: 296 | Title: 건축법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 262 | Title: 도로법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 287 | Title: 수도법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 290 | Title: 하천법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 269 | Title: 주차장법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 284 | Title: 하수도법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 266 | Title: 도로교통법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 340 | Title: 동물보호법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 322 | Title: 식품위생법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 275 | Title: 악취방지법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 246 | Title: 지방자치법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 236 | Title: 행정절차법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 301 | Title: 건축물관리법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 281 | Title: 물환경보전법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 293 | Title: 소하천정비법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 857 | Title: 장애인복지법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 259 | Title: 폐기물관리법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 254 | Title: 행정대집행법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 311 | Title: 공동주택관리법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 325 | Title: 공중위생관리법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 278 | Title: 대기환경보전법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 352 | Title: 화학물질관리법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 355 | Title: 위험물안전관리법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 252 | Title: 질서위반행위규제법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 309 | Title: 부도공공건설임대주택 임차인 보호를 위한 특별법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 310 | Title: 부도공공건설임대주택 임차인 보호를 위한 특별법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 253 | Title: 질서위반행위규제법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 356 | Title: 위험물안전관리법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 357 | Title: 위험물안전관리법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 312 | Title: 공동주택관리법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 326 | Title: 공중위생관리법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 279 | Title: 대기환경보전법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 353 | Title: 화학물질관리법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 313 | Title: 공동주택관리법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 327 | Title: 공중위생관리법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 280 | Title: 대기환경보전법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 354 | Title: 화학물질관리법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 337 | Title: 어린이놀이시설 안전관리법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 338 | Title: 어린이놀이시설 안전관리법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 339 | Title: 어린이놀이시설 안전관리법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 244 | Title: 지방교육자치에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 306 | Title: 민간임대주택에 관한 특별법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 307 | Title: 민간임대주택에 관한 특별법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 308 | Title: 민간임대주택에 관한 특별법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 245 | Title: 지방교육자치에 관한 법률 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 302 | Title: 건축물관리법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 282 | Title: 물환경보전법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 256 | Title: 방사성폐기물 관리법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 294 | Title: 소하천정비법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 858 | Title: 장애인복지법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 260 | Title: 폐기물관리법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 255 | Title: 행정대집행법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 303 | Title: 건축물관리법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 283 | Title: 물환경보전법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 295 | Title: 소하천정비법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 859 | Title: 장애인복지법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 257 | Title: 방사성폐기물 관리법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 258 | Title: 방사성폐기물 관리법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 860 | Title: 가축전염병 예방법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 261 | Title: 농어촌도로 정비법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 267 | Title: 도로교통법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 341 | Title: 동물보호법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 323 | Title: 식품위생법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 276 | Title: 악취방지법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 247 | Title: 지방자치법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 237 | Title: 행정절차법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 268 | Title: 도로교통법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 342 | Title: 동물보호법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 324 | Title: 식품위생법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 277 | Title: 악취방지법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 238 | Title: 행정절차법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 241 | Title: 공공기관의 정보공개에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 242 | Title: 공공기관의 정보공개에 관한 법률 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 243 | Title: 공공기관의 정보공개에 관한 법률 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 349 | Title: 교통약자의 이동편의 증진법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 350 | Title: 교통약자의 이동편의 증진법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 351 | Title: 교통약자의 이동편의 증진법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 861 | Title: 가축전염병 예방법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 862 | Title: 가축전염병 예방법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 299 | Title: 녹색건축물 조성 지원법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 300 | Title: 녹색건축물 조성 지원법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 320 | Title: 옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 321 | Title: 옥외광고물 등의 관리와 옥외광고산업 진흥에 관한 법률 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 21587 | Title: 공중화장실 등에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 265 | Title: 도시철도법 등에 의한 구분지상권 등기규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 21588 | Title: 공중화장실 등에 관한 법률 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 21589 | Title: 공중화장실 등에 관한 법률 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 343 | Title: 가축분뇨의 관리 및 이용에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 344 | Title: 가축분뇨의 관리 및 이용에 관한 법률 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 345 | Title: 가축분뇨의 관리 및 이용에 관한 법률 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 239 | Title: 개인정보 보호법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 270 | Title: 주차장법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 285 | Title: 하수도법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 271 | Title: 주차장법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 286 | Title: 하수도법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 240 | Title: 개인정보 보호법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 334 | Title: 시설물의 안전 및 유지관리에 관한 특별법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 335 | Title: 시설물의 안전 및 유지관리에 관한 특별법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 336 | Title: 시설물의 안전 및 유지관리에 관한 특별법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 328 | Title: 감염병의 예방 및 관리에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 329 | Title: 감염병의 예방 및 관리에 관한 법률 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 330 | Title: 감염병의 예방 및 관리에 관한 법률 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 317 | Title: 도시공원 및 녹지 등에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 318 | Title: 도시공원 및 녹지 등에 관한 법률 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 319 | Title: 도시공원 및 녹지 등에 관한 법률 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 297 | Title: 건축법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 263 | Title: 도로법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 288 | Title: 수도법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 291 | Title: 하천법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 298 | Title: 건축법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 264 | Title: 도로법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 289 | Title: 수도법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 292 | Title: 하천법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 314 | Title: 국토의 계획 및 이용에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 315 | Title: 국토의 계획 및 이용에 관한 법률 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 316 | Title: 국토의 계획 및 이용에 관한 법률 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 304 | Title: 초고층 및 지하연계 복합건축물 재난관리에 관한 특별법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 305 | Title: 초고층 및 지하연계 복합건축물 재난관리에 관한 특별법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 233 | Title: 민원 처리에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 234 | Title: 민원 처리에 관한 법률 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 235 | Title: 민원 처리에 관한 법률 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 331 | Title: 재난 및 안전관리 기본법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 332 | Title: 재난 및 안전관리 기본법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 333 | Title: 재난 및 안전관리 기본법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 248 | Title: 지방자치법 시행령 제120조에 따른 특례를 둘 수 있는 시ㆍ군ㆍ구의 지정에 필요한 서식에 관한 규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 249 | Title: 지방행정제재ㆍ부과금의 징수 등에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 250 | Title: 지방행정제재ㆍ부과금의 징수 등에 관한 법률 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 251 | Title: 지방행정제재ㆍ부과금의 징수 등에 관한 법률 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 272 | Title: 소음ㆍ진동관리법 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 273 | Title: 소음ㆍ진동관리법 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 274 | Title: 소음ㆍ진동관리법 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 346 | Title: 장애인ㆍ노인ㆍ임산부 등의 편의증진 보장에 관한 법률 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 347 | Title: 장애인ㆍ노인ㆍ임산부 등의 편의증진 보장에 관한 법률 시행령 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL
+ID: 348 | Title: 장애인ㆍ노인ㆍ임산부 등의 편의증진 보장에 관한 법률 시행규칙 | Purpose: OFFICIAL_LAW | Status: VERIFIED_OFFICIAL | Juris: NATIONAL

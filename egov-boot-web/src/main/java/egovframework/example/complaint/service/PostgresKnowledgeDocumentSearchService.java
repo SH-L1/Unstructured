@@ -47,19 +47,37 @@ public class PostgresKnowledgeDocumentSearchService implements KnowledgeDocument
 
 	private List<String> keywordsFor(ComplaintAnalysis analysis) {
 		ComplaintType type = analysis.getComplaintType();
-		return switch (type) {
-			case ILLEGAL_DUMPING -> List.of("waste", "dumping", "garbage", "trash", "쓰레기", "폐기물", "무단투기", analysis.getIntent());
-			case ROAD_DAMAGE -> List.of("road", "pothole", "sidewalk", "도로", "포트홀", "파손", "보도", analysis.getIntent());
-			case ILLEGAL_PARKING -> List.of("parking", "illegal parking", "불법주정차", "주차", "교통", analysis.getIntent());
-			case TRAFFIC_SIGN -> List.of("traffic sign", "signal", "sign", "교통표지", "신호", analysis.getIntent());
-			case NOISE -> List.of("noise", "소음", "생활불편", analysis.getIntent());
-			case ENVIRONMENT -> List.of("environment", "pollution", "환경", "오염", "악취", analysis.getIntent());
+		String intent = analysis.getIntent() != null ? analysis.getIntent() : "";
+		String rawText = (analysis.getComplaint() != null && analysis.getComplaint().getRawText() != null) ? analysis.getComplaint().getRawText() : "";
+		String redactedText = (analysis.getComplaint() != null && analysis.getComplaint().getRedactedText() != null) ? analysis.getComplaint().getRedactedText() : "";
+
+		java.util.List<String> keywords = new java.util.ArrayList<>();
+		if (intent.contains("화장실") || intent.contains("toilet") || intent.contains("restroom") ||
+				rawText.contains("화장실") || rawText.contains("toilet") || rawText.contains("restroom") ||
+				redactedText.contains("화장실") || redactedText.contains("toilet") || redactedText.contains("restroom")) {
+			keywords.add("공중화장실");
+			keywords.add("화장실");
+			keywords.add("toilet");
+			keywords.add("restroom");
+			keywords.add("위생");
+			keywords.add("청소");
+		}
+
+		List<String> typeKeywords = switch (type) {
+			case ILLEGAL_DUMPING -> List.of("waste", "dumping", "garbage", "trash", "쓰레기", "폐기물", "무단투기", intent);
+			case ROAD_DAMAGE -> List.of("road", "pothole", "sidewalk", "도로", "포트홀", "파손", "보도", intent);
+			case ILLEGAL_PARKING -> List.of("parking", "illegal parking", "불법주정차", "주차", "교통", intent);
+			case TRAFFIC_SIGN -> List.of("traffic sign", "signal", "sign", "교통표지", "신호", intent);
+			case NOISE -> List.of("noise", "소음", "생활불편", intent);
+			case ENVIRONMENT -> List.of("environment", "pollution", "환경", "오염", "악취", intent);
 			case HAZARDOUS_MATERIAL -> List.of(
 					"biohazard", "biochemical", "hazardous", "chemical", "bomb", "explosive", "emergency",
 					"생화학", "위험물", "폭탄", "폭발물", "화학물질", "유해물질", "재난", "경찰", "소방",
-					analysis.getIntent()
+					intent
 			);
-			default -> List.of(analysis.getIntent());
+			default -> List.of(intent);
 		};
+		keywords.addAll(typeKeywords);
+		return keywords;
 	}
 }

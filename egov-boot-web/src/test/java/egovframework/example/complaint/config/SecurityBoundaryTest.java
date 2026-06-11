@@ -46,7 +46,7 @@ class SecurityBoundaryTest {
 				.andExpect(status().isForbidden());
 		mockMvc.perform(get("/actuator/health").session(login("auditor", "auditor-test")))
 				.andExpect(status().isOk());
-		mockMvc.perform(get("/dashboard").session(login("reviewer", "reviewer-test")))
+		mockMvc.perform(get("/dashboard/").session(login("reviewer", "reviewer-test")))
 				.andExpect(status().isOk());
 	}
 

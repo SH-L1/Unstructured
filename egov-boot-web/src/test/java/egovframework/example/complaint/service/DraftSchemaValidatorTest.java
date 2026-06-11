@@ -60,7 +60,7 @@ class DraftSchemaValidatorTest {
 				  "schemaVersion":"draft-claims-v1",
 				  "claims":[{
 				    "text":"Staff review required.",
-				    "claimType":"REVIEW_NOTICE",
+				    "claimType":"EVIDENCE_BASED_FINDING",
 				    "evidenceIds":[%s]
 				  }]
 				}

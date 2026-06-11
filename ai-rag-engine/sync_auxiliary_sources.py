@@ -182,6 +182,24 @@ def source_registry_id(cursor, source: AuxiliarySource, interval_minutes: int) -
     return int(cursor.fetchone()[0])
 
 
+def _split_text_into_chunks(content: str, max_chunk_size: int = 1800) -> list[str]:
+    """Split plain text content into chunks by paragraph boundaries."""
+    paragraphs = [p.strip() for p in content.split("\n\n") if p.strip()]
+    chunks: list[str] = []
+    current = ""
+    for paragraph in paragraphs:
+        candidate = f"{current}\n\n{paragraph}".strip() if current else paragraph
+        if len(candidate) <= max_chunk_size:
+            current = candidate
+        else:
+            if current:
+                chunks.append(current)
+            current = paragraph
+    if current:
+        chunks.append(current)
+    return chunks or [content]
+
+
 def upsert_document(cursor, source_id: int, document: AuxiliaryDocument) -> None:
     now = datetime.now()
     values = {
@@ -264,6 +282,39 @@ def upsert_document(cursor, source_id: int, document: AuxiliaryDocument) -> None
         """,
         (knowledge_id, document.source.purpose, now, now),
     )
+    # --- Create knowledge_document_chunks so RAG search can find this document ---
+    cursor.execute(
+        "UPDATE knowledge_document_chunks SET active = false, updated_at = %s WHERE knowledge_document_id = %s",
+        (now, knowledge_id),
+    )
+    chunks = _split_text_into_chunks(document.content)
+    for chunk_index, chunk_content in enumerate(chunks):
+        cursor.execute(
+            """
+            INSERT INTO knowledge_document_chunks (
+                knowledge_document_id, chunk_index, content, keywords, legal_basis,
+                token_count, active, created_at, updated_at
+            ) VALUES (%s, %s, %s, %s, %s, %s, true, %s, %s)
+            ON CONFLICT (knowledge_document_id, chunk_index)
+            DO UPDATE SET
+                content = EXCLUDED.content,
+                keywords = EXCLUDED.keywords,
+                legal_basis = EXCLUDED.legal_basis,
+                token_count = EXCLUDED.token_count,
+                active = true,
+                updated_at = EXCLUDED.updated_at
+            """,
+            (
+                knowledge_id,
+                chunk_index,
+                chunk_content,
+                document.query[:500],
+                None,
+                len(chunk_content.split()),
+                now,
+                now,
+            ),
+        )
 
 
 def mark_sync_success(cursor, source: AuxiliarySource, source_id: int, documents: list[AuxiliaryDocument], interval_minutes: int) -> None:
@@ -305,6 +356,7 @@ def sync() -> int:
     documents = collect_documents()
     documents_by_source = {source: [document for document in documents if document.source == source] for source in SOURCES}
     with psycopg2.connect(**connection_kwargs()) as connection:
+        connection.set_client_encoding('UTF8')
         with connection.cursor() as cursor:
             for source, source_documents in documents_by_source.items():
                 if not source_enabled(source):

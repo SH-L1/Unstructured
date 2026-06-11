@@ -46,16 +46,17 @@ if (Test-Path $PythonExe) {
     Write-Host "Python worker started (Job ID: $($WorkerJob.Id))" -ForegroundColor Green
 } else {
     Write-Host "WARNING: Python venv not found at $PythonExe" -ForegroundColor Red
-    Write-Host "Run: cd ai-rag-engine && python -m venv .venv && .venv\Scripts\python.exe -m pip install -r requirements.txt" -ForegroundColor Yellow
 }
 
-Write-Host "Starting Civil Complaint Dashboard." -ForegroundColor Green
+Write-Host "Starting Civil Complaint Dashboard in PostgreSQL Mode." -ForegroundColor Green
 Write-Host "URL: http://localhost:$Port/dashboard/" -ForegroundColor Cyan
 Write-Host "Press Ctrl+C in this window to stop the server." -ForegroundColor DarkGray
 
 Push-Location $ProjectRoot
 try {
-    & $JavaExe "-Dfile.encoding=UTF-8" -jar $JarPath "--spring.profiles.active=dashboard-h2" "--server.port=$Port"
+    # H2가 아닌 실제 PostgreSQL DB를 바인딩하여 실행합니다.
+    # 로그인 세션 보안은 시연/개발 검토를 위해 옵션으로 비활성화 가능하게 하고 기본 구동합니다.
+    & $JavaExe "-Dfile.encoding=UTF-8" -jar $JarPath "--server.port=$Port" "--app.security.session.enabled=false" "--SENSITIVE_DATA_KEY=some-local-development-sensitive-data-key-32-chars-long" "--app.worker.service-token=dashboard-worker-service-token-at-least-32-characters"
 } finally {
     # 서버 종료 시 워커도 정리
     if ($WorkerJob) {

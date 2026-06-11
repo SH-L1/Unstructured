@@ -22,7 +22,13 @@ public interface KnowledgeDocumentChunkRepository extends JpaRepository<Knowledg
 			      or lower(c.content) like lower(concat('%', :keyword, '%'))
 			      or lower(k.keywords) like lower(concat('%', :keyword, '%'))
 			  )
-			order by c.chunkIndex
+			order by
+			  case when lower(k.title) = lower(:keyword) then 0
+			       when lower(k.title) like lower(concat('%', :keyword, '%')) then 1
+			       when lower(c.keywords) like lower(concat('%', :keyword, '%')) then 2
+			       else 3
+			  end,
+			  c.chunkIndex
 			""")
 	List<KnowledgeDocumentChunk> searchByKeyword(@Param("keyword") String keyword);
 }

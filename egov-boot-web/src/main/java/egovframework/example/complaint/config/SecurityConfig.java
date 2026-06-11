@@ -78,12 +78,12 @@ public class SecurityConfig {
 	@ConditionalOnProperty(name = "app.security.session.enabled", havingValue = "true")
 	UserDetailsService userDetailsService(
 			PasswordEncoder encoder,
-			@Value("${app.security.session.intake-password:change-me-intake}") String intakePassword,
-			@Value("${app.security.session.reviewer-password:change-me-reviewer}") String reviewerPassword,
-			@Value("${app.security.session.approver-password:change-me-approver}") String approverPassword,
-			@Value("${app.security.session.knowledge-admin-password:change-me-knowledge-admin}") String knowledgeAdminPassword,
-			@Value("${app.security.session.auditor-password:change-me-auditor}") String auditorPassword,
-			@Value("${app.security.session.admin-password:change-me-admin}") String adminPassword
+			@Value("${app.security.session.intake-password:}") String intakePassword,
+			@Value("${app.security.session.reviewer-password:}") String reviewerPassword,
+			@Value("${app.security.session.approver-password:}") String approverPassword,
+			@Value("${app.security.session.knowledge-admin-password:}") String knowledgeAdminPassword,
+			@Value("${app.security.session.auditor-password:}") String auditorPassword,
+			@Value("${app.security.session.admin-password:}") String adminPassword
 	) {
 		requireConfiguredPassword("INTAKE", intakePassword);
 		requireConfiguredPassword("REVIEWER", reviewerPassword);

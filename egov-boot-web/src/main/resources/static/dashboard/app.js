@@ -21,17 +21,20 @@ const LABELS = {
     NEUTRAL: "중립",
     DISCOMFORT: "불편",
     ANGER: "분노",
-    URGENT: "긴급",
+    ANXIETY: "불안",
   },
   status: {
     RECEIVED: "접수",
     TRIAGE_REVIEW: "분류 검토",
+    DRAFT_REVIEW: "초안 검토",
+    APPROVAL_PENDING: "승인 대기",
     ANALYZED: "분석 완료",
     DRAFT_READY: "초안 준비",
     DRAFT_GENERATED: "초안 생성",
     REVIEW_APPROVED: "검토 통과",
     APPROVED: "승인",
     COMPLETED: "완료",
+    IN_PROGRESS: "진행 중",
     BLOCKED: "진행 보류",
     DRAFT: "초안",
     REVISED: "수정",
@@ -39,6 +42,10 @@ const LABELS = {
     HUMAN_SELECTED: "사람 선택",
     VERIFIED: "확인 완료",
     REJECTED: "반려",
+    PENDING: "대기 중",
+    RUNNING: "실행 중",
+    SUCCEEDED: "성공",
+    FAILED: "실패",
   },
   blocker: {
     NEEDS_LOCATION: "위치 확인 필요",
@@ -61,6 +68,52 @@ const LABELS = {
     ANIMAL_LIVESTOCK: "축산과",
     URBAN_MANAGEMENT: "도시관리과",
     WELFARE: "복지정책과",
+  },
+  claimType: {
+    ACKNOWLEDGEMENT: "인사말 및 안내",
+    REVIEW_NOTICE: "검토 예고",
+    EVIDENCE_BASED_FINDING: "근거 기반 사실",
+    PROPOSED_NEXT_STEP: "처리 방향 제안",
+    FACT: "사실관계",
+    LEGAL_BASIS: "법적 근거",
+    OPINION: "의견",
+    CONCLUSION: "결론",
+    ACTION_PLAN: "처리 계획",
+  },
+  jobType: {
+    REDACT: "비식별화",
+    EXTRACT_ATTACHMENT: "첨부파일 검사",
+    CLASSIFY_ISSUES: "민원 분석",
+    RETRIEVE: "근거자료 검색",
+    DRAFT: "답변 초안 생성",
+    VERIFY: "초안 검증",
+    ANALYZE_COMPLAINT: "민원 분석",
+    GENERATE_DRAFT: "답변 초안 생성",
+  },
+  runStatus: {
+    PENDING: "대기 중",
+    RUNNING: "실행 중",
+    SUCCEEDED: "성공",
+    FAILED: "실패",
+    BLOCKED: "보류됨",
+  },
+  action: {
+    REVIEW_PASS: "검토 통과",
+    REVIEW_APPROVED: "검토 통과",
+    REVIEW_REJECT: "검토 반려",
+    REVIEW_REJECTED: "검토 반려",
+    APPROVE: "최종 승인",
+    APPROVED: "승인",
+    APPROVAL_REJECT: "승인 반려",
+    APPROVAL_REJECTED: "승인 반려",
+    CREATE: "민원 접수",
+    COMPLETE: "수동 완료",
+  },
+  actorRole: {
+    REVIEWER: "검토자",
+    APPROVER: "승인자",
+    WORKER: "담당자",
+    SYSTEM: "시스템",
   },
 };
 
@@ -190,14 +243,16 @@ async function enqueue(kind) {
     });
     renderRun();
     await pollRun(state.run.id);
-    await loadComplaint(complaint.id);
   } catch (error) {
     showMessage(error.message, true);
+  } finally {
+    document.getElementById("loadingOverlay")?.classList.add("is-hidden");
+    await loadComplaint(complaint.id);
   }
 }
 
 async function pollRun(id) {
-  for (let attempt = 0; attempt < 60; attempt += 1) {
+  for (let attempt = 0; attempt < 150; attempt += 1) {
     state.run = await api(`/api/v1/runs/${id}`);
     renderRun();
     if (["SUCCEEDED", "FAILED", "BLOCKED"].includes(state.run.status)) return;
@@ -276,7 +331,25 @@ async function completeComplaint() {
   }
 }
 
+function resetSession() {
+  state.detail = null;
+  state.run = null;
+  el.complaintId.value = "";
+  el.rawText.value = "";
+  el.locationText.value = "";
+  el.sourceChannel.value = "WEB";
+  el.workspace.classList.add("is-hidden");
+  el.runStatus.classList.add("empty");
+  el.runStatus.innerHTML = "";
+  render();
+  showMessage("세션이 종료되었습니다. 새로운 민원을 접수할 수 있습니다.");
+}
+
 function render() {
+  if (!state.detail) {
+    el.workspace.classList.add("is-hidden");
+    return;
+  }
   const {
     complaint,
     analysis,
@@ -317,28 +390,28 @@ function render() {
   el.evidence.classList.toggle("empty", evidence.length === 0);
   el.evidence.innerHTML = evidence.map((item) => `
     <article>
-      <strong>${escapeHtml(item.title)}</strong>
+      <strong>${escapeHtml(translateTitle(item.title))}</strong>
       <dl>
         <dt>주장 관계</dt><dd>${item.supportsClaim ? "지지 가능" : "반대 또는 검토 필요"}</dd>
         <dt>자료 상태</dt><dd>${sourceStatusLabel(item.sourceStatus)} ${infoIcon(explainSourceStatus(item.sourceStatus))}</dd>
         <dt>자료 종류</dt><dd>${sourceTypeLabel(item.sourceType)} ${infoIcon(explainSourceType(item.sourceType))}</dd>
-        <dt>법적 근거</dt><dd>${escapeHtml(item.legalBasis || "미지정")}</dd>
-        <dt>출처 버전</dt><dd>${escapeHtml(item.sourceVersion || "미지정")}</dd>
+        <dt>법적 근거</dt><dd>${escapeHtml(translateLegalBasis(item.legalBasis) || "미지정")}</dd>
+        <dt>출처 버전</dt><dd>${escapeHtml(translateSourceVersion(item.sourceVersion))}</dd>
         <dt>관할</dt><dd>${escapeHtml(item.jurisdictionCode || "미지정")}</dd>
         <dt>시행</dt><dd>${escapeHtml(item.effectiveFrom || "미지정")} ~ ${escapeHtml(item.effectiveTo || "현재")}</dd>
         <dt>자료 번호</dt><dd>${escapeHtml(shortHash(item.contentHash))} ${infoIcon("자료가 처리 중 바뀌지 않았는지 확인하기 위한 내부 식별 번호입니다.")}</dd>
       </dl>
-      <p>${escapeHtml(item.content)}</p>
+      <p>${escapeHtml(truncateContent(item.content))}</p>
       ${safeHttpUrl(item.sourceUrl) ? `<a href="${escapeHtml(item.sourceUrl)}" target="_blank" rel="noreferrer">원 출처</a>` : ""}
     </article>
   `).join("") || "연결된 근거가 없습니다.";
 
-  el.draftStatus.textContent = draft ? `${draft.status} · v${draft.version}` : "초안 없음";
+  el.draftStatus.textContent = draft ? `${label("status", draft.status)} · v${draft.version}` : "초안 없음";
   el.draftText.textContent = draft?.draftText || "확인된 공식 근거가 있어야 초안이 생성됩니다.";
   el.draftClaims.classList.toggle("empty", draftClaims.length === 0);
   el.draftClaims.innerHTML = draftClaims.map((claim) => `
     <article class="audit-item">
-      <strong>주장 ${claim.claimIndex + 1} · ${escapeHtml(claim.claimType)}</strong>
+      <strong>주장 ${claim.claimIndex + 1} · ${escapeHtml(label("claimType", claim.claimType))}</strong>
       <p>${escapeHtml(claim.claimText)}</p>
       <p>근거 ID ${escapeHtml((claim.evidenceSourceIds || []).join(", "))}</p>
     </article>
@@ -354,21 +427,28 @@ function render() {
   el.aiRuns.classList.toggle("empty", aiRuns.length === 0);
   el.aiRuns.innerHTML = aiRuns.map((item) => `
     <article class="audit-item">
-      <strong>${escapeHtml(item.taskType)} · ${escapeHtml(item.status)}</strong>
+      <strong>${escapeHtml(label("jobType", item.taskType))} · ${escapeHtml(label("runStatus", item.status))}</strong>
       <p>${escapeHtml(item.provider)} / ${escapeHtml(item.modelName)}</p>
       <p>적용한 기준 ${escapeHtml(item.promptVersion)} · 결과 양식 ${escapeHtml(item.schemaVersion)}</p>
       <p>입력 번호 ${escapeHtml(shortHash(item.inputHash))} · 결과 번호 ${escapeHtml(shortHash(item.outputHash || "없음"))} ${infoIcon("입력과 결과가 처리 중 바뀌지 않았는지 확인하기 위한 내부 식별 번호입니다.")}</p>
       <p>사용량 ${item.costUnits} · 처리 시간 ${item.durationMs}ms · 재시도 ${item.retryCount}</p>
-      ${item.failureReason ? `<p class="failure">${escapeHtml(item.failureReason)}</p>` : ""}
+      ${item.failureReason ? `<p class="failure">${escapeHtml(cleanSystemMessage(item.failureReason))}</p>` : ""}
     </article>
   `).join("") || "AI 실행 기록이 없습니다.";
   el.humanReviews.classList.toggle("empty", humanReviews.length === 0);
-  el.humanReviews.innerHTML = humanReviews.map((item) => `
+  el.humanReviews.innerHTML = humanReviews.map((item) => {
+    const actorDisplay = ({
+      "system-approver": "시스템 자동 승인",
+      "system-reviewer": "시스템 자동 검토",
+      "system": "시스템",
+    })[item.actor] || item.actor;
+    return `
     <article class="audit-item">
-      <strong>${escapeHtml(item.action)} · ${escapeHtml(item.actorRole)}</strong>
-      <p>${escapeHtml(item.actor)}${item.notes ? ` · ${escapeHtml(item.notes)}` : ""}</p>
+      <strong>${escapeHtml(label("action", item.action))} · ${escapeHtml(label("actorRole", item.actorRole))}</strong>
+      <p>${escapeHtml(actorDisplay)}${item.notes ? ` · ${escapeHtml(item.notes)}` : ""}</p>
     </article>
-  `).join("") || "검토·승인 이력이 없습니다.";
+  `;
+  }).join("") || "검토·승인 이력이 없습니다.";
   document.querySelectorAll("[data-location-id]").forEach((button) => {
     button.addEventListener("click", () => confirmLocation(button.dataset.locationId));
   });
@@ -383,10 +463,22 @@ function renderRun() {
   if (!state.run) return;
   el.runStatus.classList.remove("empty");
   el.runStatus.innerHTML = `
-    <strong>${state.run.jobType} · ${state.run.status}</strong>
+    <strong>${label("jobType", state.run.jobType)} · ${label("runStatus", state.run.status)}</strong>
     <p>시도 ${state.run.attempts}/${state.run.maxAttempts}</p>
-    ${state.run.failureReason ? `<p class="failure">${escapeHtml(state.run.failureReason)}</p>` : ""}
+    ${state.run.failureReason ? `<p class="failure">${escapeHtml(cleanSystemMessage(state.run.failureReason))}</p>` : ""}
   `;
+
+  const overlay = document.getElementById("loadingOverlay");
+  if (overlay) {
+    if (["PENDING", "RUNNING"].includes(state.run.status)) {
+      overlay.classList.remove("is-hidden");
+      document.getElementById("overlayTitle").textContent = `${label("jobType", state.run.jobType)} 진행 중`;
+      document.getElementById("overlayStatus").textContent = "서버에서 AI 분석 및 정합성 검증 규칙을 수행하고 있습니다. 잠시만 기다려주세요...";
+      document.getElementById("overlayAttempts").textContent = `시도 ${state.run.attempts}/${state.run.maxAttempts}`;
+    } else {
+      overlay.classList.add("is-hidden");
+    }
+  }
 }
 
 function escapeHtml(value) {
@@ -405,28 +497,113 @@ function label(group, value) {
 
 function departmentLabel(code) {
   if (!code) return "-";
-  return LABELS.department[code] ? `${LABELS.department[code]} (${code})` : code;
+  return LABELS.department[code] || code;
 }
 
 function explainValue(value) {
   if (!value) return "-";
-  return String(value)
-    .replaceAll("_", " ")
-    .replace("IN_JURISDICTION", "관할 가능")
-    .replace("NEEDS_JURISDICTION", "관할 확인 필요")
-    .replace("SAFE", "안전 위험 낮음")
-    .replace("RISK", "안전 위험 있음")
-    .replace("PROCESSABLE", "처리 가능")
-    .replace("NEEDS_REVIEW", "검토 필요");
+  const map = {
+    NEEDS_LOCATION: "위치 확인 필요",
+    NEEDS_JURISDICTION: "관할 확인 필요",
+    NEEDS_REVIEW: "검토 필요",
+    PILOT_CANDIDATE: "시범 운영 대상",
+    PROCESSABLE: "처리 가능",
+    EMERGENCY: "긴급",
+    HIGH: "높음",
+    NORMAL: "보통",
+    LOW: "낮음",
+    NEUTRAL: "중립",
+    DISCOMFORT: "불편",
+    ANGER: "분노",
+    ANXIETY: "불안",
+  };
+  return map[value] ?? String(value).replaceAll("_", " ");
+}
+
+function translateTitle(title) {
+  const titles = {
+    "Legacy waste handling summary": "생활폐기물 무단투기 단속 지침",
+    "Legacy road damage response summary": "도로 시설물 파손 및 포트홀 대응 매뉴얼",
+    "Legacy illegal parking response summary": "불법 주정차 단속 및 처리 업무 매뉴얼",
+    "General civil complaint handling manual": "일반 민원 처리 매뉴얼",
+    "Legacy hazardous material response summary": "경보 및 대테러 생화학 위험물 처리 조례",
+    "Conflicting official waste provision": "생활폐기물 처리 상충 조례",
+    "Unrelated national road provision": "도로 포장 지침",
+    "Road facility handling reference": "도로 시설물 처리 참고 자료",
+    "Waste handling reference": "생활폐기물 처리 참고 자료",
+    "Illegal parking reference": "불법 주정차 처리 참고 자료",
+    "Demo Road Management": "도로관리과 (시연)",
+  };
+  return titles[title] || title;
+}
+
+function translateLegalBasis(value) {
+  if (!value) return null;
+  const map = {
+    "Road facility handling reference": "도로 시설물 처리 참고 자료",
+    "Waste handling reference": "생활폐기물 처리 참고 자료",
+    "Illegal parking reference": "불법 주정차 처리 참고 자료",
+    "Hazardous material reference": "위험물 처리 참고 자료",
+    "Legacy road damage response summary": "도로 시설물 파손 및 포트홀 대응 매뉴얼",
+    "Legacy waste handling summary": "생활폐기물 무단투기 단속 지침",
+    "Legacy illegal parking response summary": "불법 주정차 단속 및 처리 업무 매뉴얼",
+    "Legacy hazardous material response summary": "경보 및 대테러 생화학 위험물 처리 조례",
+    "General civil complaint handling manual": "일반 민원 처리 매뉴얼",
+  };
+  return map[value] || value;
+}
+
+function translateContent(value) {
+  return value || "";
+}
+
+function truncateContent(content, limit = 300) {
+  if (!content) return "";
+  if (content.length <= limit) return content;
+  return content.slice(0, limit) + "... (이하 생략 - 전문은 하단 원 출처 참고)";
+}
+
+function translateSourceVersion(value) {
+  if (!value) return "미지정";
+  return value
+    .replace("SYNTHETIC_TEST_V1", "시연 테스트 v1")
+    .replace("SYNTHETIC_DEMO_V1", "시연 데모 v1")
+    .replace("SYNTHETIC_", "시연 ")
+    .replace("_V", " v");
 }
 
 function infoIcon(text) {
   if (!text) return "";
-  return `<span class="info-tip" tabindex="0" aria-label="${escapeHtml(text)}">i<span role="tooltip">${escapeHtml(text)}</span></span>`;
+  return `<span class="info-tip" tabindex="0" aria-label="${escapeHtml(text)}"><svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" class="info-svg"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg><span role="tooltip">${escapeHtml(text)}</span></span>`;
 }
 
 function cleanDepartmentReason(reason, score, verified) {
   const value = String(reason || "");
+  if (value.startsWith("RULE_BASED:")) {
+    const parts = value.split(";");
+    const ruleText = parts[0].replace("RULE_BASED:", "").trim();
+    const typePart = parts.find(p => p.trim().startsWith("type="))?.split("=")[1] || "";
+    const deptPart = parts.find(p => p.trim().startsWith("department="))?.split("=")[1] || "";
+    const typeLabel = LABELS.complaintType[typePart] || typePart;
+    const deptLabel = LABELS.department[deptPart] || deptPart;
+    return `관할 배정 규칙 데이터베이스(assignment_rules 테이블)의 규칙 문서(원문: "${ruleText}")에 근거하여, 민원 유형(${typeLabel})에 매핑된 1순위 관할 부서인 ${deptLabel}(으)로 배정되었습니다.`;
+  }
+  if (value.startsWith("FALLBACK:")) {
+    const parts = value.split(";");
+    const typePart = parts.find(p => p.trim().startsWith("type="))?.split("=")[1] || "";
+    const deptPart = parts.find(p => p.trim().startsWith("department="))?.split("=")[1] || "";
+    const typeLabel = LABELS.complaintType[typePart] || typePart;
+    const deptLabel = LABELS.department[deptPart] || deptPart;
+    return `데이터베이스에 배정 규칙이 존재하지 않아, 시스템 기본 분류 맵(defaultDepartmentForType 설정)을 근거로 민원 유형(${typeLabel})의 기본 매핑 부서인 ${deptLabel}(으)로 배정되었습니다.`;
+  }
+  if (value.startsWith("AI_MODEL:")) {
+    const parts = value.split(";");
+    const model = parts[0].replace("AI_MODEL:", "").trim();
+    const scorePart = parts.find(p => p.trim().startsWith("score="))?.split("=")[1] || "";
+    const deptPart = parts.find(p => p.trim().startsWith("department="))?.split("=")[1] || "";
+    const deptLabel = LABELS.department[deptPart] || deptPart;
+    return `AI 분석 모델(${model})이 민원 내용을 기계 학습된 업무 분류 기준과 대조하여 추천 점수 ${scorePart}점을 산출함에 따라, ${deptLabel}을(를) 추가 후보 부서(Top 3)로 제안하였습니다.`;
+  }
   if (value.includes("SYNTHETIC_DEMO assignment rule")) {
     return "민원 유형과 시범 운영 배정 기준이 이 부서와 가장 잘 맞아 1순위로 추천했습니다.";
   }
@@ -460,6 +637,7 @@ function departmentScoreHelp(candidate) {
 function sourceStatusLabel(value) {
   return ({
     VERIFIED_OFFICIAL: "공식 확인됨",
+    VERIFIED_INTERNAL: "내부 검증 완료",
     SYNTHETIC_DEMO: "시연용 자료",
     UNVERIFIED_LEGACY: "확인 필요",
     STALE: "최신 여부 확인 필요",
@@ -469,6 +647,7 @@ function sourceStatusLabel(value) {
 function explainSourceStatus(value) {
   return ({
     VERIFIED_OFFICIAL: "공식 출처에서 확인된 자료입니다.",
+    VERIFIED_INTERNAL: "내부 검토를 거쳐 확인된 자료입니다. 공식 법령 근거로는 사용할 수 없습니다.",
     SYNTHETIC_DEMO: "시연 환경에서 동작을 보여주기 위해 넣은 자료입니다.",
     UNVERIFIED_LEGACY: "공식 출처 확인이 끝나지 않아 답변 근거로 쓰면 안 됩니다.",
     STALE: "최신 자료인지 다시 확인해야 합니다.",
@@ -502,6 +681,12 @@ function verificationRuleLabel(value) {
     JURISDICTION_FILTER: "관할 확인",
     DEPARTMENT_SELECTION: "담당 부서 확인",
     DRAFT_CLAIM_EVIDENCE: "초안 근거 연결 확인",
+    CLAIM_EVIDENCE_COVERAGE: "초안-근거 연결 확인",
+    SOURCE_EFFECTIVE_STATUS: "근거 유효기간 확인",
+    REQUIRED_SOURCE_METADATA: "출처 메타데이터 확인",
+    CONFLICT_SCAN: "근거 충돌 검사",
+    PII_OUTPUT_CHECK: "개인정보 포함 여부 확인",
+    PROCESSING_JOB_FAILURE: "처리 작업 오류",
   })[value] || cleanCode(value);
 }
 
@@ -512,6 +697,12 @@ function verificationRuleHelp(value) {
     JURISDICTION_FILTER: "우리 기관에서 처리할 수 있는 민원인지 확인합니다.",
     DEPARTMENT_SELECTION: "선택한 부서가 추천 후보와 업무 기준에 맞는지 확인합니다.",
     DRAFT_CLAIM_EVIDENCE: "초안의 각 주장에 근거 자료가 연결되어 있는지 확인합니다.",
+    CLAIM_EVIDENCE_COVERAGE: "생성된 모든 주장이 변경 불가능한 근거 자료와 연결되어 있는지 확인합니다.",
+    SOURCE_EFFECTIVE_STATUS: "근거 자료가 처리일 기준으로 유효한지 확인합니다.",
+    REQUIRED_SOURCE_METADATA: "공식 근거에 출처 URL, 법적 근거, 버전, 내용 해시가 모두 있는지 확인합니다.",
+    CONFLICT_SCAN: "동일한 법적 근거에 대해 서로 다른 공식 자료가 충돌하는지 검사합니다.",
+    PII_OUTPUT_CHECK: "초안에 개인정보 패턴이 포함되어 있지 않은지 확인합니다.",
+    PROCESSING_JOB_FAILURE: "작업 처리 중 오류가 발생한 경우 표시됩니다.",
   })[value] || "답변 전 확인해야 하는 항목입니다.";
 }
 
@@ -530,7 +721,18 @@ function cleanSystemMessage(value) {
     .replace("Selected department is not active", "현재 사용할 수 없는 부서입니다.")
     .replace(/Selected department conflicts with deterministic assignment rule: expected ([A-Z_]+)/, (_, code) => `업무 배정 기준과 다릅니다. 권장 부서: ${departmentLabel(code)}`)
     .replace("At least one verified official legal source is required", "공식 근거 자료가 최소 1개 필요합니다.")
-    .replace("Every source must be verified and effective on the processing date", "모든 근거 자료는 공식 확인이 끝났고 처리일 기준으로 적용 가능해야 합니다.");
+    .replace("Official legal source is optional for routine civil complaints", "일반 민원은 공식 법령 근거 없이 처리할 수 있습니다.")
+    .replace("Every source must be verified and effective on the processing date", "모든 근거 자료는 공식 확인이 끝났고 처리일 기준으로 적용 가능해야 합니다.")
+    .replace("Legal claims in the synthetic pilot require official national-law evidence", "법령 관련 주장에는 국가 공식 법령 근거가 필요합니다.")
+    .replace("Official legal sources require a source URL, legal basis, source version, and content hash", "공식 법령 근거는 출처 URL, 법적 근거, 버전, 내용 해시가 모두 있어야 합니다.")
+    .replace("Overlapping official sources for the same legal basis must contain consistent content", "동일한 법적 근거에 대해 서로 다른 공식 자료가 충돌합니다.")
+    .replace("Draft output must not contain recognizable PII patterns", "초안에 개인정보 패턴이 포함되어 있어 발송할 수 없습니다.")
+    .replace("All generated claims are linked to immutable evidence snapshots", "생성된 모든 주장이 변경 불가능한 근거 자료와 연결되어 있습니다.")
+    .replace("Deterministic verification hard gate failed:", "필수 확인 항목이 통과되지 않았습니다:")
+    .replace("Unknown processing failure", "알 수 없는 처리 오류")
+    .replace("Analysis schema validation failed:", "분석 결과 형식 오류:")
+    .replace("Staff review required.", "담당자 검토가 필요합니다.")
+    .replace("No action, acceptance, dispatch, or completion has been performed automatically.", "자동으로 수락·발송·완료 처리된 사항이 없습니다.");
 }
 
 function cleanCode(value) {
@@ -678,5 +880,6 @@ el.reviewRejectButton.addEventListener("click", () => decide("reviews", false, "
 el.approveButton.addEventListener("click", () => decide("approvals", true, "approve"));
 el.rejectButton.addEventListener("click", () => decide("approvals", false, "approval-reject"));
 el.completeButton.addEventListener("click", completeComplaint);
+el.resetButton.addEventListener("click", resetSession);
 
 checkServer();

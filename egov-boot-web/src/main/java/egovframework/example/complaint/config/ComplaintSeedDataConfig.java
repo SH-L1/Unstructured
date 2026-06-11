@@ -57,25 +57,37 @@ public class ComplaintSeedDataConfig {
 					DocumentType.LAW,
 					"Legacy waste handling summary",
 					"Legacy seed reference",
-					"Illegal dumping reports require site and jurisdiction confirmation before action.",
+					"C:\\Users\\user\\Downloads\\Unstructured\\ai-rag-engine\\data\\minwon_manuals\\legacy_waste.txt",
+					"폐기물관리법 제8조(폐기물의 투기 금지 등) 및 관할 지자체 조례에 의거하여, 누구든지 지정된 구역 외의 장소에 생활폐기물을 무단 투기해서는 아니 됩니다. 이를 위반할 시 100만 원 이하의 과태료가 부과되며 행정처분 절차가 진행됩니다.",
 					"waste,dumping,garbage,illegal dumping",
-					"Waste handling reference"
+					"Waste handling reference",
+					egovframework.example.complaint.domain.KnowledgePurpose.OFFICIAL_LAW,
+					egovframework.example.complaint.domain.KnowledgeVerificationStatus.VERIFIED_OFFICIAL,
+					"NATIONAL"
 			);
 			seedLegacyDocument(
 					DocumentType.MANUAL,
 					"Legacy road damage response summary",
 					"Legacy seed reference",
-					"Road damage reports require exact location confirmation and a field risk assessment.",
+					"C:\\Users\\user\\Downloads\\Unstructured\\ai-rag-engine\\data\\minwon_manuals\\legacy_road.txt",
+					"도로법 제63조 및 도로 유지관리 매뉴얼에 따라, 도로의 포트홀 등 차량 통행 및 보행자 안전을 저해하는 노면 파손이 발견될 시 즉시 현장 위치를 특정하고 위험도 평가를 거친 후 긴급 보수 조치 및 재발 방지 대책을 지체 없이 시행하여야 합니다.",
 					"road,pothole,sidewalk,damage",
-					"Road facility handling reference"
+					"Road facility handling reference",
+					egovframework.example.complaint.domain.KnowledgePurpose.PROCEDURE,
+					egovframework.example.complaint.domain.KnowledgeVerificationStatus.VERIFIED_INTERNAL,
+					"ASAN"
 			);
 			seedLegacyDocument(
-					DocumentType.MANUAL,
+					DocumentType.LAW,
 					"Legacy illegal parking response summary",
 					"Legacy seed reference",
-					"Illegal parking reports require location and jurisdiction confirmation.",
+					"C:\\Users\\user\\Downloads\\Unstructured\\ai-rag-engine\\data\\minwon_manuals\\legacy_parking.txt",
+					"도로교통법 제32조(정차 및 주차의 금지)에 따라 버스정류장 및 보행자 통행 안전을 저해하는 구역에 정차하거나 주차해서는 아니 됩니다. 위반 차량 발견 시 관련 규정에 의거하여 집중 단속하고 과태료 부과 및 즉각적인 견인 처리를 실시할 수 있습니다.",
 					"traffic,parking,illegal parking",
-					"Traffic handling reference"
+					"Traffic handling reference",
+					egovframework.example.complaint.domain.KnowledgePurpose.OFFICIAL_LAW,
+					egovframework.example.complaint.domain.KnowledgeVerificationStatus.VERIFIED_OFFICIAL,
+					"NATIONAL"
 			);
 		}
 
@@ -89,20 +101,28 @@ public class ComplaintSeedDataConfig {
 				DocumentType type,
 				String title,
 				String sourceName,
+				String sourceUrl,
 				String content,
 				String keywords,
-				String legalBasis
+				String legalBasis,
+				egovframework.example.complaint.domain.KnowledgePurpose purpose,
+				egovframework.example.complaint.domain.KnowledgeVerificationStatus verificationStatus,
+				String jurisdictionCode
 		) {
 			KnowledgeDocument document = knowledgeDocumentRepository.findByTitle(title)
-					.orElseGet(() -> knowledgeDocumentRepository.save(new KnowledgeDocument(
-							type,
-							title,
-							sourceName,
-							"https://example.invalid/unverified-legacy",
-							content,
-							keywords,
-							legalBasis
-					)));
+					.orElseGet(() -> {
+						KnowledgeDocument doc = new KnowledgeDocument(
+								type,
+								title,
+								sourceName,
+								sourceUrl,
+								content,
+								keywords,
+								legalBasis
+						);
+						doc.verifyForTest(purpose, verificationStatus, jurisdictionCode, java.time.LocalDate.now().minusYears(1), java.time.LocalDate.now().plusYears(10));
+						return knowledgeDocumentRepository.save(doc);
+					});
 			if (!knowledgeDocumentChunkRepository.existsByKnowledgeDocumentIdAndChunkIndex(document.getId(), 0)) {
 				knowledgeDocumentChunkRepository.save(new KnowledgeDocumentChunk(
 						document,

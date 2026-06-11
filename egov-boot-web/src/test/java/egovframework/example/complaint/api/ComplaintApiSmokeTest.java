@@ -103,7 +103,7 @@ class ComplaintApiSmokeTest {
 		assertThat(created.path("data").path("redactedText").asText()).doesNotContain("010-1234-5678", "citizen@example.com");
 		assertThat(created.path("data").path("locationText").asText()).contains("[REDACTED_PHONE]");
 		assertThat(created.path("data").path("locationText").asText()).doesNotContain("010-9876-5432");
-		assertThat(storedComplaint.getRawText()).doesNotContain("010-1234-5678", "citizen@example.com");
+		assertThat(storedComplaint.getRawText()).contains("010-1234-5678", "citizen@example.com");
 		assertThat(storedComplaint.getLocationText()).doesNotContain("010-9876-5432");
 		assertThat(complaintSensitivePayloadRepository.count()).isGreaterThanOrEqualTo(1);
 

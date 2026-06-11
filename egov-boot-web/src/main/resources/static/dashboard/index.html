@@ -29,7 +29,7 @@
             <h2>새 민원 또는 기존 민원 열기</h2>
           </div>
           <div class="lookup">
-            <input id="complaintId" type="text" placeholder="기존 민원 UUID" />
+            <input id="complaintId" type="text" placeholder="기존 민원 식별 번호 (UUID)" />
             <button id="loadButton" class="secondary" type="button">열기</button>
           </div>
         </div>
@@ -41,11 +41,11 @@
           <div class="fields">
             <label>접수 채널
               <select id="sourceChannel">
-                <option value="WEB">WEB</option>
-                <option value="MOBILE">MOBILE</option>
-                <option value="CALL_CENTER">CALL_CENTER</option>
-                <option value="VISIT">VISIT</option>
-                <option value="EMAIL">EMAIL</option>
+                <option value="WEB">홈페이지 (웹)</option>
+                <option value="MOBILE">모바일 앱</option>
+                <option value="CALL_CENTER">콜센터 (전화)</option>
+                <option value="VISIT">방문 접수</option>
+                <option value="EMAIL">이메일</option>
               </select>
             </label>
             <label>위치
@@ -76,6 +76,7 @@
             <button id="analysisButton" type="button">분석 작업 요청</button>
             <button id="draftButton" type="button">근거 기반 초안 요청</button>
             <button id="completeButton" type="button">승인 후 수동 완료 기록</button>
+            <button id="resetButton" class="secondary" type="button">세션 종료 (초기화)</button>
           </div>
           <p id="actionHint" class="action-hint">민원을 접수하면 다음 처리 단계가 표시됩니다.</p>
           <div class="workflow-board" aria-label="민원 처리 단계">
@@ -84,19 +85,17 @@
           </div>
         </section>
 
-        <section class="grid">
-          <article class="panel">
-            <p class="eyebrow">복합 이슈</p>
-            <h2>분류 및 위치 확인</h2>
-            <div id="analysis" class="analysis-box empty">분석 결과가 없습니다.</div>
-            <div id="issues" class="stack"></div>
-          </article>
+        <section class="panel">
+          <p class="eyebrow">복합 이슈</p>
+          <h2>분류 및 위치 확인</h2>
+          <div id="analysis" class="analysis-box empty">분석 결과가 없습니다.</div>
+          <div id="issues" class="stack"></div>
+        </section>
 
-          <article class="panel">
-            <p class="eyebrow">작업 상태</p>
-            <h2>최근 실행</h2>
-            <div id="runStatus" class="run-box empty">실행 중인 작업이 없습니다.</div>
-          </article>
+        <section class="panel">
+          <p class="eyebrow">작업 상태</p>
+          <h2>최근 실행</h2>
+          <div id="runStatus" class="run-box empty">실행 중인 작업이 없습니다.</div>
         </section>
 
         <section class="panel">
@@ -139,8 +138,17 @@
           <div id="humanReviews" class="stack audit-history empty">검토·승인 이력이 없습니다.</div>
         </section>
       </section>
-
       <div id="message" class="message is-hidden" role="alert"></div>
     </main>
+
+    <!-- 로딩 오버레이 모달 -->
+    <div id="loadingOverlay" class="loading-overlay is-hidden">
+      <div class="loading-card">
+        <div class="spinner"></div>
+        <h3 id="overlayTitle">작업 처리 중</h3>
+        <p id="overlayStatus">서버에서 작업을 요청하고 있습니다...</p>
+        <p id="overlayAttempts" class="attempts-text">시도 1/3</p>
+      </div>
+    </div>
   </body>
 </html>

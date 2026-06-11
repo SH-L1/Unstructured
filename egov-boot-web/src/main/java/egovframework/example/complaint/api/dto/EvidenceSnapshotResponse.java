@@ -29,7 +29,7 @@ public record EvidenceSnapshotResponse(
 				snapshot.getSourceId(),
 				snapshot.getTitle(),
 				snapshot.getContent(),
-				snapshot.getSourceUrl(),
+				resolveSourceUrl(snapshot.getSourceUrl()),
 				snapshot.getLegalBasis(),
 				snapshot.getSourceVersion(),
 				snapshot.getJurisdictionCode(),
@@ -40,5 +40,26 @@ public record EvidenceSnapshotResponse(
 				snapshot.isSupportsClaim(),
 				snapshot.getCreatedAt()
 		);
+	}
+
+	private static String resolveSourceUrl(String sourceUrl) {
+		if (sourceUrl == null) {
+			return null;
+		}
+		String normalized = sourceUrl.replace("\\", "/");
+		int dataIdx = normalized.indexOf("ai-rag-engine/data/");
+		if (dataIdx != -1) {
+			String subPath = normalized.substring(dataIdx + "ai-rag-engine/data/".length());
+			String baseUrl = "http://localhost:8081";
+			try {
+				if (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() != null) {
+					baseUrl = org.springframework.web.servlet.support.ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+				}
+			} catch (Exception e) {
+				// Fallback to default
+			}
+			return baseUrl + "/data/" + subPath;
+		}
+		return sourceUrl;
 	}
 }

@@ -55,6 +55,9 @@ public class Complaint extends BaseTimeEntity {
 	@Column(nullable = false)
 	private int attachmentRevision;
 
+	@jakarta.persistence.OneToOne(mappedBy = "complaint", fetch = jakarta.persistence.FetchType.LAZY)
+	private ComplaintAnalysis analysis;
+
 	protected Complaint() {
 	}
 
@@ -119,6 +122,10 @@ public class Complaint extends BaseTimeEntity {
 
 	public long getVersion() {
 		return version;
+	}
+
+	public ComplaintAnalysis getAnalysis() {
+		return analysis;
 	}
 
 	public void markTriageReview() {

@@ -78,6 +78,9 @@ public class ProcessingJobLeaseRecoveryService {
 		if (reason != null && reason.contains("Conflicting official evidence")) {
 			return WorkflowBlocker.CONFLICT_DETECTED;
 		}
+		if (reason != null && reason.contains("jurisdiction")) {
+			return WorkflowBlocker.NEEDS_JURISDICTION;
+		}
 		return WorkflowBlocker.PROCESSING_FAILED;
 	}
 

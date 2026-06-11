@@ -650,6 +650,7 @@ def sync() -> dict[str, int]:
     source_filter = selected_source_types()
     suffix_filter = selected_suffixes()
     with psycopg2.connect(**connection_kwargs()) as connection:
+        connection.set_client_encoding('UTF8')
         with connection.cursor() as cursor:
             for source in SOURCES:
                 if source_filter is not None and source.source_type not in source_filter:

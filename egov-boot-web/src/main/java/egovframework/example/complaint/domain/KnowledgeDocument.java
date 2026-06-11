@@ -167,17 +167,6 @@ public class KnowledgeDocument extends BaseTimeEntity {
 		this.effectiveFrom = effectiveFrom;
 		this.effectiveTo = effectiveTo;
 		this.sourceVersion = "SYNTHETIC_TEST_V1";
-		this.contentHash = sha256(content);
-	}
-
-	private static String sha256(String value) {
-		try {
-			return HexFormat.of().formatHex(
-					MessageDigest.getInstance("SHA-256").digest(value.getBytes(StandardCharsets.UTF_8))
-			);
-		}
-		catch (NoSuchAlgorithmException exception) {
-			throw new IllegalStateException("SHA-256 is unavailable", exception);
-		}
+		this.contentHash = egovframework.example.complaint.service.ContentHashService.calculateSha256(content);
 	}
 }

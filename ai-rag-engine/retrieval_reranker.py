@@ -20,8 +20,8 @@ TOKEN_RE = re.compile(r"[0-9A-Za-z가-힣_]+")
 
 PURPOSE_WEIGHTS = {
     "OFFICIAL_LAW": 1.0,
-    "PROCEDURE": 0.72,
-    "LOCAL_ORDINANCE_REFERENCE": 0.58,
+    "PROCEDURE": 0.90,
+    "LOCAL_ORDINANCE_REFERENCE": 0.85,
     "HISTORICAL_CASE": 0.42,
     "STYLE_REFERENCE": 0.18,
     "STYLE": 0.18,
@@ -95,6 +95,8 @@ def candidate_score(
     status_fit = STATUS_WEIGHTS.get(status, 0.05)
     official_law_gate = 0.0
     if purpose == "OFFICIAL_LAW" and status == "VERIFIED_OFFICIAL" and candidate.jurisdiction_code.upper() == "NATIONAL":
+        official_law_gate = 1.0
+    elif expected in ("LOCAL_ORDINANCE_REFERENCE", "PROCEDURE") and purpose == expected and status in ("VERIFIED_OFFICIAL", "VERIFIED_INTERNAL"):
         official_law_gate = 1.0
     return (
         0.38 * lexical_overlap(query, candidate)

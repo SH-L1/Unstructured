@@ -282,6 +282,7 @@ def upsert_record(cursor, run_id: str, source_id: int, record: dict[str, Any]) -
 def sync() -> int:
     records = collect_records()
     with psycopg2.connect(**connection_kwargs()) as connection:
+        connection.set_client_encoding('UTF8')
         with connection.cursor() as cursor:
             source_id = source_registry_id(cursor)
             run_id = start_run(cursor, source_id)

@@ -17,6 +17,7 @@ public class ExternalCallGuard {
 	private final long maxCostUnitsPerCall;
 	private final Clock clock;
 	private final Map<String, CircuitState> states = new ConcurrentHashMap<>();
+	private final Map<String, Object> locks = new ConcurrentHashMap<>();
 
 	@Autowired
 	public ExternalCallGuard(
@@ -41,8 +42,9 @@ public class ExternalCallGuard {
 		if (estimatedCostUnits < 0 || estimatedCostUnits > maxCostUnitsPerCall) {
 			throw new IllegalStateException("External call cost limit exceeded for " + provider);
 		}
+		Object lock = locks.computeIfAbsent(provider, ignored -> new Object());
 		CircuitState state = states.computeIfAbsent(provider, ignored -> new CircuitState());
-		synchronized (state) {
+		synchronized (lock) {
 			if (state.openUntil != null && clock.instant().isBefore(state.openUntil)) {
 				throw new IllegalStateException("External provider circuit is open: " + provider);
 			}
@@ -53,14 +55,14 @@ public class ExternalCallGuard {
 		}
 		try {
 			T result = call.get();
-			synchronized (state) {
+			synchronized (lock) {
 				state.failures = 0;
 				state.openUntil = null;
 			}
 			return result;
 		}
 		catch (RuntimeException exception) {
-			synchronized (state) {
+			synchronized (lock) {
 				state.failures++;
 				if (state.failures >= failureThreshold) {
 					state.openUntil = Instant.now(clock).plusMillis(openDurationMillis);

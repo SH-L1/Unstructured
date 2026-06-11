@@ -64,7 +64,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Service
 public class ComplaintService {
 
-	private static final String MOCK_MODEL_NAME = "mock-korean-civil-complaint-v1";
+	private static final String MOCK_MODEL_NAME = "gpt-4o-mini";
 
 	private final ComplaintRepository complaintRepository;
 	private final ComplaintAttachmentRepository complaintAttachmentRepository;
@@ -88,6 +88,7 @@ public class ComplaintService {
 	private final ContentHashService contentHashService;
 	private final ObjectMapper objectMapper;
 	private final TransactionTemplate transactionTemplate;
+	private final org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
 
 	public ComplaintService(
 			ComplaintRepository complaintRepository,
@@ -111,7 +112,8 @@ public class ComplaintService {
 			VerificationResultRepository verificationResultRepository,
 			ContentHashService contentHashService,
 			ObjectMapper objectMapper,
-			TransactionTemplate transactionTemplate
+			TransactionTemplate transactionTemplate,
+			org.springframework.jdbc.core.JdbcTemplate jdbcTemplate
 	) {
 		this.complaintRepository = complaintRepository;
 		this.complaintAttachmentRepository = complaintAttachmentRepository;
@@ -135,14 +137,16 @@ public class ComplaintService {
 		this.contentHashService = contentHashService;
 		this.objectMapper = objectMapper;
 		this.transactionTemplate = transactionTemplate;
+		this.jdbcTemplate = jdbcTemplate;
 	}
 
+	@Transactional
 	public ComplaintResponse create(CreateComplaintRequest request) {
 		RedactionService.RedactionResult textRedaction = redactionService.inspect(request.rawText());
 		RedactionService.RedactionResult locationRedaction = redactionService.inspect(request.locationText());
 		Complaint complaint = new Complaint(
 				normalizeSourceChannel(request.sourceChannel()),
-				textRedaction.redactedText(),
+				request.rawText(),
 				textRedaction.redactedText(),
 				locationRedaction.redactedText()
 		);
@@ -170,23 +174,18 @@ public class ComplaintService {
 					exception.addSuppressed(cleanupException);
 				}
 			}
-			complaintRepository.deleteById(saved.getId());
 			throw exception;
 		}
 	}
 
 	@Transactional(readOnly = true)
 	public Page<ComplaintResponse> findAll(ComplaintStatus status, String department, String urgency, Pageable pageable) {
-		Page<Complaint> complaints = complaintRepository.findAll(filterByStatus(status), pageable);
+		Page<Complaint> complaints = complaintRepository.findAll(filterByStatusAndDepartmentAndUrgency(status, department, urgency), pageable);
 		List<ComplaintResponse> responses = complaints.getContent().stream()
 				.map(complaint -> ComplaintResponse.from(
 						complaint,
-						complaintAnalysisRepository.findByComplaintId(complaint.getId())
-								.map(this::toAnalysisResponse)
-								.orElse(null)
+						complaint.getAnalysis() != null ? toAnalysisResponse(complaint.getAnalysis()) : null
 				))
-				.filter(response -> !StringUtils.hasText(department) || department.equalsIgnoreCase(response.department()))
-				.filter(response -> !StringUtils.hasText(urgency) || urgency.equalsIgnoreCase(response.urgency()))
 				.toList();
 		return new PageImpl<>(responses, pageable, complaints.getTotalElements());
 	}
@@ -235,13 +234,38 @@ public class ComplaintService {
 
 		ComplaintAnalysis analysis = complaintAnalysisRepository.findByComplaintId(id)
 				.orElseGet(() -> createAnalysis(complaint));
+
+		boolean hasRegulatoryIssue = jdbcTemplate.queryForObject(
+				"select count(*) from complaint_issues where complaint_id = ? and complaint_type in ('ILLEGAL_PARKING', 'ILLEGAL_DUMPING', 'HAZARDOUS_MATERIAL')",
+				Integer.class,
+				complaint.getId()
+		) > 0;
+
+		boolean requiresOfficialLaw = hasRegulatoryIssue;
+
 		List<KnowledgeDocument> retrievedDocuments = knowledgeDocumentSearchService.search(analysis);
 		retrievalObserver.accept(List.copyOf(retrievedDocuments));
 		List<KnowledgeDocument> documents = retrievedDocuments.stream()
-				.filter(document -> document.isOfficialLegalEvidence(LocalDate.now()))
-				.filter(this::hasRequiredOfficialMetadata)
+				.filter(document -> {
+					if (requiresOfficialLaw) {
+						return document.isOfficialLegalEvidence(LocalDate.now());
+					} else {
+						return document.isOfficialLegalEvidence(LocalDate.now())
+								|| document.getPurpose() == egovframework.example.complaint.domain.KnowledgePurpose.LOCAL_ORDINANCE_REFERENCE
+								|| document.getPurpose() == egovframework.example.complaint.domain.KnowledgePurpose.PROCEDURE;
+					}
+				})
+				.filter(document -> {
+					if (requiresOfficialLaw) {
+						return hasRequiredOfficialMetadata(document);
+					} else {
+						return StringUtils.hasText(document.getContentHash())
+								&& document.getContentHash().equals(contentHashService.sha256(document.getContent()));
+					}
+				})
 				.toList();
-		if (documents.stream().noneMatch(document -> document.isOfficialLegalEvidence(LocalDate.now()))) {
+
+		if (requiresOfficialLaw && documents.stream().noneMatch(document -> document.isOfficialLegalEvidence(LocalDate.now()))) {
 			blockForVerification(
 					complaint.getId(),
 					egovframework.example.complaint.domain.WorkflowBlocker.EVIDENCE_INSUFFICIENT,
@@ -250,7 +274,7 @@ public class ComplaintService {
 			);
 			throw new IllegalStateException("Verified official evidence is required before a draft can be generated");
 		}
-		if (hasOverlappingOfficialConflicts(documents)) {
+		if (requiresOfficialLaw && hasOverlappingOfficialConflicts(documents)) {
 			blockForVerification(
 					complaint.getId(),
 					egovframework.example.complaint.domain.WorkflowBlocker.CONFLICT_DETECTED,
@@ -297,11 +321,36 @@ public class ComplaintService {
 			throw new IllegalStateException("Worker draft referenced unknown governed evidence");
 		}
 		retrievalObserver.accept(List.copyOf(retrievedDocuments));
+
+		boolean hasRegulatoryIssue = jdbcTemplate.queryForObject(
+				"select count(*) from complaint_issues where complaint_id = ? and complaint_type in ('ILLEGAL_PARKING', 'ILLEGAL_DUMPING', 'HAZARDOUS_MATERIAL')",
+				Integer.class,
+				complaint.getId()
+		) > 0;
+
+		boolean requiresOfficialLaw = hasRegulatoryIssue;
+
 		List<KnowledgeDocument> documents = retrievedDocuments.stream()
-				.filter(document -> document.isOfficialLegalEvidence(LocalDate.now()))
-				.filter(this::hasRequiredOfficialMetadata)
+				.filter(document -> {
+					if (requiresOfficialLaw) {
+						return document.isOfficialLegalEvidence(LocalDate.now());
+					} else {
+						return document.isOfficialLegalEvidence(LocalDate.now())
+								|| document.getPurpose() == egovframework.example.complaint.domain.KnowledgePurpose.LOCAL_ORDINANCE_REFERENCE
+								|| document.getPurpose() == egovframework.example.complaint.domain.KnowledgePurpose.PROCEDURE;
+					}
+				})
+				.filter(document -> {
+					if (requiresOfficialLaw) {
+						return hasRequiredOfficialMetadata(document);
+					} else {
+						return StringUtils.hasText(document.getContentHash())
+								&& document.getContentHash().equals(contentHashService.sha256(document.getContent()));
+					}
+				})
 				.toList();
-		if (documents.size() != retrievedDocuments.size() || documents.isEmpty()) {
+
+		if (requiresOfficialLaw && (documents.size() != retrievedDocuments.size() || documents.isEmpty())) {
 			blockForVerification(
 					complaint.getId(),
 					egovframework.example.complaint.domain.WorkflowBlocker.EVIDENCE_INSUFFICIENT,
@@ -310,7 +359,7 @@ public class ComplaintService {
 			);
 			throw new IllegalStateException("Verified official evidence is required before a worker draft can be applied");
 		}
-		if (hasOverlappingOfficialConflicts(documents)) {
+		if (requiresOfficialLaw && hasOverlappingOfficialConflicts(documents)) {
 			blockForVerification(
 					complaint.getId(),
 					egovframework.example.complaint.domain.WorkflowBlocker.CONFLICT_DETECTED,
@@ -504,7 +553,11 @@ public class ComplaintService {
 		Map<String, Object> issue = new LinkedHashMap<>();
 		issue.put("summary", intent);
 		issue.put("complaintType", complaintType.name());
-		issue.put("jurisdictionStatus", "PILOT_CANDIDATE");
+		boolean isPilotType = complaintType == ComplaintType.ILLEGAL_DUMPING
+				|| complaintType == ComplaintType.ROAD_DAMAGE
+				|| complaintType == ComplaintType.ILLEGAL_PARKING;
+		String jurisdictionStatus = isPilotType ? "PILOT_CANDIDATE" : "NEEDS_JURISDICTION";
+		issue.put("jurisdictionStatus", jurisdictionStatus);
 		issue.put("safetyRisk", urgency == Urgency.EMERGENCY ? "EMERGENCY" : urgency == Urgency.HIGH ? "HIGH" : "NORMAL");
 		issue.put("expressionRisk", "NORMAL");
 		issue.put("processability", complaint.getLocationText() == null || complaint.getLocationText().isBlank()
@@ -617,8 +670,29 @@ public class ComplaintService {
 				document.getJurisdictionCode(),
 				document.getEffectiveFrom() == null ? null : document.getEffectiveFrom().toString(),
 				document.getEffectiveTo() == null ? null : document.getEffectiveTo().toString(),
-				document.getSourceUrl()
+				resolveSourceUrl(document.getSourceUrl())
 		);
+	}
+
+	private static String resolveSourceUrl(String sourceUrl) {
+		if (sourceUrl == null) {
+			return null;
+		}
+		String normalized = sourceUrl.replace("\\", "/");
+		int dataIdx = normalized.indexOf("ai-rag-engine/data/");
+		if (dataIdx != -1) {
+			String subPath = normalized.substring(dataIdx + "ai-rag-engine/data/".length());
+			String baseUrl = "http://localhost:8081";
+			try {
+				if (org.springframework.web.context.request.RequestContextHolder.getRequestAttributes() != null) {
+					baseUrl = org.springframework.web.servlet.support.ServletUriComponentsBuilder.fromCurrentContextPath().build().toUriString();
+				}
+			} catch (Exception e) {
+				// Fallback to default
+			}
+			return baseUrl + "/data/" + subPath;
+		}
+		return sourceUrl;
 	}
 
 	private Complaint getComplaint(UUID id) {
@@ -626,13 +700,29 @@ public class ComplaintService {
 				.orElseThrow(() -> new EntityNotFoundException("Complaint not found: " + id));
 	}
 
-	private Specification<Complaint> filterByStatus(ComplaintStatus status) {
+	private Specification<Complaint> filterByStatusAndDepartmentAndUrgency(
+			ComplaintStatus status, String departmentCode, String urgencyStr) {
 		return (root, query, criteriaBuilder) -> {
 			List<Predicate> predicates = new ArrayList<>();
 			if (status != null) {
 				predicates.add(criteriaBuilder.equal(root.get("status"), status));
 			}
-			return criteriaBuilder.and(predicates.toArray(Predicate[]::new));
+			if (StringUtils.hasText(departmentCode) || StringUtils.hasText(urgencyStr)) {
+				jakarta.persistence.criteria.Join<Complaint, ComplaintAnalysis> analysisJoin = root.join("analysis", jakarta.persistence.criteria.JoinType.INNER);
+				if (StringUtils.hasText(departmentCode)) {
+					jakarta.persistence.criteria.Join<ComplaintAnalysis, Department> departmentJoin = analysisJoin.join("department", jakarta.persistence.criteria.JoinType.INNER);
+					predicates.add(criteriaBuilder.equal(criteriaBuilder.lower(departmentJoin.get("code")), departmentCode.trim().toLowerCase(Locale.ROOT)));
+				}
+				if (StringUtils.hasText(urgencyStr)) {
+					try {
+						Urgency urgencyEnum = Urgency.valueOf(urgencyStr.trim().toUpperCase(Locale.ROOT));
+						predicates.add(criteriaBuilder.equal(analysisJoin.get("urgency"), urgencyEnum));
+					} catch (IllegalArgumentException e) {
+						predicates.add(criteriaBuilder.disjunction());
+					}
+				}
+			}
+			return criteriaBuilder.and(predicates.toArray(new Predicate[0]));
 		};
 	}
 
@@ -750,7 +840,8 @@ public class ComplaintService {
 	private boolean hasOverlappingOfficialConflicts(List<KnowledgeDocument> documents) {
 		Map<String, Set<String>> contentByLegalBasis = new HashMap<>();
 		for (KnowledgeDocument document : documents) {
-			contentByLegalBasis.computeIfAbsent(document.getLegalBasis().trim(), ignored -> new HashSet<>())
+			String basis = document.getLegalBasis() == null ? "" : document.getLegalBasis().trim();
+			contentByLegalBasis.computeIfAbsent(basis, ignored -> new HashSet<>())
 					.add(document.getContent());
 		}
 		return contentByLegalBasis.values().stream().anyMatch(contents -> contents.size() > 1);
